@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: fleet_mgmt_db
+    environment:
+      POSTGRES_DB: fleet_mgmt_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: noclashfleet
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
