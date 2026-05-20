@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 
 public class Task {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private String id;
     private int priority;
 

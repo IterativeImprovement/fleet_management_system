@@ -1,6 +1,9 @@
 package com.siyu.fleet_mgmt_sys.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.Collections;
 import java.util.List;
@@ -9,6 +12,9 @@ import java.util.List;
 @Table(name = "robots")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE) // All subclasses of robot go into the same table
 @DiscriminatorColumn(name = "robot_type", discriminatorType = DiscriminatorType.STRING)
+@Getter
+@Setter
+@NoArgsConstructor
 public abstract class Robot {
     @Id
     @GeneratedValue
@@ -17,6 +23,7 @@ public abstract class Robot {
     private String name;
     private int type;
     private int status;
+    private double speed; // speed in metres per second
 
     /* Status Codes
     0: Idle and stationary, ready to pick up new tasks
@@ -32,12 +39,11 @@ public abstract class Robot {
     @OneToMany(mappedBy = "robot", cascade = CascadeType.ALL)
     private List<Task> tasks;
 
-    protected Robot() {} // constructor for JPA
-
-    protected Robot(String name, int type) {
+    protected Robot(String name, int type, double speed) {
         this.name = name;
         this.type = type;
         this.status = 0;
+        this.speed = speed;
         this.route = null;
         this.tasks = null;
     }
