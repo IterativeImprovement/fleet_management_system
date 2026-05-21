@@ -1,7 +1,6 @@
 package com.siyu.fleet_mgmt_sys.controller;
 
 import com.siyu.fleet_mgmt_sys.dto.OneMapRouteResponseDTO;
-import com.siyu.fleet_mgmt_sys.model.WayPoint;
 import com.siyu.fleet_mgmt_sys.service.external.OneMapService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +17,7 @@ public class RouteController {
     private final OneMapService routeService;
 
     @GetMapping("/coords") // coords are lat,lng format
-    // sample req: /route/coords?start=1.3081,103.8551&end=1.2739,103.8012
+    // sample req: GET localhost:8080/route/coords?start=1.3081,103.8551&end=1.2739,103.8012
 
     public ResponseEntity<OneMapRouteResponseDTO> getRoute(
             @RequestParam String start,
