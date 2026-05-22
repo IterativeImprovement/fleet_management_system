@@ -21,4 +21,6 @@ public class RouteGeometry {
     @OneToMany
     private List<WayPoint> wayPoints;
 
+    private String routeGeoString;
+
 }

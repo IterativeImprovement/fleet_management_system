@@ -26,13 +26,13 @@ public class OneMapService {
                 "&routeType=drive" +
                 "&time=11:19:47" +
                 "&start=" +
-                String.valueOf(startWp.getLatitude()) +
+                startWp.getLatitude() +
                 "," +
-                String.valueOf(startWp.getLongitude()) +
+                startWp.getLongitude() +
                 "&end=" +
-                String.valueOf(endWp.getLatitude()) +
+                endWp.getLatitude() +
                 "," +
-                String.valueOf(endWp.getLongitude())
+                endWp.getLongitude()
                 ;
 
         HttpHeaders headers = new HttpHeaders();
@@ -40,13 +40,15 @@ public class OneMapService {
         headers.set("Authorization", authToken);
 
         HttpEntity<String> entity = new HttpEntity<>(headers);
-//
+
         ResponseEntity<OneMapRouteResponseDTO> response = restTemplate.exchange(
                 url,
                 HttpMethod.GET,
                 entity,
                 OneMapRouteResponseDTO.class
         );
+
+        System.out.println("Route retrieved successfully from OneMap API");
 
        return response.getBody(); // raw JSON string
 

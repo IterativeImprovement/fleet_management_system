@@ -18,12 +18,12 @@ import java.util.List;
 public abstract class Robot {
     @Id
     @GeneratedValue
-    private Long id;
+    protected Long id;
 
-    private String name;
-    private int type;
-    private int status;
-    private double speed; // speed in metres per second
+    protected String name;
+    protected int type;
+    protected int status;
+    protected double speed; // speed in metres per second
 
     /* Status Codes
     0: Idle and stationary, ready to pick up new tasks
@@ -34,10 +34,10 @@ public abstract class Robot {
      */
 
     @OneToOne(mappedBy = "robot", cascade = CascadeType.ALL)
-    private Route route;
+    protected Route route;
 
     @OneToMany(mappedBy = "robot", cascade = CascadeType.ALL)
-    private List<Task> tasks;
+    protected List<Task> tasks;
 
     protected Robot(String name, int type, double speed) {
         this.name = name;
@@ -46,14 +46,6 @@ public abstract class Robot {
         this.speed = speed;
         this.route = null;
         this.tasks = null;
-    }
-
-    public int getStatus() {
-        return this.status;
-    }
-
-    public Route getRoute() {
-        return this.route;
     }
 
     public List<Task> getTasks() {

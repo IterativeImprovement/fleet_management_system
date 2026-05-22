@@ -35,6 +35,11 @@ public class WayPoint {
         String[] parts = latlng.split(",");
         this.latitude = Double.parseDouble(parts[0].trim());
         this.longitude = Double.parseDouble(parts[1].trim());
-        System.out.println("WayPoint created: " + this.latitude + ", " + this.longitude);
+        //System.out.println("WayPoint created: " + this.latitude + ", " + this.longitude);
+    }
+
+    @Override
+    public String toString() {
+        return this.latitude + "," + this.longitude;
     }
 }

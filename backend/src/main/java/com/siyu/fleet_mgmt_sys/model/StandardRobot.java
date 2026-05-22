@@ -17,4 +17,16 @@ public class StandardRobot extends Robot {
         super("S" + name,0, 10.0);
     }
 
+    @Override
+    public String toString() {
+        return "Robot {" +
+                "\n  id: " + this.id +
+                "\n  name: " + name +
+                "\n  type: " + type +
+                "\n  status: " + status +
+                "\n  speed: " + speed +
+                "\n  route: " + (route != null ? route.getId() : "none") +
+                "\n  tasks: " + (tasks != null ? tasks.size() + " task(s)" : "none") +
+                "\n}";
+    }
 }
