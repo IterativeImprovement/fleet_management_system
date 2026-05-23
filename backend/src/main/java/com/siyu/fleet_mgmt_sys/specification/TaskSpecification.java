@@ -15,7 +15,7 @@ import java.util.List;
 public class TaskSpecification {
 
     public static Specification<Task> filter(
-            String priority,
+            Integer priority,
             String type,
             String timeLeft,
             String startDateTime,
@@ -26,7 +26,7 @@ public class TaskSpecification {
 
             // priority
             if (priority != null) {
-                predicates.add(cb.equal(root.get("priority"), Integer.parseInt(priority)));
+                predicates.add(cb.equal(root.get("priority"), priority));
             }
 
             // type

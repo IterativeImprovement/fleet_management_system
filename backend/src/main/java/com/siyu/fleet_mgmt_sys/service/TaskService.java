@@ -53,13 +53,13 @@ public class TaskService {
         System.out.println("Task deleted successfully!\n" + taskString);
     }
 
-    public List<Task> filterTasks(String priority, String type, String timeLeft,
+    public List<Task> filterTasks(Integer priority, String type, String timeLeft,
                                   String startDateTime, String completionDateTime) {
         List<Task> tasks = taskRepository.findAll(
                 TaskSpecification.filter(priority, type, timeLeft, startDateTime, completionDateTime)
         );
 
-        System.out.println("Retrieved filtered tasks:" + tasks.toString());
+        System.out.println("Retrieved filtered tasks:" + tasks);
         return tasks;
     }
 

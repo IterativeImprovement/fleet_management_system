@@ -7,14 +7,14 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@DiscriminatorValue("Standard")
+@DiscriminatorValue("Large")
 @Getter
 @Setter
 @NoArgsConstructor
-public class StandardRobot extends Robot {
+public class LargeRobot extends Robot {
 
-    public StandardRobot(String name) {
-        super("S" + name,"Standard", 10.0);
+    public LargeRobot(String name) {
+        super("L" + name,"Large", 5.0);
     }
 
 }

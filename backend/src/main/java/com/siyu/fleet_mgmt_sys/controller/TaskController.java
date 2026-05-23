@@ -56,7 +56,7 @@ public class TaskController {
 
     @GetMapping // GET localhost:8080/task?startDateTime=after:2026-05-21T14:49:33
     public ResponseEntity<List<Task>> filterTask(
-            @RequestParam(required = false) String priority,
+            @RequestParam(required = false) Integer priority,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String timeLeft, // gte:Dxx:xx:xx:xx (days, hours, minutes, seconds)
             @RequestParam(required = false) String startDateTime, // after:D2026-05-21T14:49:33 / before / on
