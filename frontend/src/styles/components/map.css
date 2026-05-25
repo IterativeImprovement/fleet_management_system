@@ -97,6 +97,10 @@
   opacity: 1;
 }
 
+.leaflet-container svg .task-route {
+  cursor: pointer;
+}
+
 /* Robot markers 
 
 .map-robot-marker {

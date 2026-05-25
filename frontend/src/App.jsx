@@ -180,6 +180,7 @@ function App() {
         isLoadingRoutes={isLoadingRoutes}
         routeErrorCount={routeErrorCount}
         onSelectRobot={handleSelectRobot}
+        onSelectTask={handleSelectTask}
       />
 
       <AlertLog alerts={mockAlerts} />
