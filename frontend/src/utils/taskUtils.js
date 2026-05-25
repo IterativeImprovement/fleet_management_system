@@ -1,32 +1,40 @@
 export function getPriorityType(priority) {
-  return priority.toLowerCase()
+  if (priority === 1) return 'high'
+  if (priority === 2) return 'medium'
+  if (priority === 3) return 'low'
+
+  return 'unknown'
 }
 
 export function createTask({
   id,
   priority,
-  start,
-  destination,
-  requiredCompletionTime = '',
-  dependencies = [],
-  assignedRobotId = null,
-  status = 'Pending',
-  eta = '-',
-  route = [],
+  name,
+  description = '',
+  type = 'StandardTransport',
+  startDateTime = '',
+  completionDateTime = '',
+  startWayPoint,
+  endWayPoint,
+  robot = null,
+  tasks = [],
 }) {
   return {
-    id: id.trim(),
+    id,
     priority,
     priorityType: getPriorityType(priority),
 
-    start: start.trim(),
-    destination: destination.trim(),
-    requiredCompletionTime: requiredCompletionTime.trim() || '-',
-    dependencies,
+    name: name.trim(),
+    description: description.trim(),
+    type,
 
-    status,
-    assignedRobotId,
-    eta,
-    route,
+    startDateTime,
+    completionDateTime,
+
+    startWayPoint,
+    endWayPoint,
+
+    robot,
+    tasks,
   }
 }

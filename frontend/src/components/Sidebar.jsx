@@ -21,8 +21,21 @@ function Sidebar({
   const [isAddingTask, setIsAddingTask] = useState(false)
   const [isAddingRobot, setIsAddingRobot] = useState(false)
 
-  const selectedRobot = robots.find(robot => robot.id === selectedRobotId)
-  const selectedTask = tasks.find(task => task.id === selectedTaskId)
+  const selectedRobot = robots.find(
+    robot => String(robot.id) === String(selectedRobotId)
+  )
+  const selectedTask = tasks.find(
+    task => String(task.id) === String(selectedTaskId)
+  )
+  const selectedTaskAssignedRobot =
+    selectedTask?.robot ||
+    robots.find(robot =>
+      robot.tasks?.some(task => {
+        const robotTaskId = typeof task === 'object' ? task.id : task
+
+        return String(robotTaskId) === String(selectedTask?.id)
+      })
+    )
 
   function handleOpenRobotTab() {
     onChangeTab('robots')
@@ -64,7 +77,10 @@ function Sidebar({
         selectedRobot ? (
           <SelectedRobotPanel
             robot={selectedRobot}
-            onBack={() => onSelectRobot(null)}
+            onBack={() => {
+              onSelectRobot(null)
+              onSelectTask(null)
+            }}
             onSelectTask={onSelectTask}
           />
         ) : (
@@ -85,6 +101,7 @@ function Sidebar({
 
             {isAddingRobot ? (
               <AddRobotForm
+                robots={robots}
                 onAddRobot={(newRobot) => {
                   onAddRobot(newRobot)
                   setIsAddingRobot(false)
@@ -104,14 +121,15 @@ function Sidebar({
       ) : selectedTask ? (
         <SelectedTaskPanel
           task={selectedTask}
+          assignedRobot={selectedTaskAssignedRobot}
           onBack={() => {
             onSelectTask(null)
+            onSelectRobot(null)
             setIsAddingTask(false)
           }}
           onViewRobot={() => {
             onChangeTab('robots')
-            onSelectTask(null)
-            onSelectRobot(selectedTask.assignedRobotId)
+            onSelectRobot(selectedTaskAssignedRobot?.id)
           }}
         />
       ) : (

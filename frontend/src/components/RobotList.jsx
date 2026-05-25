@@ -7,7 +7,7 @@ function RobotList({ robots, selectedRobotId, onSelectRobot }) {
                 <RobotRow 
                     robot={robot} 
                     key={robot.id} 
-                    isSelected={robot.id === selectedRobotId}
+                    isSelected={String(robot.id) === String(selectedRobotId)}
                     onSelectRobot={onSelectRobot}
                     />))}
         </div>

@@ -1,0 +1,283 @@
+.map {
+  grid-area: map;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.map-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.map-header p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.map-canvas {
+  flex: 1;
+  min-height: 0;
+  border-radius: 12px;
+  background-color: #f3f4f6;
+  border: 1px dashed #d1d5db;
+
+  position: relative;
+  overflow: hidden;
+
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Route lines */
+
+.route-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+.route-line {
+  fill: none;
+  stroke: #9ca3af;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.55;
+  cursor: pointer;
+  pointer-events: stroke;
+}
+
+.route-line.idle {
+  stroke: #9ca3af;
+}
+
+.route-line.moving {
+  stroke: #0a84ff;
+}
+
+.route-line.executing {
+  stroke: #22c55e;
+}
+
+.route-line.low-battery {
+  stroke: #f59e0b;
+  stroke-dasharray: 5 3;
+}
+
+.route-line.broken-down,
+.route-line.blocked {
+  stroke: #dc2626;
+  stroke-dasharray: 4 3;
+}
+
+.route-line.unknown {
+  stroke: #9ca3af;
+  stroke-dasharray: 3 3;
+}
+
+.route-line.selected {
+  stroke-width: 2.5;
+  opacity: 1;
+}
+
+/* Robot markers 
+
+.map-robot-marker {
+  --marker-color: #9ca3af;
+  --marker-glow: rgba(156, 163, 175, 0.22);
+
+  position: absolute;
+  z-index: 3;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  transform: translateY(-50%);
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.map-robot-marker:focus-visible {
+  outline: 2px solid #111827;
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
+.marker-dot {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  border-radius: 50%;
+
+  background-color: var(--marker-color);
+  border: 1px solid #ffffff;
+  box-shadow: 0 0 0 2px var(--marker-glow);
+
+  transform: translateX(-50%);
+}
+
+.marker-label {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 4px 8px;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+}
+
+.map-robot-marker.selected {
+  z-index: 5;
+}
+
+.map-robot-marker.selected .marker-dot {
+  transform: translateX(-50%) scale(1.3);
+  box-shadow: 0 0 0 4px var(--marker-glow);
+}
+
+.map-robot-marker.selected .marker-label {
+  background-color: #111827;
+  border-color: #111827;
+  color: #ffffff;
+}
+
+.map-robot-marker.idle {
+  --marker-color: #808080;
+  --marker-glow: rgba(128, 128, 128, 0.22);
+}
+
+.map-robot-marker.moving {
+  --marker-color: #0a84ff;
+  --marker-glow: rgba(10, 132, 255, 0.22);
+}
+
+.map-robot-marker.executing {
+  --marker-color: #22c55e;
+  --marker-glow: rgba(34, 197, 94, 0.22);
+}
+
+.map-robot-marker.low-battery {
+  --marker-color: #f59e0b;
+  --marker-glow: rgba(245, 158, 11, 0.22);
+}
+
+.map-robot-marker.broken-down,
+.map-robot-marker.blocked {
+  --marker-color: #dc2626;
+  --marker-glow: rgba(220, 38, 38, 0.22);
+}
+
+.map-robot-marker.unknown {
+  --marker-color: #9ca3af;
+  --marker-glow: rgba(156, 163, 175, 0.22);
+}
+*/
+/* Obstacle markers */
+
+.map-obstacle-marker {
+  position: absolute;
+  z-index: 4;
+
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  border-radius: 999px;
+  padding: 6px 10px;
+
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(153, 27, 27, 0.12);
+}
+
+.obstacle-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  border-radius: 50%;
+
+  background-color: #dc2626;
+  color: #ffffff;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 12px;
+  line-height: 1;
+}
+
+.map-obstacle-div-icon {
+  background: transparent;
+  border: none;
+}
+
+/* Leaflet robot markers */
+
+.robot-marker {
+  stroke-width: 2px;
+  fill-opacity: 0.9;
+}
+
+.robot-marker.idle {
+  stroke: #6b7280;
+  fill: #808080;
+}
+
+.robot-marker.moving {
+  stroke: #2563eb;
+  fill: #0a84ff;
+}
+
+.robot-marker.executing {
+  stroke: #15803d;
+  fill: #22c55e;
+}
+
+.robot-marker.low-battery {
+  stroke: #b45309;
+  fill: #f59e0b;
+}
+
+.robot-marker.broken-down {
+  stroke: #b91c1c;
+  fill: #dc2626;
+}
+
+.robot-marker.unknown {
+  stroke: #6b7280;
+  fill: #9ca3af;
+}
+
+.robot-marker.selected {
+  stroke: #111827;
+  stroke-width: 4px;
+}
+
+.leaflet-container svg .robot-marker {
+  vector-effect: non-scaling-stroke;
+}

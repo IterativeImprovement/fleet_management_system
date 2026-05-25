@@ -7,7 +7,7 @@ function TaskList({ tasks, selectedTaskId, onSelectTask }) {
         <TaskRow 
           key={task.id}
           task={task}
-          isSelected={task.id === selectedTaskId}
+          isSelected={String(task.id) === String(selectedTaskId)}
           onSelectTask={onSelectTask}
         />
       ))}

@@ -1,8 +1,12 @@
+import { getRobotStatusLabel, getRobotStatusType } from '../utils/robotUtils'
+
 function RobotRow({ robot, isSelected, onSelectRobot }) {
   const batteryDisplay =
     robot.battery === null || robot.battery === undefined
       ? '—'
       : `${robot.battery}%`
+
+  const statusType = getRobotStatusType(robot.status)
 
   return (
     <div
@@ -10,11 +14,11 @@ function RobotRow({ robot, isSelected, onSelectRobot }) {
       onClick={() => onSelectRobot(robot.id)}
     >
       <div className="robot-left">
-        <span className={`robot-dot ${robot.statusType}`}></span>
+        <span className={`robot-dot ${statusType}`}></span>
 
         <div className="robot-info">
-          <h3>{robot.id}</h3>
-          <p>{robot.status || 'Unknown'}</p>
+          <h3>{robot.name || `Robot ${robot.id}`}</h3>
+          <p>{getRobotStatusLabel(robot.status)}</p>
         </div>
       </div>
 

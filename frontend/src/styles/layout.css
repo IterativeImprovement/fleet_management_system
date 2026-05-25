@@ -1,0 +1,15 @@
+.dashboard {
+  min-height: 100vh;
+  padding: 24px;
+
+  display: grid;
+  gap: 16px;
+
+  grid-template-columns: 358px 1fr;
+  grid-template-rows: 72px 1fr 140px;
+
+  grid-template-areas:
+    "topbar topbar"
+    "sidebar map"
+    "alertLog alertLog";
+}

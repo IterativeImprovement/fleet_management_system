@@ -1,0 +1,31 @@
+.topbar {
+  grid-area: topbar;
+  background-color: #f2f2f7;
+  border: 1px solid #e5e7e8;
+  border-radius: 12px;
+  padding: 16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.topbar h1 {
+  font-size: 24px;
+  margin: 0;
+}
+
+.topbar input {
+  flex: 0 1 420px;
+  min-width: 240px;
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.topbar p {
+  margin: 0;
+  font-size: 14px;
+  color: #4b5563;
+}
