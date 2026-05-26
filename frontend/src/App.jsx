@@ -12,7 +12,7 @@ import Sidebar from './components/Sidebar'
 import LiveMap from './components/LiveMap'
 import AlertLog from './components/AlertLog'
 
-import { getTasks } from './api/taskApi'
+import { getTasks, createTaskInBackend } from './api/taskApi'
 import { getRouteGeometry } from './api/routeApi'
 import {
   decodePolyline,
@@ -189,8 +189,18 @@ function App() {
     }
   }
 
-  function handleAddTask(newTask) {
-    setTasks(prevTasks => [...prevTasks, newTask])
+  async function handleAddTask(newTask) {
+    try {
+      const savedTask = await createTaskInBackend(newTask)
+
+      setTasks(prevTasks => [...prevTasks, savedTask])
+      setSelectedTaskId(savedTask.id)
+      setActiveTab('tasks')
+
+      console.log('Created task in backend:', savedTask)
+    } catch (error) {
+      console.error('Failed to create task in backend:', error)
+    }
   }
 
   function handleAddRobot(newRobot) {

@@ -48,3 +48,41 @@ export async function getTasks() {
 
   return data.map(normaliseTaskFromBackend)
 }
+
+function wayPointToString(wayPoint) {
+  return `${wayPoint.latitude},${wayPoint.longitude}`
+}
+
+function taskToCreateRequest(task) {
+  return {
+    name: task.name,
+    description: task.description,
+    type: task.type,
+    priority: task.priority,
+    startDateTime: task.startDateTime,
+    completionDateTime: task.completionDateTime,
+    startWayPointStr: wayPointToString(task.startWayPoint),
+    endWayPointStr: wayPointToString(task.endWayPoint),
+    tasks: task.tasks ?? [],
+  }
+}
+
+export async function createTaskInBackend(task) {
+  const response = await fetch(TASK_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(taskToCreateRequest(task)),
+  })
+
+  if (!response.ok) {
+    const message = await getErrorMessage(response)
+    throw new Error(`Create task failed (${response.status}): ${message}`)
+  }
+
+  const data = await response.json()
+
+  return normaliseTaskFromBackend(data)
+}
