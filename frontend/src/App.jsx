@@ -12,6 +12,7 @@ import Sidebar from './components/Sidebar'
 import LiveMap from './components/LiveMap'
 import AlertLog from './components/AlertLog'
 
+import { getTasks } from './api/taskApi'
 import { getRouteGeometry } from './api/routeApi'
 import {
   decodePolyline,
@@ -22,6 +23,8 @@ import {
 function App() {
   const [selectedRobotId, setSelectedRobotId] = useState(null)
   const [selectedTaskId, setSelectedTaskId] = useState(null)
+
+  // Start with mock tasks so the UI still works if backend is down.
   const [tasks, setTasks] = useState(mockTasks)
   const [robots, setRobots] = useState(mockRobots)
   const [activeTab, setActiveTab] = useState('robots')
@@ -34,12 +37,50 @@ function App() {
   useEffect(() => {
     let isCancelled = false
 
+    async function loadTasksFromBackend() {
+      try {
+        const backendTasks = await getTasks()
+
+        if (isCancelled) return
+
+        setTasks(backendTasks)
+
+        setSelectedTaskId(currentTaskId => {
+          if (!currentTaskId) return null
+
+          const taskStillExists = backendTasks.some(
+            task => String(task.id) === String(currentTaskId)
+          )
+
+          return taskStillExists ? currentTaskId : null
+        })
+
+        console.log('Loaded tasks from backend:', backendTasks)
+      } catch (error) {
+        console.error('Failed to load tasks from backend. Using mock tasks.', error)
+      }
+    }
+
+    loadTasksFromBackend()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let isCancelled = false
+
     async function loadRoutesForTasks() {
       const routableTasks = tasks.filter(hasValidTaskRouteEndpoints)
 
       if (routableTasks.length === 0) {
-        setRoutesByTaskId({})
-        setRouteErrorsByTaskId({})
+        if (!isCancelled) {
+          setRoutesByTaskId({})
+          setRouteErrorsByTaskId({})
+          setIsLoadingRoutes(false)
+        }
+
         return
       }
 
@@ -126,7 +167,9 @@ function App() {
     setSelectedRobotId(robotId)
 
     if (robotId) {
-      const selectedRobot = robots.find(robot => String(robot.id) === String(robotId))
+      const selectedRobot = robots.find(
+        robot => String(robot.id) === String(robotId)
+      )
       const currentTaskId = getTaskIdFromRobot(selectedRobot)
 
       setActiveTab('robots')
@@ -147,19 +190,19 @@ function App() {
   }
 
   function handleAddTask(newTask) {
-    setTasks(prevTask => [...prevTask, newTask])
+    setTasks(prevTasks => [...prevTasks, newTask])
   }
 
   function handleAddRobot(newRobot) {
-    setRobots(prev => [...prev, newRobot])
+    setRobots(prevRobots => [...prevRobots, newRobot])
   }
 
   return (
-    <main className='dashboard'>
+    <main className="dashboard">
       <Topbar />
 
-      <Sidebar 
-        robots={robots} 
+      <Sidebar
+        robots={robots}
         tasks={tasks}
         selectedRobotId={selectedRobotId}
         selectedTaskId={selectedTaskId}
@@ -170,7 +213,7 @@ function App() {
         onAddTask={handleAddTask}
         onAddRobot={handleAddRobot}
       />
-    
+
       <LiveMap
         robots={robots}
         obstacles={mockObstacles}
