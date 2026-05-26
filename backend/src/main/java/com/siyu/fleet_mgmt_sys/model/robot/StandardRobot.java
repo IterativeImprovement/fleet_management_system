@@ -23,6 +23,6 @@ public class StandardRobot extends Robot {
 
     @Override
     public RobotType getType() {
-        return RobotType.STANDARD;
+        return StandardRobot.TYPE;
     }
 }

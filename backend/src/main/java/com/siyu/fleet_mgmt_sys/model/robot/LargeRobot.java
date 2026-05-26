@@ -24,6 +24,6 @@ public class LargeRobot extends Robot {
 
     @Override
     public RobotType getType() {
-        return RobotType.LARGE;
+        return LargeRobot.TYPE;
     }
 }
