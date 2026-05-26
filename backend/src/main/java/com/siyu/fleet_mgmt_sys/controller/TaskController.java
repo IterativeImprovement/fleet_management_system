@@ -2,7 +2,7 @@ package com.siyu.fleet_mgmt_sys.controller;
 
 import com.siyu.fleet_mgmt_sys.dto.TaskRequestDTO;
 import com.siyu.fleet_mgmt_sys.model.Task;
-import com.siyu.fleet_mgmt_sys.service.TaskService;
+import com.siyu.fleet_mgmt_sys.service.task.TaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -54,15 +54,27 @@ public class TaskController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity<Task> updateTask(@PathVariable Long id, @RequestBody TaskRequestDTO req) {
+        return ResponseEntity.ok(taskService.updateTask(id,req));
+    }
+
     @GetMapping // GET localhost:8080/task?startDateTime=after:2026-05-21T14:49:33
     public ResponseEntity<List<Task>> filterTask(
             @RequestParam(required = false) Integer priority,
             @RequestParam(required = false) String type,
+            @RequestParam(required = false) String status, // refer to RobotStatus for possible statuses
             @RequestParam(required = false) String timeLeft, // gte:Dxx:xx:xx:xx (days, hours, minutes, seconds)
             @RequestParam(required = false) String startDateTime, // after:D2026-05-21T14:49:33 / before / on
             @RequestParam(required = false) String completionDateTime
     ) // 2026-05-21T14:49:33
     {
-        return ResponseEntity.ok(taskService.filterTasks(priority, type, timeLeft, startDateTime, completionDateTime));
+        return ResponseEntity.ok(taskService.filterTasks(priority, type, status, timeLeft, startDateTime, completionDateTime));
+    }
+
+    @PatchMapping("/{id}/complete")
+    public ResponseEntity<Void> completeTask(@PathVariable Long id) {
+        taskService.completeTask(id);
+        return ResponseEntity.ok().build();
     }
 }

@@ -1,7 +1,8 @@
 package com.siyu.fleet_mgmt_sys.specification;
 
-import com.siyu.fleet_mgmt_sys.model.Robot;
+import com.siyu.fleet_mgmt_sys.model.enums.RobotStatus;
 import com.siyu.fleet_mgmt_sys.model.Task;
+import com.siyu.fleet_mgmt_sys.model.robot.Robot;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -12,7 +13,7 @@ import java.util.List;
 
 public class RobotSpecification {
     public static Specification<Robot> filter (
-            Integer status,
+            RobotStatus status,
             String type,
             List<Long> taskIds
             )

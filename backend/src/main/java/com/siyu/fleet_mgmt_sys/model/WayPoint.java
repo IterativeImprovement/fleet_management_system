@@ -23,9 +23,7 @@ public class WayPoint {
     private double latitude;
     private double longitude;
 
-    @ManyToOne
-    @JoinColumn(name = "route_id")
-    private RouteGeometry routeGeo;
+    private String routeGeo;
 
     public WayPoint(double latitude, double longitude) {
         this.latitude = latitude;

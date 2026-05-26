@@ -17,6 +17,7 @@ public class TaskSpecification {
     public static Specification<Task> filter(
             Integer priority,
             String type,
+            String status,
             String timeLeft,
             String startDateTime,
             String completionDateTime
@@ -32,6 +33,10 @@ public class TaskSpecification {
             // type
             if (type != null) {
                 predicates.add(cb.equal(root.get("type"), type));
+            }
+
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
             }
 
             // startDateTime — after: / before: / on:

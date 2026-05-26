@@ -2,10 +2,16 @@ package com.siyu.fleet_mgmt_sys.service;
 
 import com.siyu.fleet_mgmt_sys.dto.RobotRequestDTO;
 import com.siyu.fleet_mgmt_sys.exception.RobotNotFoundException;
-import com.siyu.fleet_mgmt_sys.model.LargeRobot;
-import com.siyu.fleet_mgmt_sys.model.Robot;
-import com.siyu.fleet_mgmt_sys.model.StandardRobot;
+import com.siyu.fleet_mgmt_sys.exception.TaskNotFoundException;
+import com.siyu.fleet_mgmt_sys.model.enums.RobotStatus;
+import com.siyu.fleet_mgmt_sys.model.Task;
+import com.siyu.fleet_mgmt_sys.model.enums.TaskStatus;
+import com.siyu.fleet_mgmt_sys.model.robot.LargeRobot;
+import com.siyu.fleet_mgmt_sys.model.robot.Robot;
+import com.siyu.fleet_mgmt_sys.model.robot.StandardRobot;
 import com.siyu.fleet_mgmt_sys.repository.RobotRepository;
+import com.siyu.fleet_mgmt_sys.repository.TaskRepository;
+import com.siyu.fleet_mgmt_sys.service.task.allocation.TaskAllocationService;
 import com.siyu.fleet_mgmt_sys.specification.RobotSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +22,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RobotService {
     private final RobotRepository robotRepository;
+    private final TaskRepository taskRepository;
+    private final TaskAllocationService allocationService;
 
     public Robot createRobot(RobotRequestDTO req) {
         Robot robot = switch (req.getType()) {
@@ -23,6 +31,12 @@ public class RobotService {
             case "Large" -> new LargeRobot(req.getName());
             default -> throw new IllegalArgumentException("Unknown robot type: " + req.getType());
         };
+
+        // initialises the robot with the given list of tasks
+        req.getTaskIdsToAdd().stream().map(id -> taskRepository.findById(id).orElseThrow(() -> new TaskNotFoundException(id)))
+                                .forEach(task -> allocationService.assign(robot, task, false));
+
+
 
         System.out.println("Robot created successfully!\n" + robot.toStringDetailed());
         return robotRepository.save(robot);
@@ -44,16 +58,71 @@ public class RobotService {
         System.out.println("Robot deleted successfully!\n" + robotString);
     }
 
-    public List<Robot> filterRobots(Integer status, String type, List<Long> taskIds) {
+    public Robot updateRobot(Long id, RobotRequestDTO req) {
+        Robot robot = robotRepository.findById(id)
+                .orElseThrow(() -> new RobotNotFoundException(id));
+
+        if (req.getName() != null) robot.setName(req.getName());
+
+        if (req.getTasksIdsToRemove() != null && !req.getTasksIdsToRemove().isEmpty()) {
+            req.getTasksIdsToRemove().forEach(taskId -> {
+                Task task = taskRepository.findById(taskId)
+                        .orElseThrow(() -> new TaskNotFoundException(taskId));
+
+                robot.getTasks().remove(task);
+
+                task.setRobot(null);
+                task.setStatus(TaskStatus.PENDING_ASSIGNMENT); // return to pool
+                taskRepository.save(task);
+            });
+        }
+
+        if (req.getTaskIdsToAdd() != null && !req.getTaskIdsToAdd().isEmpty()) {
+            req.getTaskIdsToAdd().forEach(taskId -> {
+                Task task = taskRepository.findById(taskId)
+                        .orElseThrow(() -> new TaskNotFoundException(taskId));
+
+                // add to robot's list
+                robot.getTasks().add(task);
+
+                // assign robot to task
+                task.setRobot(robot);
+                task.setStatus(TaskStatus.ASSIGNED);
+
+                taskRepository.save(task);
+            });
+        }
+
+        return robotRepository.save(robot);
+    }
+
+    public List<Robot> filterRobots(String status, String type, List<Long> taskIds) {
+        RobotStatus robotStatus = status != null ? RobotStatus.valueOf(status.toUpperCase()) : null; // convert to RobotStatus
+
         List<Robot> robots = robotRepository.findAll(
-                RobotSpecification.filter(status, type, taskIds)
+                RobotSpecification.filter(robotStatus, type, taskIds)
         );
 
         System.out.println("Retrieved filtered robots: " + robots);
         return robots;
     }
 
-    public void updateStatusAndPosition(Long robotId, Integer status, double lat, double lng) {
+    public void setToBase(Long robotId) {
+        Robot robot = robotRepository.findById(robotId)
+                .orElseThrow(() -> new RobotNotFoundException(robotId));
+
+        robot.setLatitude(robot.getBaseLatitude());
+        robot.setLongitude(robot.getBaseLongitude());
+        robot.setStatus(RobotStatus.IDLE);
+        robotRepository.save(robot);
+
+        // robot is idle at base - trigger allocation
+        allocationService.assignNextTask(robot);
+    }
+
+
+    // websocket
+    public void updateStatusAndPosition(Long robotId, RobotStatus status, double lat, double lng) {
         Robot robot = robotRepository.findById(robotId)
                 .orElseThrow(() -> new RobotNotFoundException(robotId));
 

@@ -1,5 +1,6 @@
-package com.siyu.fleet_mgmt_sys.model;
+package com.siyu.fleet_mgmt_sys.model.robot;
 
+import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 import lombok.Getter;
@@ -14,7 +15,11 @@ import lombok.Setter;
 public class StandardRobot extends Robot {
 
     public StandardRobot(String name) {
-        super("S" + name,"Standard", 10.0);
+        super("S" + name);
     }
+
+    public final static RobotType TYPE = RobotType.STANDARD;
+    public final static double SPEED = 10.0;
+    public final static int TYPE_INT = -1;
 
 }

@@ -2,7 +2,7 @@ package com.siyu.fleet_mgmt_sys.controller;
 
 import com.siyu.fleet_mgmt_sys.dto.RobotRequestDTO;
 import com.siyu.fleet_mgmt_sys.dto.RobotSimulationDTO;
-import com.siyu.fleet_mgmt_sys.model.Robot;
+import com.siyu.fleet_mgmt_sys.model.robot.Robot;
 import com.siyu.fleet_mgmt_sys.service.RobotService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.util.List;
+
 
 @RestController
 @RequestMapping("/robot")
@@ -35,9 +36,11 @@ public class RobotController {
 
     //body example (assuming DTO handles the specific subclass mapping via 'type')
     {
-        "name": "RoboCarrier-01",
-        "type": 1,
-        "speed": 1.5
+        "name": "Robot1",
+        "type": "Standard",
+        "status": "IDLE",
+        "tasksIdsToRemove": [],
+        "tasksIdsToAdd": []
     }
     */
 
@@ -52,18 +55,39 @@ public class RobotController {
         return ResponseEntity.noContent().build();
     }
 
+    /*
+    PATCH http://localhost:8080/robots/1
+
+    {
+        "name": "Robot A",
+        "taskIdsToAdd": [2, 3],
+        "taskIdsToRemove": [1]
+    }
+     */
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<Robot> updateRobot(@PathVariable Long id, @RequestBody RobotRequestDTO req) {
+        return ResponseEntity.ok(robotService.updateRobot(id, req));
+    }
+
     @GetMapping // GET localhost:8080/robots?taskIds=1&taskIds=2&taskIds=3
     public ResponseEntity<List<Robot>> filterRobots(
-            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) String status, // refer to RobotStatus for possible statuses
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) List<Long> taskIds
+            @RequestParam(required = false) List<Long> taskIds // finds all robots that are assigned these tasks
     ) {
         return ResponseEntity.ok(robotService.filterRobots(status, type, taskIds));
     }
 
+    @PatchMapping("/{id}/base")
+    public ResponseEntity<Void> setToBase(@PathVariable Long id) { // sets the location's robot to the base defined
+         robotService.setToBase(id);
+         return ResponseEntity.ok().build();
+         }
+
     // simulation logic, this connects to the websocket and it takes information about the robot's position from the frontend and updates it in the backend
-    @MessageMapping("/robots/{robotId}/position")
-    public void updatePosition(@DestinationVariable Long robotId, RobotSimulationDTO dto) {
-        robotService.updateStatusAndPosition(robotId, dto.getStatus(), dto.getLat(), dto.getLng());
+    @MessageMapping("/robot/{id}/update") //
+    public void updateStatusAndPosition(@DestinationVariable Long id, RobotSimulationDTO dto) {
+        robotService.updateStatusAndPosition(id, dto.getStatus(), dto.getLat(), dto.getLng());
     }
 }

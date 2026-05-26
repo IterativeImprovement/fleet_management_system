@@ -1,11 +1,16 @@
-package com.siyu.fleet_mgmt_sys.model;
+package com.siyu.fleet_mgmt_sys.model.robot;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.siyu.fleet_mgmt_sys.model.Cluster;
+import com.siyu.fleet_mgmt_sys.model.Task;
+import com.siyu.fleet_mgmt_sys.model.enums.RobotStatus;
+import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -16,45 +21,47 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 public abstract class Robot {
+
+    /* fields */
+
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     protected Long id;
 
     protected String name;
-    protected String type;
-    protected Integer status;
-    protected double speed; // speed in metres per second
+    protected RobotStatus status = RobotStatus.IDLE;
 
-    /* Status Codes
-    0: Idle and stationary, ready to pick up new tasks
-    1: Normal, moving
-    2: Executing a task (At task point)
-    5: Low battery, moving
-    9: Broken down, moving
-     */
+    protected RobotType TYPE = RobotType.UNINITIALISED;
+    protected double SPEED = 0.0; // speed in metres per second
 
-    @OneToOne(mappedBy = "robot", cascade = CascadeType.ALL)
-    protected Route route;
-
-    @OneToMany(mappedBy = "robot", cascade = CascadeType.ALL)
-    protected List<Task> tasks;
+    // for testing purposes, base is set at Harbourfront MRT station
+    // TODO: Allow user to set base latlng
+    protected double baseLatitude = 1.265389;
+    protected double baseLongitude = 103.821530;
 
     protected double latitude;
     protected double longitude;
 
-    protected Robot(String name, String type, double speed) {
+    public static int TOTAL_ROBOT_TYPES = 2; // number of types of robots
+
+    /* other entities */
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "robot", cascade = CascadeType.ALL)
+    protected List<Task> tasks; // tasks assigned to the robot
+
+    @ManyToOne
+    private Cluster currentCluster;
+
+    /* methods */
+
+    protected Robot(String name) {
         this.name = name;
-        this.type = type;
-        this.status = 0;
-        this.speed = speed;
-        this.route = null;
-        this.tasks = null;
-        this.latitude = 0;
-        this.longitude = 0;
     }
 
     public List<Task> getTasks() {
-        return this.tasks == null ? Collections.emptyList() : Collections.unmodifiableList(this.tasks); //immutable
+        if (this.tasks == null) this.tasks = new ArrayList<>();
+        return this.tasks;
     }
 
     public void setPosition(double latitude, double longitude) {
@@ -74,11 +81,10 @@ public abstract class Robot {
         return "Robot {" +
                 "\n  id: " + this.id +
                 "\n  name: " + name +
-                "\n  type: " + type +
+                "\n  type: " + TYPE +
                 "\n  status: " + status +
-                "\n  speed: " + speed +
+                "\n  speed: " + SPEED +
                 "\n latlong: {" + latitude + ", " + longitude + "}" +
-                "\n  route: " + (route != null ? route.getId() : "none") +
                 "\n  tasks: " + (tasks != null ? tasks.size() + " task(s)" : "none") +
                 "\n}";
     }
