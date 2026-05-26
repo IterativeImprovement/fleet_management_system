@@ -40,7 +40,37 @@ function LiveMap({
     routeLayerRef.current = L.layerGroup().addTo(mapRef.current)
     markerLayerRef.current = L.layerGroup().addTo(mapRef.current)
     obstacleLayerRef.current = L.layerGroup().addTo(mapRef.current)
+
+    requestAnimationFrame(() => {
+      mapRef.current?.invalidateSize()
+    })
   }, [])
+
+  useEffect(() => {
+    if (!mapContainerRef.current) return
+
+    const resizeMap = () => {
+      mapRef.current?.invalidateSize()
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      requestAnimationFrame(resizeMap)
+    })
+
+    resizeObserver.observe(mapContainerRef.current)
+    window.addEventListener('resize', resizeMap)
+
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', resizeMap)
+    }
+  }, [])
+
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      mapRef.current?.invalidateSize()
+    })
+  }, [selectedRobotId, selectedTaskId])
 
   useEffect(() => {
     if (!routeLayerRef.current) return
@@ -182,8 +212,8 @@ function LiveMap({
         </div>
       </div>
 
-      <div className="map-canvas" style={{ height: '600px', width: '100%' }}>
-        <div ref={mapContainerRef} style={{ height: '100%', width: '100%' }} />
+      <div className="map-canvas">
+        <div ref={mapContainerRef} className='leaflet-map' />
       </div>
     </section>
   )
