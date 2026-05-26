@@ -20,6 +20,9 @@ public class StandardRobot extends Robot {
 
     public final static RobotType TYPE = RobotType.STANDARD;
     public final static double SPEED = 10.0;
-    public final static int TYPE_INT = -1;
 
+    @Override
+    public RobotType getType() {
+        return RobotType.STANDARD;
+    }
 }

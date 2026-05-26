@@ -21,6 +21,9 @@ public class LargeRobot extends Robot {
 
     public final static RobotType TYPE = RobotType.LARGE;
     public final static double SPEED = 5.0;
-    public final static int TYPE_INT = -1;
 
+    @Override
+    public RobotType getType() {
+        return RobotType.LARGE;
+    }
 }

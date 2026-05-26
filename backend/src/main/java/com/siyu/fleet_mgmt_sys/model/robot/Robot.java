@@ -59,6 +59,10 @@ public abstract class Robot {
         this.name = name;
     }
 
+    public RobotType getType() {
+        return RobotType.UNINITIALISED;
+    }
+
     public List<Task> getTasks() {
         if (this.tasks == null) this.tasks = new ArrayList<>();
         return this.tasks;
