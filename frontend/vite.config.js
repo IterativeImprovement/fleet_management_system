@@ -25,7 +25,13 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+
+      // for robot
+      '/robot': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 })
-

@@ -13,6 +13,7 @@ import LiveMap from './components/LiveMap'
 import AlertLog from './components/AlertLog'
 
 import { getTasks, createTaskInBackend } from './api/taskApi'
+import { getRobots, createRobotInBackend } from './api/robotApi'
 import { getRouteGeometry } from './api/routeApi'
 import {
   decodePolyline,
@@ -33,6 +34,40 @@ function App() {
   const [routeErrorsByTaskId, setRouteErrorsByTaskId] = useState({})
   const [isLoadingRoutes, setIsLoadingRoutes] = useState(false)
   const routeCacheRef = useRef({})
+
+  useEffect(() => {
+    let isCancelled = false
+
+    async function loadRobotsFromBackend() {
+      try {
+        const backendRobots = await getRobots()
+
+        if (isCancelled) return
+
+        setRobots(backendRobots)
+
+        setSelectedRobotId(currentRobotId => {
+          if (!currentRobotId) return null
+
+          const robotStillExists = backendRobots.some(
+            robot => String(robot.id) === String(currentRobotId)
+          )
+
+          return robotStillExists ? currentRobotId : null
+        })
+
+        console.log('Loaded robots from backend:', backendRobots)
+      } catch (error) {
+        console.error('Failed to load robots from backend. Using mock robots.', error)
+      }
+    }
+
+    loadRobotsFromBackend()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     let isCancelled = false
@@ -221,8 +256,19 @@ function App() {
     }
   }
 
-  function handleAddRobot(newRobot) {
-    setRobots(prevRobots => [...prevRobots, newRobot])
+  async function handleAddRobot(newRobot) {
+    const savedRobot = await createRobotInBackend(newRobot)
+
+    setRobots(prevRobots => [
+      ...prevRobots.filter(robot => String(robot.id) !== String(savedRobot.id)),
+      savedRobot,
+    ])
+    setSelectedRobotId(savedRobot.id)
+    setActiveTab('robots')
+
+    console.log('Created robot in backend:', savedRobot)
+
+    return savedRobot
   }
 
   return (

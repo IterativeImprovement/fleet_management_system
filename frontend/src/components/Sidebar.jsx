@@ -103,10 +103,11 @@ function Sidebar({
             {isAddingRobot ? (
               <AddRobotForm
                 robots={robots}
-                onAddRobot={(newRobot) => {
-                  onAddRobot(newRobot)
+                onAddRobot={async (newRobot) => {
+                  const savedRobot = await onAddRobot(newRobot)
                   setIsAddingRobot(false)
-                  onSelectRobot(newRobot.id)
+                  onSelectRobot(savedRobot.id)
+                  return savedRobot
                 }}
                 onCancel={() => setIsAddingRobot(false)}
               />

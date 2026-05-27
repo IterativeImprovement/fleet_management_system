@@ -5,8 +5,9 @@ function AddRobotForm({ robots = [], onAddRobot, onCancel }) {
   const [name, setName] = useState('')
   const [type, setType] = useState('STANDARD')
   const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
 
     const trimmedName = name.trim()
@@ -37,11 +38,18 @@ function AddRobotForm({ robots = [], onAddRobot, onCancel }) {
       path: [],
     })
 
-    onAddRobot(newRobot)
+    try {
+      setIsSubmitting(true)
+      await onAddRobot(newRobot)
 
-    setName('')
-    setType('STANDARD')
-    setError('')
+      setName('')
+      setType('STANDARD')
+      setError('')
+    } catch (submitError) {
+      setError(submitError.message || 'Failed to add robot')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -53,6 +61,7 @@ function AddRobotForm({ robots = [], onAddRobot, onCancel }) {
         <input
           type="text"
           value={name}
+          disabled={isSubmitting}
           onChange={event => {
             setName(event.target.value)
             setError('')
@@ -66,6 +75,7 @@ function AddRobotForm({ robots = [], onAddRobot, onCancel }) {
         Type
         <select
           value={type}
+          disabled={isSubmitting}
           onChange={event => setType(event.target.value)}
         >
           <option value="STANDARD">Standard</option>
@@ -76,12 +86,12 @@ function AddRobotForm({ robots = [], onAddRobot, onCancel }) {
       {error && <p className="form-error">{error}</p>}
 
       <div className="form-actions">
-        <button type="button" onClick={onCancel}>
+        <button type="button" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </button>
 
-        <button type="submit">
-          Add Robot
+        <button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Adding...' : 'Add Robot'}
         </button>
       </div>
     </form>
