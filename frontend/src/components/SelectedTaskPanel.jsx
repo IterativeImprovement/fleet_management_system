@@ -57,6 +57,13 @@ function SelectedTaskPanel({ task, assignedRobot, onBack, onViewRobot }) {
           <strong>{task.id}</strong>
         </div>
 
+        {task.isLocalOnly && (
+          <div className="task-sync-warning">
+            This task is only saved in the frontend. Backend create failed
+            {task.syncError ? `: ${task.syncError}` : '.'}
+          </div>
+        )}
+
         <div className="task-detail-row">
           <span>Status:</span>
           <strong>

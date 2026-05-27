@@ -14,7 +14,7 @@ function parseWayPoint(value) {
 function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [type, setType] = useState('StandardTransport')
+  const [type, setType] = useState('STANDARD')
   const [priority, setPriority] = useState(2)
   const [startDateTime, setStartDateTime] = useState('')
   const [completionDateTime, setCompletionDateTime] = useState('')
@@ -22,6 +22,7 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
   const [endWayPointStr, setEndWayPointStr] = useState('')
   const [dependencyId, setDependencyId] = useState('')
   const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   function isValidWayPoint(value) {
     const parts = value.split(',')
@@ -39,7 +40,7 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
     return value.length === 16 ? `${value}:00` : value
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
 
     const trimmedName = name.trim()
@@ -96,18 +97,25 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
       tasks: dependencyTasks,
     })
 
-    onAddTask(newTask)
+    try {
+      setIsSubmitting(true)
+      await onAddTask(newTask)
 
-    setName('')
-    setDescription('')
-    setType('StandardTransport')
-    setPriority(2)
-    setStartDateTime('')
-    setCompletionDateTime('')
-    setStartWayPointStr('')
-    setEndWayPointStr('')
-    setDependencyId('')
-    setError('')
+      setName('')
+      setDescription('')
+      setType('STANDARD')
+      setPriority(2)
+      setStartDateTime('')
+      setCompletionDateTime('')
+      setStartWayPointStr('')
+      setEndWayPointStr('')
+      setDependencyId('')
+      setError('')
+    } catch (submitError) {
+      setError(submitError.message || 'Failed to add task')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -144,16 +152,17 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
 
       <label>
         Type
-        <input
-          type="text"
+        <select
           value={type}
           onChange={event => {
             setType(event.target.value)
             setError('')
           }}
-          placeholder="StandardTransport"
           required
-        />
+        >
+          <option value="STANDARD">Standard</option>
+          <option value="LARGE">Large</option>
+        </select>
       </label>
 
       <label>
@@ -241,12 +250,12 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
       {error && <p className="form-error">{error}</p>}
 
       <div className="form-actions">
-        <button type="button" onClick={onCancel}>
+        <button type="button" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </button>
 
-        <button type="submit">
-          Add Task
+        <button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Adding...' : 'Add Task'}
         </button>
       </div>
     </form>

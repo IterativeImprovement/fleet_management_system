@@ -193,13 +193,31 @@ function App() {
     try {
       const savedTask = await createTaskInBackend(newTask)
 
-      setTasks(prevTasks => [...prevTasks, savedTask])
+      setTasks(prevTasks => [
+        ...prevTasks.filter(task => String(task.id) !== String(savedTask.id)),
+        savedTask,
+      ])
       setSelectedTaskId(savedTask.id)
       setActiveTab('tasks')
 
       console.log('Created task in backend:', savedTask)
+
+      return savedTask
     } catch (error) {
       console.error('Failed to create task in backend:', error)
+
+      const localTask = {
+        ...newTask,
+        id: `local-${Date.now()}`,
+        isLocalOnly: true,
+        syncError: error.message,
+      }
+
+      setTasks(prevTasks => [...prevTasks, localTask])
+      setSelectedTaskId(localTask.id)
+      setActiveTab('tasks')
+
+      return localTask
     }
   }
 

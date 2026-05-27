@@ -152,10 +152,13 @@ function Sidebar({
           {isAddingTask ? (
             <AddTaskForm
               tasks={tasks}
-              onAddTask={(newTask) => {
-                onAddTask(newTask)
+              onAddTask={async (newTask) => {
+                const savedTask = await onAddTask(newTask)
+
                 setIsAddingTask(false)
-                onSelectTask(newTask.id)
+                onSelectTask(savedTask.id)
+
+                return savedTask
               }}
               onCancel={() => setIsAddingTask(false)}
             />

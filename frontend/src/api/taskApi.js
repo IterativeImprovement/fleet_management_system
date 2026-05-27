@@ -17,13 +17,14 @@ function normaliseTaskFromBackend(task) {
     priority: Number(task.priority),
     name: task.name ?? '',
     description: task.description ?? '',
-    type: task.type ?? 'StandardTransport',
+    type: task.type ?? 'STANDARD',
+    status: task.status ?? 'PENDING_ASSIGNMENT',
     startDateTime: task.startDateTime ?? '',
     completionDateTime: task.completionDateTime ?? '',
     startWayPoint: task.startWayPoint ?? null,
     endWayPoint: task.endWayPoint ?? null,
     robot: task.robot ?? null,
-    tasks: task.tasks ?? [],
+    dependencies: task.dependencies ?? task.tasks ?? [],
   })
 }
 
@@ -50,20 +51,53 @@ export async function getTasks() {
 }
 
 function wayPointToString(wayPoint) {
-  return `${wayPoint.latitude},${wayPoint.longitude}`
+  if (!wayPoint) {
+    throw new Error('Task waypoint is missing')
+  }
+
+  const latitude = Number(wayPoint.latitude)
+  const longitude = Number(wayPoint.longitude)
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    throw new Error('Task waypoint must contain valid latitude and longitude')
+  }
+
+  return `${latitude},${longitude}`
+}
+
+function getDependencyIds(task) {
+  const dependencies = task.dependencies ?? task.tasks ?? []
+
+  return dependencies
+    .map(dependency =>
+      typeof dependency === 'object' ? dependency.id : dependency
+    )
+    .filter(id => id !== null && id !== undefined && id !== '')
+    .map(Number)
+    .filter(Number.isFinite)
+}
+
+function normaliseTaskTypeForBackend(type) {
+  const value = String(type || 'STANDARD').trim().toUpperCase()
+
+  if (value === 'STANDARDTRANSPORT') return 'STANDARD'
+  if (value === 'STANDARD') return 'STANDARD'
+  if (value === 'LARGE') return 'LARGE'
+
+  return value
 }
 
 function taskToCreateRequest(task) {
   return {
     name: task.name,
     description: task.description,
-    type: task.type,
+    type: normaliseTaskTypeForBackend(task.type),
     priority: task.priority,
     startDateTime: task.startDateTime,
     completionDateTime: task.completionDateTime,
     startWayPointStr: wayPointToString(task.startWayPoint),
     endWayPointStr: wayPointToString(task.endWayPoint),
-    tasks: task.tasks ?? [],
+    dependencyIds: getDependencyIds(task),
   }
 }
 
