@@ -1,12 +1,12 @@
-import { getRobotStatusLabel, getRobotStatusType } from '../utils/robotUtils'
+import {
+  getRobotStatusLabel,
+  getRobotStatusType,
+  getRobotTypeLabel,
+} from '../utils/robotUtils'
 
 function RobotRow({ robot, isSelected, onSelectRobot }) {
-  const batteryDisplay =
-    robot.battery === null || robot.battery === undefined
-      ? '—'
-      : `${robot.battery}%`
-
   const statusType = getRobotStatusType(robot.status)
+  const statusLabel = getRobotStatusLabel(robot.status)
 
   return (
     <div
@@ -18,11 +18,13 @@ function RobotRow({ robot, isSelected, onSelectRobot }) {
 
         <div className="robot-info">
           <h3>{robot.name || `Robot ${robot.id}`}</h3>
-          <p>{getRobotStatusLabel(robot.status)}</p>
+          <p>{getRobotTypeLabel(robot.type)}</p>
         </div>
       </div>
 
-      <span className="robot-battery">{batteryDisplay}</span>
+      <span className={`robot-status-pill ${statusType}`}>
+        {statusLabel}
+      </span>
     </div>
   )
 }

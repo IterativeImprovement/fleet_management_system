@@ -1,4 +1,8 @@
-import { getPriorityType } from '../utils/taskUtils'
+import {
+  getPriorityType,
+  getTaskStatusLabel,
+  getTaskStatusType,
+} from '../utils/taskUtils'
 
 function formatWaypoint(wayPoint) {
   if (!wayPoint) return '-'
@@ -10,7 +14,22 @@ function formatDateTime(dateTime) {
   return dateTime.replace('T', ' ')
 }
 
+function getDependencies(task) {
+  return task.dependencies || task.tasks || []
+}
+
+function formatDependency(dependency) {
+  if (typeof dependency === 'object') {
+    return dependency.name || `Task ${dependency.id}`
+  }
+
+  return `Task ${dependency}`
+}
+
 function SelectedTaskPanel({ task, assignedRobot, onBack, onViewRobot }) {
+  const statusType = getTaskStatusType(task.status)
+  const dependencies = getDependencies(task)
+
   return (
     <div className="selected-task-panel">
       <button className="back-button" onClick={onBack}>
@@ -36,6 +55,15 @@ function SelectedTaskPanel({ task, assignedRobot, onBack, onViewRobot }) {
         <div className="task-detail-row">
           <span>Task ID:</span>
           <strong>{task.id}</strong>
+        </div>
+
+        <div className="task-detail-row">
+          <span>Status:</span>
+          <strong>
+            <span className={`task-status-pill ${statusType}`}>
+              {getTaskStatusLabel(task.status)}
+            </span>
+          </strong>
         </div>
 
         <div className="task-detail-row">
@@ -69,6 +97,15 @@ function SelectedTaskPanel({ task, assignedRobot, onBack, onViewRobot }) {
             {assignedRobot
               ? assignedRobot.name || `Robot ${assignedRobot.id}`
               : 'Unassigned'}
+          </strong>
+        </div>
+
+        <div className="task-detail-row">
+          <span>Dependencies:</span>
+          <strong>
+            {dependencies.length > 0
+              ? dependencies.map(formatDependency).join(', ')
+              : 'None'}
           </strong>
         </div>
 

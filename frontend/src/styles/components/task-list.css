@@ -59,7 +59,12 @@
 
 .task-status {
   margin: 0;
-  text-align: right;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+
   font-size: 15px;
   letter-spacing: 0.5px;
   color: #111827;
@@ -68,6 +73,54 @@
   overflow: visible;
   text-overflow: unset;
   word-break: break-word;
+}
+
+.task-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.task-status-pill.pending {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.task-status-pill.assigned {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+
+.task-status-pill.waiting {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.task-status-pill.in-progress {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.task-status-pill.completed {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+.task-status-pill.error {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.task-status-pill.unknown {
+  background-color: #e5e7eb;
+  color: #374151;
 }
 
 .task-priority {

@@ -3,7 +3,7 @@ import { createRobot } from '../utils/robotUtils'
 
 function AddRobotForm({ robots = [], onAddRobot, onCancel }) {
   const [name, setName] = useState('')
-  const [type, setType] = useState(0)
+  const [type, setType] = useState('STANDARD')
   const [error, setError] = useState('')
 
   function handleSubmit(event) {
@@ -28,7 +28,8 @@ function AddRobotForm({ robots = [], onAddRobot, onCancel }) {
     const newRobot = createRobot({
       id: Date.now(),
       name: trimmedName,
-      type: Number(type),
+      type,
+      status: 'IDLE',
       route: null,
       tasks: [],
       x: null,
@@ -39,7 +40,7 @@ function AddRobotForm({ robots = [], onAddRobot, onCancel }) {
     onAddRobot(newRobot)
 
     setName('')
-    setType(0)
+    setType('STANDARD')
     setError('')
   }
 
@@ -65,9 +66,10 @@ function AddRobotForm({ robots = [], onAddRobot, onCancel }) {
         Type
         <select
           value={type}
-          onChange={event => setType(Number(event.target.value))}
+          onChange={event => setType(event.target.value)}
         >
-          <option value={0}>Standard</option>
+          <option value="STANDARD">Standard</option>
+          <option value="LARGE">Large</option>
         </select>
       </label>
 

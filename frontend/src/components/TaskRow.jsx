@@ -1,6 +1,14 @@
-import { getPriorityType } from "../utils/taskUtils"
+import {
+  getPriorityType,
+  getTaskStatusLabel,
+  getTaskStatusType,
+} from '../utils/taskUtils'
 
 function TaskRow({ task, isSelected, onSelectTask }) {
+  const statusType = getTaskStatusType(task.status)
+  const statusLabel = getTaskStatusLabel(task.status)
+  const assignedRobotName = task.robot?.name || task.robot?.id
+
   return (
     <div
       className={`task-row ${isSelected ? 'selected' : ''}`}
@@ -19,9 +27,15 @@ function TaskRow({ task, isSelected, onSelectTask }) {
       </p>
 
       <p className="task-status">
-        {task.robot
-          ? `Assigned to Robot ${task.robot.id}`
-          : 'Unassigned'}
+        <span className={`task-status-pill ${statusType}`}>
+          {statusLabel}
+        </span>
+
+        {assignedRobotName && (
+          <span>
+            Assigned to {assignedRobotName}
+          </span>
+        )}
       </p>
     </div>
   )

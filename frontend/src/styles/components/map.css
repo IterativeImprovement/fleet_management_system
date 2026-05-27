@@ -267,23 +267,28 @@
 }
 
 .robot-marker.moving {
-  stroke: #2563eb;
-  fill: #0a84ff;
-}
-
-.robot-marker.executing {
   stroke: #15803d;
   fill: #22c55e;
 }
 
-.robot-marker.low-battery {
+.robot-marker.assigned {
+  stroke: #1d4ed8;
+  fill: #3b82f6;
+}
+
+.robot-marker.charging {
   stroke: #b45309;
   fill: #f59e0b;
 }
 
-.robot-marker.broken-down {
+.robot-marker.maintenance {
+  stroke: #c2410c;
+  fill: #f97316;
+}
+
+.robot-marker.error {
   stroke: #b91c1c;
-  fill: #dc2626;
+  fill: #ef4444;
 }
 
 .robot-marker.unknown {

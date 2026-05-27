@@ -42,19 +42,23 @@
 }
 
 .robot-dot.moving {
-  background-color: #0a84ff;
-}
-
-.robot-dot.executing {
   background-color: #22c55e;
 }
 
-.robot-dot.low-battery {
+.robot-dot.assigned {
+  background-color: #3b82f6;
+}
+
+.robot-dot.charging {
   background-color: #f59e0b;
 }
 
-.robot-dot.broken-down {
-  background-color: #dc2626;
+.robot-dot.maintenance {
+  background-color: #f97316;
+}
+
+.robot-dot.error {
+  background-color: #ef4444;
 }
 
 .robot-dot.unknown {
@@ -80,8 +84,45 @@
   color: #6b7290;
 }
 
-.robot-battery {
-  font-size: 20px;
-  font-weight: 500;
-  color: #000000;
+.robot-status-pill {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.robot-status-pill.idle {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.robot-status-pill.assigned {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+
+.robot-status-pill.moving {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.robot-status-pill.charging {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.robot-status-pill.maintenance {
+  background-color: #ffedd5;
+  color: #c2410c;
+}
+
+.robot-status-pill.error {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.robot-status-pill.unknown {
+  background-color: #e5e7eb;
+  color: #374151;
 }

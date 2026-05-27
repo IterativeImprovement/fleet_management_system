@@ -1,14 +1,50 @@
-import { getRobotStatusLabel, getRobotStatusType } from '../utils/robotUtils'
+import {
+  getRobotStatusLabel,
+  getRobotStatusType,
+  getRobotTypeLabel,
+} from '../utils/robotUtils'
 
-function SelectedRobotPanel({ robot, onBack, onSelectTask }) {
-  const batteryDisplay =
-    robot.battery === null || robot.battery === undefined
-      ? 'Not available'
-      : `${robot.battery}%`
+function getTaskId(task) {
+  return typeof task === 'object' ? task.id : task
+}
 
+function formatWaypoint(wayPoint) {
+  if (!wayPoint) return null
+
+  return `${wayPoint.latitude}, ${wayPoint.longitude}`
+}
+
+function formatTaskRoute(task) {
+  const start = formatWaypoint(task?.startWayPoint)
+  const end = formatWaypoint(task?.endWayPoint)
+
+  if (!start || !end) return 'None'
+
+  return `${start} -> ${end}`
+}
+
+function getAssignedTasks(robot, tasks) {
+  const robotTaskIds = robot.tasks?.map(getTaskId) || []
+
+  const assignedFromTaskList = tasks.filter(task => {
+    const taskRobotId = task.robot?.id
+    const taskIsInRobotList = robotTaskIds.some(
+      taskId => String(taskId) === String(task.id)
+    )
+
+    return String(taskRobotId) === String(robot.id) || taskIsInRobotList
+  })
+
+  if (assignedFromTaskList.length > 0) return assignedFromTaskList
+
+  return robot.tasks || []
+}
+
+function SelectedRobotPanel({ robot, tasks = [], onBack, onSelectTask }) {
   const statusType = getRobotStatusType(robot.status)
   const statusLabel = getRobotStatusLabel(robot.status)
-  const currentTask = robot.tasks?.[0]
+  const assignedTasks = getAssignedTasks(robot, tasks)
+  const currentTask = assignedTasks[0]
 
   return (
     <div className="selected-robot-panel">
@@ -37,17 +73,12 @@ function SelectedRobotPanel({ robot, onBack, onSelectTask }) {
 
         <div className="robot-detail-row">
           <span>Type:</span>
-          <strong>{robot.type === 0 ? 'Standard' : 'Unknown'}</strong>
+          <strong>{getRobotTypeLabel(robot.type)}</strong>
         </div>
 
         <div className="robot-detail-row">
           <span>Speed:</span>
           <strong>{robot.speed} m/s</strong>
-        </div>
-
-        <div className="robot-detail-row">
-          <span>Battery:</span>
-          <strong>{batteryDisplay}</strong>
         </div>
 
         <div className="robot-detail-row">
@@ -68,20 +99,12 @@ function SelectedRobotPanel({ robot, onBack, onSelectTask }) {
 
         <div className="robot-detail-row">
           <span>Assigned Tasks:</span>
-          <strong>{robot.tasks?.length || 0}</strong>
+          <strong>{assignedTasks.length}</strong>
         </div>
 
         <div className="robot-detail-row">
           <span>Current Route:</span>
-          <strong>
-            {!robot.route
-              ? 'None'
-              : typeof robot.route === 'string'
-                ? robot.route
-                : robot.route.id
-                  ? `Route ${robot.route.id}`
-                  : 'Assigned'}
-          </strong>
+          <strong>{formatTaskRoute(currentTask)}</strong>
         </div>
       </div>
 

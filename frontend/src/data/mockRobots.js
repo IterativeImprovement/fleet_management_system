@@ -4,8 +4,8 @@ export const mockRobots = [
   createRobot({
     id: 1,
     name: 'R-001',
-    type: 0,
-    status: 1,
+    type: 'STANDARD',
+    status: 'ASSIGNED',
     speed: 10.0,
     battery: 87,
     x: 103.8551,
@@ -25,8 +25,8 @@ export const mockRobots = [
   createRobot({
     id: 2,
     name: 'R-002',
-    type: 0,
-    status: 5,
+    type: 'STANDARD',
+    status: 'CHARGING',
     speed: 0.0,
     battery: 76,
     x: 103.8450,
@@ -43,8 +43,8 @@ export const mockRobots = [
   createRobot({
     id: 3,
     name: 'R-003',
-    type: 0,
-    status: 9,
+    type: 'STANDARD',
+    status: 'ERROR',
     speed: 0.0,
     battery: 67,
     x: 103.8218,

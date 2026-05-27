@@ -77,6 +77,7 @@ function Sidebar({
         selectedRobot ? (
           <SelectedRobotPanel
             robot={selectedRobot}
+            tasks={tasks}
             onBack={() => {
               onSelectRobot(null)
               onSelectTask(null)
