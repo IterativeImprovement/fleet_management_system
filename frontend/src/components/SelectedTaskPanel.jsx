@@ -111,12 +111,17 @@ function SelectedTaskPanel({ task, assignedRobot, onBack, onViewRobot }) {
 
         {assignedRobot && (
           <button
+            type="button"
             className="primary-action"
             onClick={() => onViewRobot(assignedRobot.id)}
           >
             View Assigned Robot
           </button>
         )}
+
+        <button type="button" className="delete-task-button">
+          Delete Task
+        </button>
       </div>
     </div>
   )
