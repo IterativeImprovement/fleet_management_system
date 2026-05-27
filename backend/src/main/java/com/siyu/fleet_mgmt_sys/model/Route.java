@@ -1,12 +1,12 @@
 package com.siyu.fleet_mgmt_sys.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
+import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.Map;
 
 @Entity
 @Table(name = "routes")
@@ -15,11 +15,17 @@ import lombok.Setter;
 @NoArgsConstructor
 public class Route {
     @Id
+    @GeneratedValue
     private Long id;
 
-    @OneToOne
-    private Robot robot;
+    private String routeGeo;
 
     @OneToOne
-    private RouteGeometry routeGeo;
+    private Task task;
+
+    private int totalDistance; // in metres
+
+    @ElementCollection
+    @MapKeyEnumerated(EnumType.STRING)
+    private Map<RobotType, Double> estimatedTimes; // estimated time of in seconds, array of different robots' estimated times
 }

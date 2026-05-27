@@ -18,6 +18,9 @@ target/
 *.iws
 *.iml
 *.ipr
+workspace.xml
+workspace.globals.yaml
+resources.yaml
 
 ### NetBeans ###
 /nbproject/private/

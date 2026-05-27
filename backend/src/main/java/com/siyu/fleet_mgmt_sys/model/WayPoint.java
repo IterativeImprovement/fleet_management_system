@@ -12,19 +12,18 @@ import lombok.Setter;
 @NoArgsConstructor
 public class WayPoint {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "waypoint_seq")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "waypoint_seq") // this is for efficiency purposes
     @SequenceGenerator(
             name = "waypoint_seq",
             sequenceName = "waypoint_seq",
             allocationSize = 50
     )
     private long id;
-    private double longitude;
-    private double latitude;
 
-    @ManyToOne
-    @JoinColumn(name = "route_id")
-    private RouteGeometry routeGeo;
+    private double latitude;
+    private double longitude;
+
+    private String routeGeo;
 
     public WayPoint(double latitude, double longitude) {
         this.latitude = latitude;

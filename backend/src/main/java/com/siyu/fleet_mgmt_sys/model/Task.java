@@ -1,5 +1,9 @@
 package com.siyu.fleet_mgmt_sys.model;
 
+import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
+import com.siyu.fleet_mgmt_sys.model.enums.TaskStatus;
+import com.siyu.fleet_mgmt_sys.model.enums.TaskType;
+import com.siyu.fleet_mgmt_sys.model.robot.Robot;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -8,15 +12,19 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "tasks")
 @Getter
 @Setter
 @NoArgsConstructor
-// it is assumed that the only possible null field is robot
 public class Task {
+
+    /* fields */
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @NonNull
@@ -29,10 +37,21 @@ public class Task {
     @NonNull
     private String description;
 
-    private String type;
+    private TaskType type;
 
     private LocalDateTime startDateTime;
     private LocalDateTime completionDateTime;
+
+    @ElementCollection
+    @MapKeyEnumerated(EnumType.STRING)
+    private Map<RobotType, Double> calculatedPriorities = new HashMap<>();
+
+    private TaskStatus status;
+
+    /* other entities */
+
+    @OneToOne(cascade = CascadeType.ALL)
+    private Route route;
 
     @OneToOne
     @JoinColumn(name = "start_waypoint_id")
@@ -54,10 +73,22 @@ public class Task {
             joinColumns = @JoinColumn(name = "task_id"),
             inverseJoinColumns = @JoinColumn(name = "dependency_id")
     )
-    private List<Task> tasks = new ArrayList<>();
+    private List<Task> dependencies = new ArrayList<>();
 
-    public void setTasks(List<Task> tasks) {
-        this.tasks = tasks != null ? tasks : new ArrayList<>();
+    @ManyToOne
+    private Cluster startCluster;
+
+    @ManyToOne
+    private Cluster endCluster;
+
+    /* methods */
+
+    public void setDependencies(List<Task> tasks) {
+        this.dependencies = tasks != null ? tasks : new ArrayList<>();
+    }
+
+    public double getPriorityFor(RobotType robotType) {
+        return this.calculatedPriorities.get(robotType);
     }
 
     @Override
@@ -77,7 +108,7 @@ public class Task {
                 "  startWayPoint: " + (startWayPoint != null ? startWayPoint.toString() : "null") + "\n" +
                 "  endWayPoint: " + (endWayPoint != null ? endWayPoint.toString() : "null") + "\n" +
                 "  robot: " + (robot != null ? robot.toString() : "null") + "\n" +
-                "  dependencies:  " + tasks.toString() +
+                "  dependencies:  " + dependencies.toString() +
                 "}";
     }
 }
