@@ -36,7 +36,8 @@ public class TaskAllocationService {
         // step 1: look for the top task in the local cluster first
         Task bestTask = getTopTaskForRobot(robot, robotCluster);
 
-        // step 2: if nothing local, scan adjacent clusters for their top tasks
+        // step 2: if nothing local, scan adjacent clusters for their top tasks4
+        // TODO: Change to limited scale BFS to scan for a reasonably large area 
         if (bestTask == null) {
             bestTask = robotCluster.getAdjacentClusters().stream()
                     .map(c -> getTopTaskForRobot(robot, c))
@@ -47,7 +48,7 @@ public class TaskAllocationService {
 
         if (bestTask != null) {
             assign(robot, bestTask, false);
-            clusterService.refreshTopTasks(bestTask.getStartCluster());
+            clusterService.refreshTopTasks(bestTask.getStartCluster().getId());
         }
         // else robot stays idle, will retry when a new task is submitted
     }

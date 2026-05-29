@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -18,7 +19,7 @@ public class TaskRequestDTO {
     private LocalDateTime completionDateTime;
     private String startWayPointStr;  // "1.3081,103.8551"
     private String endWayPointStr;    // "1.2739,103.8012"
-    private List<Long> dependencyIds;
+    private List<Long> dependencyIds = new ArrayList<>();;
 }
 
 

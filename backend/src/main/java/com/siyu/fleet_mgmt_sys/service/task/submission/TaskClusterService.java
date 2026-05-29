@@ -1,16 +1,19 @@
 package com.siyu.fleet_mgmt_sys.service.task.submission;
 
+import com.siyu.fleet_mgmt_sys.exception.ClusterNotFoundException;
 import com.siyu.fleet_mgmt_sys.model.Cluster;
 import com.siyu.fleet_mgmt_sys.model.Task;
 import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
 import com.siyu.fleet_mgmt_sys.model.enums.TaskStatus;
 import com.siyu.fleet_mgmt_sys.repository.TaskClusterRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /*
 
@@ -26,6 +29,7 @@ public class TaskClusterService { // this service clusters tasks that are close 
 
     private final TaskClusterRepository clusterRepository;
 
+    @Transactional
     public void assignCluster(Task task) {
         assignPointToCluster(task, true);  // cluster the start point
         assignPointToCluster(task, false); // cluster the end point
@@ -114,7 +118,7 @@ public class TaskClusterService { // this service clusters tasks that are close 
                         newCluster.getCentroidLat(), newCluster.getCentroidLng(),
                         c.getCentroidLat(), c.getCentroidLng()
                 ) < ADJACENCY_THRESHOLD_METRES)
-                .toList();
+                .collect(Collectors.toList());
 
         newCluster.setAdjacentClusters(adjacent);
 
@@ -127,7 +131,11 @@ public class TaskClusterService { // this service clusters tasks that are close 
         clusterRepository.save(newCluster);
     }
 
-    public void refreshTopTasks(Cluster cluster) { // updates the top task of each cluster
+    @Transactional
+    public void refreshTopTasks(Long clusterId) { // updates the top task of each cluster
+        Cluster cluster = clusterRepository.findById(clusterId).orElseThrow(
+                () -> new ClusterNotFoundException(clusterId)
+        );
         List<Task> pending = cluster.getStartTasks().stream() // only tasks that start in this cluster will be considered
                 .filter(t -> t.getStatus() == TaskStatus.PENDING_ASSIGNMENT) // retrieves pending tasks
                 .toList();

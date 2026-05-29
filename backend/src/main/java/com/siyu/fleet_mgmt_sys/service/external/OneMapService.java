@@ -56,12 +56,7 @@ public class OneMapService {
     @Nullable
     private OneMapRouteResponseDTO getOneMapRouteResponseDTO(WayPoint startWp, WayPoint endWp) {
         String url = "https://www.onemap.gov.sg/api/public/routingsvc/route" +
-                "?date=06-06-2026" +
-                "&mode=TRANSIT" +
-                "&maxWalkDistance=0" + // no walking!
-                "&numItineraries=3" + // number of routes returned
-                "&routeType=drive" +
-                "&time=11:19:47" +
+                "?routeType=drive" +
                 "&start=" +
                 startWp.getLatitude() +
                 "," +
@@ -73,9 +68,8 @@ public class OneMapService {
                 ;
 
         HttpHeaders headers = new HttpHeaders();
-        String authToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxNDE1MSwiZm9yZXZlciI6ZmFsc2UsImlzcyI6Ik9uZU1hcCIsImlhdCI6MTc3OTY5OTMwNywibmJmIjoxNzc5Njk5MzA3LCJleHAiOjE3Nzk5NTg1MDcsImp0aSI6ImVjNjcxY2NkLTkyZTQtNGUzOS1iNGNiLTc3ZGUxZGU1OTVmYyJ9.4Vrm_hun2gWAcksgstdm4KGjWrLP7vhKwTTSG5iaXcXqP8xf19J-AbigIcXV3OugonULx8AMFdjQUMYo80BVg55ryu567FZ0BzaDxW56MnLHsex-cfWT7GtGJxuT11b0tn3wqjU_WxuBgXAOOLYrzcMvFtXUmTAgw_3L_xPCYbK7n72DcoNLW5-ywuhXRFhILNKavsJ7jAOn8Ly2XiandErQho5j4XJWZRkF7wjzU4Np80xqmsQuEQafX_kBnvIDjgtdZ5Sfcac4evZuIKe0IW3pemKq4MoZBbxKj_kl7Ni-qiBMfOOW0HsYR3rOED2UeAp0JpZyJ-vXBi5_QPNLhw";
-        headers.set("Authorization", authToken);
-
+        String authToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxNDE1MSwiZm9yZXZlciI6ZmFsc2UsImlzcyI6Ik9uZU1hcCIsImlhdCI6MTc4MDA0Mzc2MywibmJmIjoxNzgwMDQzNzYzLCJleHAiOjE3ODAzMDI5NjMsImp0aSI6IjExYTQ1ODRlLTM3MWItNGU3NC04NWY3LWM5ZGVmOTU3NTMzMyJ9.jOe0l98e1B27CG1LwAb36cTYVmDjGhbsLYf97fXwqIJZzuBrrU1z9TSXXIZ8TD9xNLjXQ6rmJs7sCsrmX6VjC4fG_404JG53d1gSWUZH3WYU7v95BglzQCl7MwSXOh1hZ6O38XTKqp8l50IO-xwhKVbCyi3ozi1cjVOiKiGyxaBNLhstEkqmoBI1q3YpXyKJ-kiekDoReFVoIGwvDINymPonqaJiwwu2nyEgsN6QiOzkrHBSr2aOlFFCe-bz0iIaGrOHdyFwogPSv7vx2HpB9MO6pYH73AOdHimABQwOkIG14Nrp55IVA6UFg4nKXntXYgnonwuygFlmvlttwUh3uA";
+        headers.set("Authorization", "Bearer " + authToken);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
         ResponseEntity<OneMapRouteResponseDTO> response = restTemplate.exchange(
@@ -86,7 +80,8 @@ public class OneMapService {
         );
 
         System.out.println("Route retrieved successfully from OneMap API");
-
+        System.out.println("Start WP: " + startWp.getLatitude() + "," + startWp.getLongitude());
+        System.out.println("End WP: " + endWp.getLatitude() + "," + endWp.getLongitude());
         return response.getBody(); // raw JSON string
     }
 }

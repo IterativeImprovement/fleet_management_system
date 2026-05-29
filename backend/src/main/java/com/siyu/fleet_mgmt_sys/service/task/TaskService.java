@@ -1,6 +1,7 @@
 package com.siyu.fleet_mgmt_sys.service.task;
 
 import com.siyu.fleet_mgmt_sys.dto.TaskRequestDTO;
+import com.siyu.fleet_mgmt_sys.dto.TaskResponseDTO;
 import com.siyu.fleet_mgmt_sys.exception.TaskNotFoundException;
 import com.siyu.fleet_mgmt_sys.model.Task;
 import com.siyu.fleet_mgmt_sys.model.WayPoint;
@@ -33,7 +34,7 @@ public class TaskService {
     private final TaskClusterService clusterService;
     private final TaskAllocationService allocationService;
 
-    public Task createTask(TaskRequestDTO req) {
+    public TaskResponseDTO createTask(TaskRequestDTO req) {
         WayPoint start = wayPointRepository.save(new WayPoint(req.getStartWayPointStr()));
         WayPoint end = wayPointRepository.save(new WayPoint((req.getEndWayPointStr())));
 
@@ -54,15 +55,16 @@ public class TaskService {
                         .toList()
         );
 
-        System.out.println("Task created successfully!\n" + task.toStringDetailed());
-        return taskSubmissionPipeline.submitTask(task);
+        Task savedTask = taskSubmissionPipeline.submitTask(task);
+        System.out.println("Task created successfully!\n" + savedTask.toStringDetailed());
+        return new TaskResponseDTO(savedTask);
     }
 
-    public Task getTask(Long id) {
+    public TaskResponseDTO getTask(Long id) {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new TaskNotFoundException(id)); // when no tasks matches the given id
         System.out.println("Task retrieved successfully!\n" + task.toStringDetailed());
-        return task;
+        return new TaskResponseDTO(task);
     }
 
     public void deleteTask(Long id) {
@@ -74,7 +76,7 @@ public class TaskService {
         System.out.println("Task deleted successfully!\n" + taskString);
     }
 
-    public Task updateTask(Long id, TaskRequestDTO req) {
+    public TaskResponseDTO updateTask(Long id, TaskRequestDTO req) {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new TaskNotFoundException(id));
 
@@ -105,7 +107,7 @@ public class TaskService {
             task.setDependencies(dependencies);
         }
 
-        return taskRepository.save(task);
+        return new TaskResponseDTO(taskRepository.save(task));
     }
 
     public List<Task> filterTasks(Integer priority, String type, String status, String timeLeft,
@@ -134,7 +136,7 @@ public class TaskService {
         dependencyService.releaseUnblockedTasks(task);
 
         // refresh cluster cache
-        clusterService.refreshTopTasks(task.getEndCluster());
+        clusterService.refreshTopTasks(task.getEndCluster().getId());
 
         if (robot.getTasks().isEmpty()) {
             robot.setStatus(RobotStatus.IDLE);
@@ -148,4 +150,5 @@ public class TaskService {
             robotRepository.save(robot);
         }
     }
+
 }

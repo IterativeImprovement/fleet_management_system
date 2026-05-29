@@ -1,6 +1,8 @@
 package com.siyu.fleet_mgmt_sys.model.robot;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.siyu.fleet_mgmt_sys.model.Cluster;
 import com.siyu.fleet_mgmt_sys.model.Task;
 import com.siyu.fleet_mgmt_sys.model.enums.RobotStatus;
@@ -20,6 +22,11 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "robot_type")
+@JsonSubTypes({
+        @JsonSubTypes.Type(value = StandardRobot.class, name = "Standard"),
+        @JsonSubTypes.Type(value = LargeRobot.class, name = "Large")
+})
 public abstract class Robot {
 
     /* fields */
@@ -31,8 +38,8 @@ public abstract class Robot {
     protected String name;
     protected RobotStatus status = RobotStatus.IDLE;
 
-    protected RobotType TYPE = RobotType.UNINITIALISED;
-    protected double SPEED = 0.0; // speed in metres per second
+    protected RobotType type = RobotType.UNINITIALISED;
+    protected double speed = 0.0; // speed in metres per second
 
     // for testing purposes, base is set at Harbourfront MRT station
     // TODO: Allow user to set base latlng
@@ -85,9 +92,9 @@ public abstract class Robot {
         return "Robot {" +
                 "\n  id: " + this.id +
                 "\n  name: " + name +
-                "\n  type: " + TYPE +
+                "\n  type: " + type +
                 "\n  status: " + status +
-                "\n  speed: " + SPEED +
+                "\n  speed: " + speed +
                 "\n latlong: {" + latitude + ", " + longitude + "}" +
                 "\n  tasks: " + (tasks != null ? tasks.size() + " task(s)" : "none") +
                 "\n}";

@@ -18,12 +18,10 @@ public class WayPoint {
             sequenceName = "waypoint_seq",
             allocationSize = 50
     )
-    private long id;
+    private Long id;
 
     private double latitude;
     private double longitude;
-
-    private String routeGeo;
 
     public WayPoint(double latitude, double longitude) {
         this.latitude = latitude;
@@ -34,7 +32,7 @@ public class WayPoint {
         String[] parts = latlng.split(",");
         this.latitude = Double.parseDouble(parts[0].trim());
         this.longitude = Double.parseDouble(parts[1].trim());
-        //System.out.println("WayPoint created: " + this.latitude + ", " + this.longitude);
+        System.out.println("WayPoint created: " + this.latitude + ", " + this.longitude);
     }
 
     @Override

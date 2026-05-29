@@ -26,8 +26,8 @@ public class TaskDependencyService {
                 t.setStatus(TaskStatus.PENDING_ASSIGNMENT); // add it to the task pool
                 taskRepository.save(t);
 
-                clusterService.refreshTopTasks(t.getStartCluster());
-                clusterService.refreshTopTasks(t.getEndCluster());
+                clusterService.refreshTopTasks(t.getStartCluster().getId());
+                clusterService.refreshTopTasks(t.getEndCluster().getId());
             }
         });
     }

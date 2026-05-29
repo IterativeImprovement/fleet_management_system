@@ -1,5 +1,6 @@
 package com.siyu.fleet_mgmt_sys.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
 import com.siyu.fleet_mgmt_sys.model.enums.TaskStatus;
 import com.siyu.fleet_mgmt_sys.model.enums.TaskType;
@@ -44,6 +45,7 @@ public class Task {
 
     @ElementCollection
     @MapKeyEnumerated(EnumType.STRING)
+    @JsonIgnore
     private Map<RobotType, Double> calculatedPriorities = new HashMap<>();
 
     private TaskStatus status;
@@ -53,12 +55,12 @@ public class Task {
     @OneToOne(cascade = CascadeType.ALL)
     private Route route;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "start_waypoint_id")
     @NonNull
     private WayPoint startWayPoint;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "end_waypoint_id")
     @NonNull
     private WayPoint endWayPoint;
@@ -75,10 +77,10 @@ public class Task {
     )
     private List<Task> dependencies = new ArrayList<>();
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     private Cluster startCluster;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     private Cluster endCluster;
 
     /* methods */
