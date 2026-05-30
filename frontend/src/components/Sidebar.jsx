@@ -73,105 +73,107 @@ function Sidebar({
         </button>
       </div>
 
-      {activeTab === 'robots' ? (
-        selectedRobot ? (
-          <SelectedRobotPanel
-            robot={selectedRobot}
-            tasks={tasks}
+      <div className="sidebar-content">
+        {activeTab === 'robots' ? (
+          selectedRobot ? (
+            <SelectedRobotPanel
+              robot={selectedRobot}
+              tasks={tasks}
+              onBack={() => {
+                onSelectRobot(null)
+                onSelectTask(null)
+              }}
+              onSelectTask={onSelectTask}
+            />
+          ) : (
+            <>
+              <div className="sidebar-section-header">
+                <h3>Robots</h3>
+
+                <button
+                  className="add-button"
+                  onClick={() => {
+                    setIsAddingRobot(true)
+                    setIsAddingTask(false)
+                  }}
+                >
+                  + Add
+                </button>
+              </div>
+
+              {isAddingRobot ? (
+                <AddRobotForm
+                  robots={robots}
+                  onAddRobot={async (newRobot) => {
+                    const savedRobot = await onAddRobot(newRobot)
+                    setIsAddingRobot(false)
+                    onSelectRobot(savedRobot.id)
+                    return savedRobot
+                  }}
+                  onCancel={() => setIsAddingRobot(false)}
+                />
+              ) : (
+                <RobotList
+                  robots={robots}
+                  selectedRobotId={selectedRobotId}
+                  onSelectRobot={onSelectRobot}
+                />
+              )}
+            </>
+          )
+        ) : selectedTask ? (
+          <SelectedTaskPanel
+            task={selectedTask}
+            assignedRobot={selectedTaskAssignedRobot}
             onBack={() => {
-              onSelectRobot(null)
               onSelectTask(null)
+              onSelectRobot(null)
+              setIsAddingTask(false)
             }}
-            onSelectTask={onSelectTask}
+            onViewRobot={() => {
+              onChangeTab('robots')
+              onSelectRobot(selectedTaskAssignedRobot?.id)
+            }}
           />
         ) : (
           <>
             <div className="sidebar-section-header">
-              <h3>Robots</h3>
+              <h3>Tasks</h3>
 
               <button
                 className="add-button"
                 onClick={() => {
-                  setIsAddingRobot(true)
-                  setIsAddingTask(false)
+                  setIsAddingTask(true)
+                  setIsAddingRobot(false)
                 }}
               >
                 + Add
               </button>
             </div>
 
-            {isAddingRobot ? (
-              <AddRobotForm
-                robots={robots}
-                onAddRobot={async (newRobot) => {
-                  const savedRobot = await onAddRobot(newRobot)
-                  setIsAddingRobot(false)
-                  onSelectRobot(savedRobot.id)
-                  return savedRobot
+            {isAddingTask ? (
+              <AddTaskForm
+                tasks={tasks}
+                onAddTask={async (newTask) => {
+                  const savedTask = await onAddTask(newTask)
+
+                  setIsAddingTask(false)
+                  onSelectTask(savedTask.id)
+
+                  return savedTask
                 }}
-                onCancel={() => setIsAddingRobot(false)}
+                onCancel={() => setIsAddingTask(false)}
               />
             ) : (
-              <RobotList
-                robots={robots}
-                selectedRobotId={selectedRobotId}
-                onSelectRobot={onSelectRobot}
+              <TaskList
+                tasks={tasks}
+                selectedTaskId={selectedTaskId}
+                onSelectTask={onSelectTask}
               />
             )}
           </>
-        )
-      ) : selectedTask ? (
-        <SelectedTaskPanel
-          task={selectedTask}
-          assignedRobot={selectedTaskAssignedRobot}
-          onBack={() => {
-            onSelectTask(null)
-            onSelectRobot(null)
-            setIsAddingTask(false)
-          }}
-          onViewRobot={() => {
-            onChangeTab('robots')
-            onSelectRobot(selectedTaskAssignedRobot?.id)
-          }}
-        />
-      ) : (
-        <>
-          <div className="sidebar-section-header">
-            <h3>Tasks</h3>
-
-            <button
-              className="add-button"
-              onClick={() => {
-                setIsAddingTask(true)
-                setIsAddingRobot(false)
-              }}
-            >
-              + Add
-            </button>
-          </div>
-
-          {isAddingTask ? (
-            <AddTaskForm
-              tasks={tasks}
-              onAddTask={async (newTask) => {
-                const savedTask = await onAddTask(newTask)
-
-                setIsAddingTask(false)
-                onSelectTask(savedTask.id)
-
-                return savedTask
-              }}
-              onCancel={() => setIsAddingTask(false)}
-            />
-          ) : (
-            <TaskList
-              tasks={tasks}
-              selectedTaskId={selectedTaskId}
-              onSelectTask={onSelectTask}
-            />
-          )}
-        </>
-      )}
+        )}
+      </div>
     </aside>
   )
 }
