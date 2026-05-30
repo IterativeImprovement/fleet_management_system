@@ -11,6 +11,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.Hibernate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -55,7 +56,7 @@ public abstract class Robot {
 
     @JsonIgnore
     @OneToMany(mappedBy = "robot", cascade = CascadeType.ALL)
-    protected List<Task> tasks; // tasks assigned to the robot
+    protected List<Task> tasks = new ArrayList<>(); // tasks assigned to the robot
 
     @ManyToOne
     private Cluster currentCluster;
@@ -88,7 +89,12 @@ public abstract class Robot {
                 "}";
     }
 
+
+
     public String toStringDetailed() {
+        String taskInfo = Hibernate.isInitialized(tasks)
+                ? "tasks: " + tasks.size()
+                : "tasks: <not loaded>";
         return "Robot {" +
                 "\n  id: " + this.id +
                 "\n  name: " + name +
@@ -96,7 +102,7 @@ public abstract class Robot {
                 "\n  status: " + status +
                 "\n  speed: " + speed +
                 "\n latlong: {" + latitude + ", " + longitude + "}" +
-                "\n  tasks: " + (tasks != null ? tasks.size() + " task(s)" : "none") +
+                "\n  tasks: " + taskInfo +
                 "\n}";
     }
 
