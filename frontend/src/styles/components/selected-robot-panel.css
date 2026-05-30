@@ -141,7 +141,8 @@
 }
 
 .primary-action,
-.secondary-action {
+.secondary-action,
+.danger-action {
   width: 100%;
   border-radius: 14px;
   padding: 18px 16px;
@@ -152,7 +153,8 @@
 }
 
 .primary-action:hover,
-.secondary-action:hover {
+.secondary-action:hover,
+.danger-action:hover:not(:disabled) {
   transform: translateY(-1px);
 }
 
@@ -168,4 +170,28 @@
   color: #111827;
   border: 1px solid #d1d5db;
   box-shadow: 0 6px 12px rgba(17, 24, 39, 0.18);
+}
+
+.danger-action {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  box-shadow: none;
+}
+
+.danger-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.selected-action-error {
+  margin: -8px 0 0;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background-color: #fef2f2;
+  color: #991b1b;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
 }

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   getRobotStatusLabel,
   getRobotStatusType,
@@ -40,11 +41,38 @@ function getAssignedTasks(robot, tasks) {
   return robot.tasks || []
 }
 
-function SelectedRobotPanel({ robot, tasks = [], onBack, onSelectTask }) {
+function SelectedRobotPanel({
+  robot,
+  tasks = [],
+  onBack,
+  onSelectTask,
+  onDeleteRobot,
+}) {
+  const [deleteError, setDeleteError] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
   const statusType = getRobotStatusType(robot.status)
   const statusLabel = getRobotStatusLabel(robot.status)
   const assignedTasks = getAssignedTasks(robot, tasks)
   const currentTask = assignedTasks[0]
+
+  async function handleDeleteRobot() {
+    const robotName = robot.name || `Robot ${robot.id}`
+    const shouldDelete = window.confirm(
+      `Delete ${robotName}? This action cannot be undone.`
+    )
+
+    if (!shouldDelete) return
+
+    try {
+      setIsDeleting(true)
+      setDeleteError('')
+      await onDeleteRobot?.(robot.id)
+    } catch (error) {
+      setDeleteError(error.message || 'Failed to delete robot')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   return (
     <div className="selected-robot-panel">
@@ -112,6 +140,16 @@ function SelectedRobotPanel({ robot, tasks = [], onBack, onSelectTask }) {
         <h3>Actions</h3>
         <button className="primary-action">Send to Base</button>
         <button className="secondary-action">Send to Servicing</button>
+        <button
+          type="button"
+          className="danger-action"
+          onClick={handleDeleteRobot}
+          disabled={isDeleting}
+        >
+          {isDeleting ? 'Deleting...' : 'Delete Robot'}
+        </button>
+
+        {deleteError && <p className="selected-action-error">{deleteError}</p>}
       </div>
     </div>
   )

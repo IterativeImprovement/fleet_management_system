@@ -13,7 +13,11 @@ import LiveMap from './components/LiveMap'
 import AlertLog from './components/AlertLog'
 
 import { getTasks, createTaskInBackend } from './api/taskApi'
-import { getRobots, createRobotInBackend } from './api/robotApi'
+import {
+  getRobots,
+  createRobotInBackend,
+  deleteRobotInBackend,
+} from './api/robotApi'
 import { getRouteGeometry } from './api/routeApi'
 import {
   decodePolyline,
@@ -271,6 +275,28 @@ function App() {
     return savedRobot
   }
 
+  async function handleDeleteRobot(robotId) {
+    await deleteRobotInBackend(robotId)
+
+    setRobots(prevRobots =>
+      prevRobots.filter(robot => String(robot.id) !== String(robotId))
+    )
+
+    setTasks(prevTasks =>
+      prevTasks.map(task =>
+        String(task.robot?.id) === String(robotId)
+          ? { ...task, robot: null }
+          : task
+      )
+    )
+
+    setSelectedRobotId(null)
+    setSelectedTaskId(null)
+    setActiveTab('robots')
+
+    console.log('Deleted robot from backend:', robotId)
+  }
+
   return (
     <main className="dashboard">
       <Topbar />
@@ -286,6 +312,7 @@ function App() {
         onChangeTab={setActiveTab}
         onAddTask={handleAddTask}
         onAddRobot={handleAddRobot}
+        onDeleteRobot={handleDeleteRobot}
       />
 
       <LiveMap

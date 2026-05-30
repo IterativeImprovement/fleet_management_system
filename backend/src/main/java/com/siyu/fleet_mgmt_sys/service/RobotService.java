@@ -52,10 +52,15 @@ public class RobotService {
     public void deleteRobot(Long id) {
         Robot robot = robotRepository.findById(id)
                 .orElseThrow(() -> new RobotNotFoundException(id));
-        String robotString = robot.toStringDetailed();
+
+        if (!robot.getTasks().isEmpty()) {
+            throw new IllegalStateException("Cannot delete robot with assigned tasks");
+        }
+        //String robotString = robot.toStringDetailed();
         robotRepository.delete(robot);
 
-        System.out.println("Robot deleted successfully!\n" + robotString);
+        // System.out.println("Robot deleted successfully!\n" + robotString);
+        System.out.println("Robot deleted successfully!\n");
     }
 
     public Robot updateRobot(Long id, RobotRequestDTO req) {

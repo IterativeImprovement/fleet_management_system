@@ -89,3 +89,17 @@ export async function createRobotInBackend(robot) {
 
   return normaliseRobotFromBackend(data)
 }
+
+export async function deleteRobotInBackend(robotId) {
+  const response = await fetch(`${ROBOT_ENDPOINT}/${robotId}`, {
+    method: 'DELETE',
+    headers: {
+      Accept: 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const message = await getErrorMessage(response)
+    throw new Error(`Delete robot failed (${response.status}): ${message}`)
+  }
+}
