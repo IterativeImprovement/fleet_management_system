@@ -18,12 +18,13 @@ public class Route {
     @GeneratedValue
     private Long id;
 
+    @Column(columnDefinition = "TEXT") // for long strings
     private String routeGeo;
 
     @OneToOne
     private Task task;
 
-    private int totalDistance; // in metres
+    private Integer totalDistance; // in metres
 
     @ElementCollection
     @MapKeyEnumerated(EnumType.STRING)

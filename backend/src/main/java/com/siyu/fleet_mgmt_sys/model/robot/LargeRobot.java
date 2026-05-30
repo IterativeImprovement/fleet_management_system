@@ -19,11 +19,7 @@ public class LargeRobot extends Robot {
     }
 
 
-    public final static RobotType TYPE = RobotType.LARGE;
-    public final static double SPEED = 5.0;
+    public final RobotType type = RobotType.LARGE;
+    public final double speed = RobotAttributes.Large.SPEED;
 
-    @Override
-    public RobotType getType() {
-        return LargeRobot.TYPE;
-    }
 }

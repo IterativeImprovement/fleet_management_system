@@ -7,6 +7,7 @@ import com.siyu.fleet_mgmt_sys.model.enums.TaskStatus;
 import com.siyu.fleet_mgmt_sys.repository.TaskRepository;
 import com.siyu.fleet_mgmt_sys.service.route.RouteEstimationService;
 import com.siyu.fleet_mgmt_sys.service.route.RouteService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +24,7 @@ public class TaskSubmissionPipeline {
     private final TaskPriorityService priorityService;
     private final TaskClusterService clusterService;
 
+    @Transactional
     public Task submitTask(Task task) {
         // retrieves route geometry and total distance info
         Route route = routeService.getRoute(task.getStartWayPoint(), task.getEndWayPoint());
@@ -41,9 +43,12 @@ public class TaskSubmissionPipeline {
                 : TaskStatus.WAITING_FOR_DEPENDENCIES); // else, its status is set to waiting
 
         clusterService.assignCluster(task);
-        clusterService.refreshTopTasks(task.getStartCluster());
-        clusterService.refreshTopTasks(task.getEndCluster());
-        return taskRepository.save(task);
+        if (task.getStartCluster() != null) {
+            clusterService.refreshTopTasks(task.getStartCluster().getId());
+        }
+        if (task.getEndCluster() != null) {
+            clusterService.refreshTopTasks(task.getEndCluster().getId());
+        }        return taskRepository.save(task);
     }
 
 }

@@ -18,11 +18,6 @@ public class StandardRobot extends Robot {
         super("S" + name);
     }
 
-    public final static RobotType TYPE = RobotType.STANDARD;
-    public final static double SPEED = 10.0;
-
-    @Override
-    public RobotType getType() {
-        return StandardRobot.TYPE;
-    }
+    public final RobotType type = RobotType.STANDARD;
+    public final double speed = RobotAttributes.Standard.SPEED;
 }

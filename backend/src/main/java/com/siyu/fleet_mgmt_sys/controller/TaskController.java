@@ -1,6 +1,7 @@
 package com.siyu.fleet_mgmt_sys.controller;
 
 import com.siyu.fleet_mgmt_sys.dto.TaskRequestDTO;
+import com.siyu.fleet_mgmt_sys.dto.TaskResponseDTO;
 import com.siyu.fleet_mgmt_sys.model.Task;
 import com.siyu.fleet_mgmt_sys.service.task.TaskService;
 import lombok.RequiredArgsConstructor;
@@ -17,8 +18,8 @@ public class TaskController {
     private final TaskService taskService;
 
     @PostMapping
-    public ResponseEntity<Task> createTask(@RequestBody TaskRequestDTO req) {
-        Task result = taskService.createTask(req);
+    public ResponseEntity<TaskResponseDTO> createTask(@RequestBody TaskRequestDTO req) {
+        TaskResponseDTO result = taskService.createTask(req);
         return ResponseEntity.created(URI.create("/task/" + result.getId()))
                 .body(result);
     }
@@ -35,7 +36,7 @@ public class TaskController {
         "name": "Deliver package",
             "description": "Deliver package to warehouse A",
             "priority": 1,
-            "type": "delivery",
+            "type": "Standard",
             "startWayPointStr": "1.3081,103.8551",
             "endWayPointStr": "1.2739,103.8012",
             "startDateTime": "2026-05-21T14:49:33",
@@ -44,7 +45,7 @@ public class TaskController {
     */
 
     @GetMapping("/{id}") // GET localhost:8080/task/id
-    public ResponseEntity<Task> getTask(@PathVariable Long id) {
+    public ResponseEntity<TaskResponseDTO> getTask(@PathVariable Long id) {
         return ResponseEntity.ok(taskService.getTask(id));
     }
 
@@ -55,7 +56,7 @@ public class TaskController {
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<Task> updateTask(@PathVariable Long id, @RequestBody TaskRequestDTO req) {
+    public ResponseEntity<TaskResponseDTO> updateTask(@PathVariable Long id, @RequestBody TaskRequestDTO req) {
         return ResponseEntity.ok(taskService.updateTask(id,req));
     }
 

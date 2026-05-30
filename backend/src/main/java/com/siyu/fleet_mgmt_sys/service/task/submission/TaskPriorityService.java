@@ -30,6 +30,7 @@ public class TaskPriorityService {
         Map<RobotType, Double> calculatedPriorities = new HashMap<>();
 
         for (RobotType robotType : RobotType.values()) {
+            if (robotType == RobotType.UNINITIALISED) continue;
 
             // exclude robots that cannot complete this task type
             if (task.getType() == TaskType.LARGE && robotType == RobotType.STANDARD) {

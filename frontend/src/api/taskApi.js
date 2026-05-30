@@ -11,6 +11,19 @@ async function getErrorMessage(response) {
   }
 }
 
+// turns the string passed in from the backend into an object
+function parseWaypointString(wpStr) {
+  if (!wpStr || typeof wpStr !== 'string') return null;
+
+  const parts = wpStr.split(',');
+  if (parts.length !== 2) return null;
+
+  return {
+    latitude: parts[0].trim(),
+    longitude: parts[1].trim()
+  };
+}
+
 function normaliseTaskFromBackend(task) {
   return createTask({
     id: task.id,
@@ -21,8 +34,8 @@ function normaliseTaskFromBackend(task) {
     status: task.status ?? 'PENDING_ASSIGNMENT',
     startDateTime: task.startDateTime ?? '',
     completionDateTime: task.completionDateTime ?? '',
-    startWayPoint: task.startWayPoint ?? null,
-    endWayPoint: task.endWayPoint ?? null,
+    startWayPoint: parseWaypointString(task.startWayPointStr || task.startWayPoint),
+    endWayPoint: parseWaypointString(task.endWayPointStr || task.endWayPoint),
     robot: task.robot ?? null,
     dependencies: task.dependencies ?? task.tasks ?? [],
   })

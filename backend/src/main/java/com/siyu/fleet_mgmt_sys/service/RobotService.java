@@ -37,9 +37,9 @@ public class RobotService {
                                 .forEach(task -> allocationService.assign(robot, task, false));
 
 
-
-        System.out.println("Robot created successfully!\n" + robot.toStringDetailed());
-        return robotRepository.save(robot);
+        Robot savedRobot = robotRepository.save(robot);
+        System.out.println("Robot created successfully!\n" + savedRobot.toStringDetailed());
+        return savedRobot;
     }
 
     public Robot getRobot(Long id) {
