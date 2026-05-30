@@ -8,27 +8,27 @@ export default defineConfig({
     proxy: {
       // for map
       '/map/tiles': {
-        target: 'http://localhost:8080',
+        target: 'http://backend-api:8080',
         changeOrigin: true,
         secure: false,
       },
       // for get route
       '/route': {
-        target: 'http://localhost:8080',
+        target: 'http://backend-api:8080',
         changeOrigin: true,
         secure: false,
       },
 
       // for task
       '/task': {
-        target: 'http://localhost:8080',
+        target: 'http://backend-api:8080',
         changeOrigin: true,
         secure: false,
       },
 
       // for robot
       '/robot': {
-        target: 'http://localhost:8080',
+        target: 'http://backend-api:8080',
         changeOrigin: true,
         secure: false,
       },

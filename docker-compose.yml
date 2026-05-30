@@ -1,3 +1,5 @@
+# -- Database & Services --
+
 services:
   postgres:
     image: postgres:latest
@@ -9,7 +11,34 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fleet_mgmt_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend-api:
+    build: ./backend
+    container_name: spring-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/fleet_mgmt_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=noclashfleet
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend-ui:
+    build: ./frontend
+    container_name: react-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend-api
 
 volumes:
   postgres_data:
