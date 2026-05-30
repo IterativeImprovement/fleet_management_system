@@ -3,6 +3,53 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getRobotStatusType } from '../utils/robotUtils'
 
+const SINGAPORE_CENTER = [1.3521, 103.8198]
+const SINGAPORE_BOUNDS = L.latLngBounds(
+  [1.16, 103.502],
+  [1.56073, 104.11475]
+)
+const ONEMAP_MIN_ZOOM = 11
+const ONEMAP_MAX_ZOOM = 19
+const SINGAPORE_START_ZOOM = 13
+
+function getSingaporeMinZoom(map) {
+  const size = map.getSize()
+
+  if (!size.x || !size.y) return SINGAPORE_START_ZOOM
+
+  for (let zoom = ONEMAP_MIN_ZOOM; zoom <= ONEMAP_MAX_ZOOM; zoom += 1) {
+    const projectedBounds = L.bounds(
+      map.project(SINGAPORE_BOUNDS.getNorthWest(), zoom),
+      map.project(SINGAPORE_BOUNDS.getSouthEast(), zoom)
+    )
+    const boundsSize = projectedBounds.getSize()
+
+    if (boundsSize.x >= size.x && boundsSize.y >= size.y) {
+      return zoom
+    }
+  }
+
+  return ONEMAP_MAX_ZOOM
+}
+
+function keepMapInsideSingapore(map) {
+  const minZoom = getSingaporeMinZoom(map)
+
+  map.setMinZoom(minZoom)
+
+  if (map.getZoom() < minZoom) {
+    map.setZoom(minZoom, { animate: false })
+  }
+
+  map.panInsideBounds(SINGAPORE_BOUNDS, { animate: false })
+}
+
+function fitBoundsInsideSingapore(map, bounds, options) {
+  keepMapInsideSingapore(map)
+  map.fitBounds(bounds, { ...options, animate: false })
+  keepMapInsideSingapore(map)
+}
+
 function LiveMap({
   robots = [],
   obstacles = [],
@@ -24,15 +71,20 @@ function LiveMap({
     if (mapRef.current || !mapContainerRef.current) return
 
     mapRef.current = L.map(mapContainerRef.current, {
-      center: [1.3521, 103.8198],
-      zoom: 12,
-      minZoom: 3,
+      center: SINGAPORE_CENTER,
+      zoom: SINGAPORE_START_ZOOM,
+      minZoom: SINGAPORE_START_ZOOM,
+      maxZoom: ONEMAP_MAX_ZOOM,
+      maxBounds: SINGAPORE_BOUNDS,
+      maxBoundsViscosity: 1,
     })
 
     L.tileLayer('/map/tiles/{z}/{x}/{y}.png', {
+      bounds: SINGAPORE_BOUNDS,
       detectRetina: true,
-      maxZoom: 19,
-      minZoom: 11,
+      maxZoom: ONEMAP_MAX_ZOOM,
+      minZoom: ONEMAP_MIN_ZOOM,
+      noWrap: true,
       attribution:
         '<img src="https://www.onemap.gov.sg/web-assets/images/logo/om_logo.png" style="height:20px;width:20px;" />&nbsp;<a href="https://www.onemap.gov.sg/" target="_blank" rel="noopener noreferrer">OneMap</a>&nbsp;&copy;&nbsp;contributors&nbsp;&#124;&nbsp;<a href="https://www.sla.gov.sg/" target="_blank" rel="noopener noreferrer">Singapore Land Authority</a>',
     }).addTo(mapRef.current)
@@ -42,7 +94,10 @@ function LiveMap({
     obstacleLayerRef.current = L.layerGroup().addTo(mapRef.current)
 
     requestAnimationFrame(() => {
-      mapRef.current?.invalidateSize()
+      if (!mapRef.current) return
+
+      mapRef.current.invalidateSize()
+      keepMapInsideSingapore(mapRef.current)
     })
   }, [])
 
@@ -50,7 +105,10 @@ function LiveMap({
     if (!mapContainerRef.current) return
 
     const resizeMap = () => {
-      mapRef.current?.invalidateSize()
+      if (!mapRef.current) return
+
+      mapRef.current.invalidateSize()
+      keepMapInsideSingapore(mapRef.current)
     }
 
     const resizeObserver = new ResizeObserver(() => {
@@ -68,7 +126,10 @@ function LiveMap({
 
   useEffect(() => {
     requestAnimationFrame(() => {
-      mapRef.current?.invalidateSize()
+      if (!mapRef.current) return
+
+      mapRef.current.invalidateSize()
+      keepMapInsideSingapore(mapRef.current)
     })
   }, [selectedRobotId, selectedTaskId])
 
@@ -107,16 +168,20 @@ function LiveMap({
     })
 
     if (selectedRouteLine) {
-      mapRef.current?.fitBounds(selectedRouteLine.getBounds(), {
+      if (!mapRef.current) return
+
+      fitBoundsInsideSingapore(mapRef.current, selectedRouteLine.getBounds(), {
         padding: [32, 32],
       })
       return
     }
 
     if (!hasFittedAllRoutesRef.current && routeLines.length > 0) {
+      if (!mapRef.current) return
+
       const routeGroup = L.featureGroup(routeLines)
 
-      mapRef.current?.fitBounds(routeGroup.getBounds(), {
+      fitBoundsInsideSingapore(mapRef.current, routeGroup.getBounds(), {
         padding: [32, 32],
       })
 
