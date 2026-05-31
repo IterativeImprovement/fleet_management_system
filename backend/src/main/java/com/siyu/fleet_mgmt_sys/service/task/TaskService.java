@@ -18,6 +18,7 @@ import com.siyu.fleet_mgmt_sys.service.task.submission.TaskSubmissionPipeline;
 import com.siyu.fleet_mgmt_sys.specification.TaskSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
@@ -65,6 +66,7 @@ public class TaskService {
         return new TaskResponseDTO(savedTask);
     }
 
+    @Transactional(readOnly = true)
     public TaskResponseDTO getTask(Long id) {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new TaskNotFoundException(id)); // when no tasks matches the given id
@@ -115,14 +117,17 @@ public class TaskService {
         return new TaskResponseDTO(taskRepository.save(task));
     }
 
-    public List<Task> filterTasks(Integer priority, String type, String status, String timeLeft,
-                                  String startDateTime, String completionDateTime) {
+    @Transactional(readOnly = true)
+    public List<TaskResponseDTO> filterTasks(Integer priority, String type, String status, String timeLeft,
+                                             String startDateTime, String completionDateTime) {
         List<Task> tasks = taskRepository.findAll(
                 TaskSpecification.filter(priority, type, status, timeLeft, startDateTime, completionDateTime)
         );
 
         System.out.println("Retrieved filtered tasks:" + tasks);
-        return tasks;
+        return tasks.stream()
+                .map(TaskResponseDTO::new)
+                .toList();
     }
 
     public void completeTask(Long taskId) {
