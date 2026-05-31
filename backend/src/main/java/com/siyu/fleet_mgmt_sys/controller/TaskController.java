@@ -2,7 +2,6 @@ package com.siyu.fleet_mgmt_sys.controller;
 
 import com.siyu.fleet_mgmt_sys.dto.TaskRequestDTO;
 import com.siyu.fleet_mgmt_sys.dto.TaskResponseDTO;
-import com.siyu.fleet_mgmt_sys.model.Task;
 import com.siyu.fleet_mgmt_sys.service.task.TaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -61,7 +60,7 @@ public class TaskController {
     }
 
     @GetMapping // GET localhost:8080/task?startDateTime=after:2026-05-21T14:49:33
-    public ResponseEntity<List<Task>> filterTask(
+    public ResponseEntity<List<TaskResponseDTO>> filterTask(
             @RequestParam(required = false) Integer priority,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String status, // refer to RobotStatus for possible statuses
