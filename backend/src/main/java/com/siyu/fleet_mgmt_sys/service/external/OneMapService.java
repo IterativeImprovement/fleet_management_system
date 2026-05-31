@@ -2,6 +2,7 @@ package com.siyu.fleet_mgmt_sys.service.external;
 
 import com.siyu.fleet_mgmt_sys.dto.OneMapRouteResponseDTO;
 import com.siyu.fleet_mgmt_sys.model.WayPoint;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -38,19 +39,6 @@ public class OneMapService {
     public OneMapRouteResponseDTO getRoute(WayPoint startWp, WayPoint endWp, String... blockages) {
 
         return getOneMapRouteResponseDTO(startWp, endWp);
-
-//        Debug Code to print raw JSON
-//        ResponseEntity<String> response = restTemplate.exchange(
-//                url,
-//                HttpMethod.GET,
-//                entity,
-//                String.class
-//        );
-//
-//        System.out.println("Raw JSON: " + response.getBody());
-//
-//        System.out.println("Raw status: " + response.getStatusCode());
-//        System.out.println("Body: " + response.getBody());
     }
 
     @Nullable
@@ -67,10 +55,7 @@ public class OneMapService {
                 endWp.getLongitude()
                 ;
 
-        HttpHeaders headers = new HttpHeaders();
-        String authToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxNDE1MSwiZm9yZXZlciI6ZmFsc2UsImlzcyI6Ik9uZU1hcCIsImlhdCI6MTc4MDA0Mzc2MywibmJmIjoxNzgwMDQzNzYzLCJleHAiOjE3ODAzMDI5NjMsImp0aSI6IjExYTQ1ODRlLTM3MWItNGU3NC04NWY3LWM5ZGVmOTU3NTMzMyJ9.jOe0l98e1B27CG1LwAb36cTYVmDjGhbsLYf97fXwqIJZzuBrrU1z9TSXXIZ8TD9xNLjXQ6rmJs7sCsrmX6VjC4fG_404JG53d1gSWUZH3WYU7v95BglzQCl7MwSXOh1hZ6O38XTKqp8l50IO-xwhKVbCyi3ozi1cjVOiKiGyxaBNLhstEkqmoBI1q3YpXyKJ-kiekDoReFVoIGwvDINymPonqaJiwwu2nyEgsN6QiOzkrHBSr2aOlFFCe-bz0iIaGrOHdyFwogPSv7vx2HpB9MO6pYH73AOdHimABQwOkIG14Nrp55IVA6UFg4nKXntXYgnonwuygFlmvlttwUh3uA";
-        headers.set("Authorization", "Bearer " + authToken);
-        HttpEntity<String> entity = new HttpEntity<>(headers);
+        HttpEntity<String> entity = getStringHttpEntity();
 
         ResponseEntity<OneMapRouteResponseDTO> response = restTemplate.exchange(
                 url,
@@ -83,5 +68,13 @@ public class OneMapService {
         System.out.println("Start WP: " + startWp.getLatitude() + "," + startWp.getLongitude());
         System.out.println("End WP: " + endWp.getLatitude() + "," + endWp.getLongitude());
         return response.getBody(); // raw JSON string
+    }
+
+    private static @NonNull HttpEntity<String> getStringHttpEntity() {
+        HttpHeaders headers = new HttpHeaders();
+        String authToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxNDE1MSwiZm9yZXZlciI6ZmFsc2UsImlzcyI6Ik9uZU1hcCIsImlhdCI6MTc4MDA0Mzc2MywibmJmIjoxNzgwMDQzNzYzLCJleHAiOjE3ODAzMDI5NjMsImp0aSI6IjExYTQ1ODRlLTM3MWItNGU3NC04NWY3LWM5ZGVmOTU3NTMzMyJ9.jOe0l98e1B27CG1LwAb36cTYVmDjGhbsLYf97fXwqIJZzuBrrU1z9TSXXIZ8TD9xNLjXQ6rmJs7sCsrmX6VjC4fG_404JG53d1gSWUZH3WYU7v95BglzQCl7MwSXOh1hZ6O38XTKqp8l50IO-xwhKVbCyi3ozi1cjVOiKiGyxaBNLhstEkqmoBI1q3YpXyKJ-kiekDoReFVoIGwvDINymPonqaJiwwu2nyEgsN6QiOzkrHBSr2aOlFFCe-bz0iIaGrOHdyFwogPSv7vx2HpB9MO6pYH73AOdHimABQwOkIG14Nrp55IVA6UFg4nKXntXYgnonwuygFlmvlttwUh3uA";
+        headers.set("Authorization", "Bearer " + authToken);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        return entity;
     }
 }

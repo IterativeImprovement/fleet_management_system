@@ -97,20 +97,20 @@ public class Task {
     public String toString() {
         return "Task { id: " + id + ", name: " + name + " }\n";
     } // this makes it easier to read a lists of tasks
-
-    public String toStringDetailed() {
-        return "Task {\n" +
-                "  id: " + id + "\n" +
-                "  name: '" + name + "'\n" +
-                "  priority: " + priority + "\n" +
-                "  description: '" + description + "'\n" +
-                "  type: '" + type + "'\n" +
-                "  startDateTime: " + startDateTime + "\n" +
-                "  completionDateTime: " + completionDateTime + "\n" +
-                "  startWayPoint: " + (startWayPoint != null ? startWayPoint.toString() : "null") + "\n" +
-                "  endWayPoint: " + (endWayPoint != null ? endWayPoint.toString() : "null") + "\n" +
-                "  robot: " + (robot != null ? robot.toString() : "null") + "\n" +
-                "  dependencies:  " + dependencies.toString() +
-                "}";
-    }
+//
+//    public String toStringDetailed() {
+//        return "Task {\n" +
+//                "  id: " + id + "\n" +
+//                "  name: '" + name + "'\n" +
+//                "  priority: " + priority + "\n" +
+//                "  description: '" + description + "'\n" +
+//                "  type: '" + type + "'\n" +
+//                "  startDateTime: " + startDateTime + "\n" +
+//                "  completionDateTime: " + completionDateTime + "\n" +
+//                "  startWayPoint: " + (startWayPoint != null ? startWayPoint.toString() : "null") + "\n" +
+//                "  endWayPoint: " + (endWayPoint != null ? endWayPoint.toString() : "null") + "\n" +
+//                "  robot: " + (robot != null ? robot.toString() : "null") + "\n" +
+//                "  dependencies:  " + dependencies.toString() +
+//                "}";
+//    }
 }

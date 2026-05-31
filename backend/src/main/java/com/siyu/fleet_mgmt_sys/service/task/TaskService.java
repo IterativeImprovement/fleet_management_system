@@ -38,6 +38,11 @@ public class TaskService {
         WayPoint start = wayPointRepository.save(new WayPoint(req.getStartWayPointStr()));
         WayPoint end = wayPointRepository.save(new WayPoint((req.getEndWayPointStr())));
 
+        if (!isWithinSingapore(start.getLatitude(), start.getLongitude())
+                || !isWithinSingapore(end.getLatitude(), end.getLongitude())) {
+            throw new IllegalArgumentException("Waypoints not within Singapore bounds.");
+        }
+
         Task task = new Task();
         task.setName(req.getName());
         task.setDescription(req.getDescription());
@@ -56,14 +61,14 @@ public class TaskService {
         );
 
         Task savedTask = taskSubmissionPipeline.submitTask(task);
-        System.out.println("Task created successfully!\n" + savedTask.toStringDetailed());
+        System.out.println("Task created successfully!\n" + savedTask.toString());
         return new TaskResponseDTO(savedTask);
     }
 
     public TaskResponseDTO getTask(Long id) {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new TaskNotFoundException(id)); // when no tasks matches the given id
-        System.out.println("Task retrieved successfully!\n" + task.toStringDetailed());
+        System.out.println("Task retrieved successfully!\n" + task);
         return new TaskResponseDTO(task);
     }
 
@@ -149,6 +154,11 @@ public class TaskService {
                     .ifPresent(next -> allocationService.assign(robot, next, true));
             robotRepository.save(robot);
         }
+    }
+
+    public boolean isWithinSingapore(double lat, double lon) {
+        return lat >= 1.1304 && lat <= 1.4504
+                && lon >= 103.6020 && lon <= 104.0850;
     }
 
 }

@@ -15,6 +15,7 @@ import com.siyu.fleet_mgmt_sys.service.task.allocation.TaskAllocationService;
 import com.siyu.fleet_mgmt_sys.specification.RobotSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -49,6 +50,7 @@ public class RobotService {
         return robot;
     }
 
+    @Transactional
     public void deleteRobot(Long id) {
         Robot robot = robotRepository.findById(id)
                 .orElseThrow(() -> new RobotNotFoundException(id));
@@ -56,11 +58,10 @@ public class RobotService {
         if (!robot.getTasks().isEmpty()) {
             throw new IllegalStateException("Cannot delete robot with assigned tasks");
         }
-        //String robotString = robot.toStringDetailed();
+
         robotRepository.delete(robot);
 
-        // System.out.println("Robot deleted successfully!\n" + robotString);
-        System.out.println("Robot deleted successfully!\n");
+        System.out.println("Robot" + id +  "deleted successfully!\n");
     }
 
     public Robot updateRobot(Long id, RobotRequestDTO req) {
