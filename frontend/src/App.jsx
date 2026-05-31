@@ -5,7 +5,6 @@ import './App.css'
 import { mockRobots } from './data/mockRobots'
 import { mockAlerts } from './data/mockAlerts'
 import { mockObstacles } from './data/mockObstacle'
-import { mockTasks } from './data/mockTasks'
 
 import Topbar from './components/Topbar'
 import Sidebar from './components/Sidebar'
@@ -29,8 +28,7 @@ function App() {
   const [selectedRobotId, setSelectedRobotId] = useState(null)
   const [selectedTaskId, setSelectedTaskId] = useState(null)
 
-  // Start with mock tasks so the UI still works if backend is down.
-  const [tasks, setTasks] = useState(mockTasks)
+  const [tasks, setTasks] = useState([])
   const [robots, setRobots] = useState(mockRobots)
   const [activeTab, setActiveTab] = useState('robots')
 
@@ -96,7 +94,7 @@ function App() {
 
         console.log('Loaded tasks from backend:', backendTasks)
       } catch (error) {
-        console.error('Failed to load tasks from backend. Using mock tasks.', error)
+        console.error('Failed to load tasks from backend.', error)
       }
     }
 
@@ -244,19 +242,7 @@ function App() {
       return savedTask
     } catch (error) {
       console.error('Failed to create task in backend:', error)
-
-      const localTask = {
-        ...newTask,
-        id: `local-${Date.now()}`,
-        isLocalOnly: true,
-        syncError: error.message,
-      }
-
-      setTasks(prevTasks => [...prevTasks, localTask])
-      setSelectedTaskId(localTask.id)
-      setActiveTab('tasks')
-
-      return localTask
+      throw error
     }
   }
 

@@ -37,7 +37,7 @@ function normaliseTaskFromBackend(task) {
     startWayPoint: parseWaypointString(task.startWayPointStr || task.startWayPoint),
     endWayPoint: parseWaypointString(task.endWayPointStr || task.endWayPoint),
     robot: task.robot ?? null,
-    dependencies: task.dependencies ?? task.tasks ?? [],
+    dependencies: task.dependencies ?? task.dependencyIds ?? task.tasks ?? [],
   })
 }
 
