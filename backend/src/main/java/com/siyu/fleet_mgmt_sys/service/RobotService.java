@@ -13,6 +13,8 @@ import com.siyu.fleet_mgmt_sys.repository.RobotRepository;
 import com.siyu.fleet_mgmt_sys.repository.TaskRepository;
 import com.siyu.fleet_mgmt_sys.service.task.allocation.TaskAllocationService;
 import com.siyu.fleet_mgmt_sys.specification.RobotSpecification;
+
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -49,6 +51,7 @@ public class RobotService {
         return robot;
     }
 
+    @Transactional
     public void deleteRobot(Long id) {
         Robot robot = robotRepository.findById(id)
                 .orElseThrow(() -> new RobotNotFoundException(id));
