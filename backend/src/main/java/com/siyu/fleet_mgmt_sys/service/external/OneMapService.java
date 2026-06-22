@@ -2,8 +2,8 @@ package com.siyu.fleet_mgmt_sys.service.external;
 
 import com.siyu.fleet_mgmt_sys.dto.OneMapRouteResponseDTO;
 import com.siyu.fleet_mgmt_sys.model.WayPoint;
-import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -11,9 +11,20 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+
+/**
+ * Connects to the OneMap API to retrieve basic Routing information (Soon to be replaced by LTA Traffic-related calculations)
+ *
+ */
+
 @Service
 public class OneMapService {
     private final RestTemplate restTemplate = new RestTemplate();
+
+
+    @Value("${onemap.api-key}")
+    private String apiKey;
+
 
     public OneMapRouteResponseDTO getRoute(String start, String end, String... blockages) {
 
@@ -37,12 +48,12 @@ public class OneMapService {
     }
 
     public OneMapRouteResponseDTO getRoute(WayPoint startWp, WayPoint endWp, String... blockages) {
-
         return getOneMapRouteResponseDTO(startWp, endWp);
     }
 
     @Nullable
     private OneMapRouteResponseDTO getOneMapRouteResponseDTO(WayPoint startWp, WayPoint endWp) {
+
         String url = "https://www.onemap.gov.sg/api/public/routingsvc/route" +
                 "?routeType=drive" +
                 "&start=" +
@@ -55,7 +66,9 @@ public class OneMapService {
                 endWp.getLongitude()
                 ;
 
-        HttpEntity<String> entity = getStringHttpEntity();
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + this.apiKey);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
 
         ResponseEntity<OneMapRouteResponseDTO> response = restTemplate.exchange(
                 url,
@@ -70,11 +83,4 @@ public class OneMapService {
         return response.getBody(); // raw JSON string
     }
 
-    private static @NonNull HttpEntity<String> getStringHttpEntity() {
-        HttpHeaders headers = new HttpHeaders();
-        String authToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxNDE1MSwiZm9yZXZlciI6ZmFsc2UsImlzcyI6Ik9uZU1hcCIsImlhdCI6MTc4MDA0Mzc2MywibmJmIjoxNzgwMDQzNzYzLCJleHAiOjE3ODAzMDI5NjMsImp0aSI6IjExYTQ1ODRlLTM3MWItNGU3NC04NWY3LWM5ZGVmOTU3NTMzMyJ9.jOe0l98e1B27CG1LwAb36cTYVmDjGhbsLYf97fXwqIJZzuBrrU1z9TSXXIZ8TD9xNLjXQ6rmJs7sCsrmX6VjC4fG_404JG53d1gSWUZH3WYU7v95BglzQCl7MwSXOh1hZ6O38XTKqp8l50IO-xwhKVbCyi3ozi1cjVOiKiGyxaBNLhstEkqmoBI1q3YpXyKJ-kiekDoReFVoIGwvDINymPonqaJiwwu2nyEgsN6QiOzkrHBSr2aOlFFCe-bz0iIaGrOHdyFwogPSv7vx2HpB9MO6pYH73AOdHimABQwOkIG14Nrp55IVA6UFg4nKXntXYgnonwuygFlmvlttwUh3uA";
-        headers.set("Authorization", "Bearer " + authToken);
-        HttpEntity<String> entity = new HttpEntity<>(headers);
-        return entity;
-    }
 }
