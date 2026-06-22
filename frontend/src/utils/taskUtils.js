@@ -118,8 +118,13 @@ export function createTask({
   endWayPoint,
   robotId = null,
   dependencyIds = [],
+  routeGeometry = '',
+  routeDistance = null,
 }) {
   const numericPriority = Number(priority)
+  const numericRouteDistance = routeDistance === null || routeDistance === undefined
+    ? null
+    : Number(routeDistance)
 
   return {
     id,
@@ -138,5 +143,7 @@ export function createTask({
 
     robotId,
     dependencyIds: normaliseDependencyIds(dependencyIds),
+    routeGeometry: String(routeGeometry || ''),
+    routeDistance: Number.isFinite(numericRouteDistance) ? numericRouteDistance : null,
   }
 }

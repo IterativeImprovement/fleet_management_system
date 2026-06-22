@@ -20,7 +20,7 @@ import java.util.Map;
 @NoArgsConstructor
 public class TaskPriorityService {
     public Map<RobotType, Double> calculatePriorities(Task task) {
-        int userPriority = task.getPriority();
+        double userPriorityScore = 4 - task.getPriority();
         double[] priorityWeights = {0.2, 0.8}; // how userPriority weights compared to calculated priorities
 
         // tightness - how estimated time to completion compares to the latest completion deadline
@@ -46,7 +46,8 @@ public class TaskPriorityService {
                 continue;
             }
 
-            double priority = tightness * priorityWeights[0] + userPriority;
+            double priority = tightness * priorityWeights[0]
+                    + userPriorityScore * priorityWeights[1];
             calculatedPriorities.put(robotType, priority);
         }
 

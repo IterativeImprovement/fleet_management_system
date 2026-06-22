@@ -54,6 +54,8 @@ export function normaliseTaskFromBackend(task) {
     endWayPoint: parseWaypoint(task.endWayPointStr || task.endWayPoint),
     robotId: task.robotId ?? task.robot?.id ?? null,
     dependencyIds: task.dependencyIds ?? task.dependencies ?? task.tasks ?? [],
+    routeGeometry: task.routeGeometry ?? task.route?.routeGeo ?? '',
+    routeDistance: task.routeDistance ?? task.route?.totalDistance ?? null,
   })
 }
 

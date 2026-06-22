@@ -1,6 +1,13 @@
 import { useState } from 'react'
 import { createTask } from '../utils/taskUtils'
 
+const SINGAPORE_BOUNDS = {
+  minLatitude: 1.1304,
+  maxLatitude: 1.4504,
+  minLongitude: 103.6020,
+  maxLongitude: 104.0850,
+}
+
 function parseWayPoint(value) {
   const [latitude, longitude] = value.split(',').map(part => Number(part.trim()))
 
@@ -33,6 +40,17 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
     const longitude = Number(parts[1].trim())
 
     return Number.isFinite(latitude) && Number.isFinite(longitude)
+  }
+
+  function isWithinSingapore(value) {
+    const { latitude, longitude } = parseWayPoint(value)
+
+    return (
+      latitude >= SINGAPORE_BOUNDS.minLatitude &&
+      latitude <= SINGAPORE_BOUNDS.maxLatitude &&
+      longitude >= SINGAPORE_BOUNDS.minLongitude &&
+      longitude <= SINGAPORE_BOUNDS.maxLongitude
+    )
   }
 
   function normaliseDateTime(value) {
@@ -69,6 +87,19 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
       return
     }
 
+    const startTime = new Date(startDateTime)
+    const completionTime = new Date(completionDateTime)
+
+    if (completionTime <= startTime) {
+      setError('Completion time must be after start time')
+      return
+    }
+
+    if (completionTime <= new Date()) {
+      setError('Completion time must be in the future')
+      return
+    }
+
     if (!isValidWayPoint(trimmedStartWayPoint)) {
       setError('Start waypoint must be in latitude,longitude format')
       return
@@ -76,6 +107,16 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
 
     if (!isValidWayPoint(trimmedEndWayPoint)) {
       setError('End waypoint must be in latitude,longitude format')
+      return
+    }
+
+    if (!isWithinSingapore(trimmedStartWayPoint)) {
+      setError('Start waypoint must be within Singapore')
+      return
+    }
+
+    if (!isWithinSingapore(trimmedEndWayPoint)) {
+      setError('End waypoint must be within Singapore')
       return
     }
 

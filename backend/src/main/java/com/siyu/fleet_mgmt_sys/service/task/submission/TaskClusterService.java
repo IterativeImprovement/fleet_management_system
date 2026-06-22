@@ -54,17 +54,26 @@ public class TaskClusterService { // this service clusters tasks that are close 
                 .orElse(null);
 
         if (match != null) {
-            if (isStart) task.setStartCluster(match);
-            else task.setEndCluster(match);
+            attachTaskToCluster(task, match, isStart);
             updateCentroid(match);
+            clusterRepository.save(match);
         } else {
             Cluster newCluster = new Cluster();
             newCluster.setCentroidLat(lat);
             newCluster.setCentroidLng(lng);
+            attachTaskToCluster(task, newCluster, isStart);
             clusterRepository.save(newCluster);
             computeAdjacency(newCluster);
-            if (isStart) task.setStartCluster(newCluster);
-            else task.setEndCluster(newCluster);
+        }
+    }
+
+    private void attachTaskToCluster(Task task, Cluster cluster, boolean isStart) {
+        if (isStart) {
+            task.setStartCluster(cluster);
+            cluster.getStartTasks().add(task);
+        } else {
+            task.setEndCluster(cluster);
+            cluster.getEndTasks().add(task);
         }
     }
 
@@ -79,10 +88,18 @@ public class TaskClusterService { // this service clusters tasks that are close 
     }
 
     private void updateCentroid(Cluster cluster) {
+        updateCentroid(cluster, null);
+    }
+
+    private void updateCentroid(Cluster cluster, Long excludedTaskId) {
         // average start tasks' startpoints
-        List<Task> startTasks = cluster.getStartTasks();
+        List<Task> startTasks = cluster.getStartTasks().stream()
+                .filter(task -> excludedTaskId == null || !excludedTaskId.equals(task.getId()))
+                .toList();
         // average end tasks' endpoints
-        List<Task> endTasks = cluster.getEndTasks();
+        List<Task> endTasks = cluster.getEndTasks().stream()
+                .filter(task -> excludedTaskId == null || !excludedTaskId.equals(task.getId()))
+                .toList();
 
         List<double[]> points = new ArrayList<>();
         startTasks.forEach(t -> points.add(new double[]{
@@ -97,7 +114,6 @@ public class TaskClusterService { // this service clusters tasks that are close 
 
         cluster.setCentroidLat(avgLat);
         cluster.setCentroidLng(avgLng);
-        clusterRepository.save(cluster);
     }
 
     private double haversineMetres(double lat1, double lng1, double lat2, double lng2) { // calculates distance between two points on earth
@@ -150,7 +166,10 @@ public class TaskClusterService { // this service clusters tasks that are close 
         clusterRepository.findByTopStandardTaskOrTopLargeTask(task, task)
                 .forEach(cluster -> addCluster(affectedClusters, cluster));
 
-        affectedClusters.values().forEach(cluster -> updateTopTasks(cluster, task.getId()));
+        affectedClusters.values().forEach(cluster -> {
+            updateCentroid(cluster, task.getId());
+            updateTopTasks(cluster, task.getId());
+        });
         clusterRepository.saveAll(affectedClusters.values());
         clusterRepository.flush();
     }

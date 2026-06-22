@@ -22,6 +22,8 @@ public class TaskResponseDTO {
     private String status;
     private Long robotId;
     private List<Long> dependencyIds;
+    private String routeGeometry;
+    private Integer routeDistance;
 
     public TaskResponseDTO(Task task) {
         this.id = task.getId();
@@ -41,6 +43,8 @@ public class TaskResponseDTO {
         this.robotId = task.getRobot() != null ? task.getRobot().getId() : null;
         this.dependencyIds = task.getDependencies() != null ?
                 task.getDependencies().stream().map(Task::getId).toList() : List.of();
+        this.routeGeometry = task.getRoute() != null ? task.getRoute().getRouteGeo() : null;
+        this.routeDistance = task.getRoute() != null ? task.getRoute().getTotalDistance() : null;
     }
 
 }

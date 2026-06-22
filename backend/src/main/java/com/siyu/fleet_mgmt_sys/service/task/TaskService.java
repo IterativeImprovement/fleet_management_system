@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 
@@ -35,31 +36,43 @@ public class TaskService {
     private final TaskClusterService clusterService;
     private final TaskAllocationService allocationService;
 
+    @Transactional
     public TaskResponseDTO createTask(TaskRequestDTO req) {
-        WayPoint start = wayPointRepository.save(new WayPoint(req.getStartWayPointStr()));
-        WayPoint end = wayPointRepository.save(new WayPoint((req.getEndWayPointStr())));
+        validateCreateRequest(req);
+
+        WayPoint start = new WayPoint(req.getStartWayPointStr());
+        WayPoint end = new WayPoint(req.getEndWayPointStr());
 
         if (!isWithinSingapore(start.getLatitude(), start.getLongitude())
                 || !isWithinSingapore(end.getLatitude(), end.getLongitude())) {
             throw new IllegalArgumentException("Waypoints not within Singapore bounds.");
         }
 
+        TaskType taskType = toTaskType(req.getType());
+        List<Long> dependencyIds = req.getDependencyIds() == null
+                ? List.of()
+                : req.getDependencyIds().stream().distinct().toList();
+        if (dependencyIds.stream().anyMatch(id -> id == null)) {
+            throw new IllegalArgumentException("Dependency IDs cannot contain null values.");
+        }
+        List<Task> dependencies = dependencyIds.stream()
+                .map(depId -> taskRepository.findById(depId)
+                        .orElseThrow(() -> new TaskNotFoundException(depId)))
+                .toList();
+
+        WayPoint savedStart = wayPointRepository.save(start);
+        WayPoint savedEnd = wayPointRepository.save(end);
+
         Task task = new Task();
-        task.setName(req.getName());
-        task.setDescription(req.getDescription());
+        task.setName(req.getName().trim());
+        task.setDescription(req.getDescription().trim());
         task.setPriority(req.getPriority());
-        task.setStartWayPoint(start);
-        task.setEndWayPoint(end);
+        task.setStartWayPoint(savedStart);
+        task.setEndWayPoint(savedEnd);
         task.setStartDateTime(req.getStartDateTime());
         task.setCompletionDateTime(req.getCompletionDateTime());
-        TaskType taskType = req.getType() != null ? TaskType.valueOf(req.getType().toUpperCase()) : null; // convert to Tasktype
         task.setType(taskType);
-        task.setDependencies(
-                req.getDependencyIds().stream()
-                        .map(depId -> taskRepository.findById(depId)
-                                .orElseThrow(() -> new TaskNotFoundException(depId)))
-                        .toList()
-        );
+        task.setDependencies(dependencies);
 
         Task savedTask = taskSubmissionPipeline.submitTask(task);
         System.out.println("Task created successfully!\n" + savedTask.toString());
@@ -79,10 +92,14 @@ public class TaskService {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new TaskNotFoundException(id));
         String taskString = task.toString();
+        WayPoint startWayPoint = task.getStartWayPoint();
+        WayPoint endWayPoint = task.getEndWayPoint();
 
         clusterService.removeTaskFromClusterCaches(task);
         taskRepository.delete(task);
         taskRepository.flush();
+        wayPointRepository.deleteAll(List.of(startWayPoint, endWayPoint));
+        wayPointRepository.flush();
 
         System.out.println("Task deleted successfully!\n" + taskString);
     }
@@ -168,6 +185,46 @@ public class TaskService {
     public boolean isWithinSingapore(double lat, double lon) {
         return lat >= 1.1304 && lat <= 1.4504
                 && lon >= 103.6020 && lon <= 104.0850;
+    }
+
+    private void validateCreateRequest(TaskRequestDTO req) {
+        if (req == null) {
+            throw new IllegalArgumentException("Task request is required.");
+        }
+        if (req.getName() == null || req.getName().isBlank()) {
+            throw new IllegalArgumentException("Task name is required.");
+        }
+        if (req.getDescription() == null || req.getDescription().isBlank()) {
+            throw new IllegalArgumentException("Task description is required.");
+        }
+        if (req.getPriority() == null || req.getPriority() < 1 || req.getPriority() > 3) {
+            throw new IllegalArgumentException("Task priority must be between 1 and 3.");
+        }
+        if (req.getStartWayPointStr() == null || req.getStartWayPointStr().isBlank()
+                || req.getEndWayPointStr() == null || req.getEndWayPointStr().isBlank()) {
+            throw new IllegalArgumentException("Start and end waypoints are required.");
+        }
+        if (req.getStartDateTime() == null || req.getCompletionDateTime() == null) {
+            throw new IllegalArgumentException("Start and completion times are required.");
+        }
+        if (!req.getCompletionDateTime().isAfter(req.getStartDateTime())) {
+            throw new IllegalArgumentException("Completion time must be after start time.");
+        }
+        if (!req.getCompletionDateTime().isAfter(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Completion time must be in the future.");
+        }
+    }
+
+    private TaskType toTaskType(String type) {
+        if (type == null || type.isBlank()) {
+            throw new IllegalArgumentException("Task type is required.");
+        }
+
+        return switch (type.trim().toUpperCase()) {
+            case "STANDARD", "STANDARDTRANSPORT" -> TaskType.STANDARD;
+            case "LARGE" -> TaskType.LARGE;
+            default -> throw new IllegalArgumentException("Unknown task type: " + type);
+        };
     }
 
 }

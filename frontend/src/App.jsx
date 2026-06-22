@@ -180,7 +180,20 @@ function App() {
             let routeData = routeCacheRef.current[routeKey]
 
             if (!routeData) {
-              if (useMockData) {
+              if (task.routeGeometry) {
+                const coordinates = decodePolyline(task.routeGeometry)
+
+                if (coordinates.length < 2) {
+                  throw new Error('Stored task route is invalid')
+                }
+
+                routeData = {
+                  coordinates,
+                  summary: task.routeDistance === null
+                    ? null
+                    : { total_distance: task.routeDistance },
+                }
+              } else if (useMockData) {
                 routeData = {
                   coordinates: createDemoRouteCoordinates(task),
                   summary: null,
