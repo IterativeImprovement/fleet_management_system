@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /*
@@ -136,7 +138,32 @@ public class TaskClusterService { // this service clusters tasks that are close 
         Cluster cluster = clusterRepository.findById(clusterId).orElseThrow(
                 () -> new ClusterNotFoundException(clusterId)
         );
+        updateTopTasks(cluster, null);
+        clusterRepository.save(cluster);
+    }
+
+    @Transactional
+    public void removeTaskFromClusterCaches(Task task) {
+        Map<Long, Cluster> affectedClusters = new LinkedHashMap<>();
+        addCluster(affectedClusters, task.getStartCluster());
+        addCluster(affectedClusters, task.getEndCluster());
+        clusterRepository.findByTopStandardTaskOrTopLargeTask(task, task)
+                .forEach(cluster -> addCluster(affectedClusters, cluster));
+
+        affectedClusters.values().forEach(cluster -> updateTopTasks(cluster, task.getId()));
+        clusterRepository.saveAll(affectedClusters.values());
+        clusterRepository.flush();
+    }
+
+    private void addCluster(Map<Long, Cluster> clusters, Cluster cluster) {
+        if (cluster != null) {
+            clusters.put(cluster.getId(), cluster);
+        }
+    }
+
+    private void updateTopTasks(Cluster cluster, Long excludedTaskId) {
         List<Task> pending = cluster.getStartTasks().stream() // only tasks that start in this cluster will be considered
+                .filter(task -> excludedTaskId == null || !excludedTaskId.equals(task.getId()))
                 .filter(t -> t.getStatus() == TaskStatus.PENDING_ASSIGNMENT) // retrieves pending tasks
                 .toList();
 
@@ -150,6 +177,5 @@ public class TaskClusterService { // this service clusters tasks that are close 
 
         cluster.setTopStandardTask(topStandard);
         cluster.setTopLargeTask(topLarge);
-        clusterRepository.save(cluster);
     }
 }

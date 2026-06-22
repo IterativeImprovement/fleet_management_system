@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import {
+  getTaskDeleteBlockReason,
   getPriorityType,
   getTaskStatusLabel,
   getTaskStatusType,
@@ -14,21 +16,53 @@ function formatDateTime(dateTime) {
   return dateTime.replace('T', ' ')
 }
 
-function getDependencies(task) {
-  return task.dependencies || task.tasks || []
+function formatDependency(dependencyId, tasks) {
+  const dependency = tasks.find(
+    task => String(task.id) === String(dependencyId)
+  )
+
+  return dependency?.name || `Task ${dependencyId}`
 }
 
-function formatDependency(dependency) {
-  if (typeof dependency === 'object') {
-    return dependency.name || `Task ${dependency.id}`
-  }
-
-  return `Task ${dependency}`
-}
-
-function SelectedTaskPanel({ task, assignedRobot, onBack, onViewRobot }) {
+function SelectedTaskPanel({
+  task,
+  tasks = [],
+  assignedRobot,
+  onBack,
+  onViewRobot,
+  onDeleteTask,
+}) {
+  const [deleteError, setDeleteError] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
   const statusType = getTaskStatusType(task.status)
-  const dependencies = getDependencies(task)
+  const priorityType = getPriorityType(task.priority)
+  const dependencies = task.dependencyIds || []
+  const deleteBlockReason = getTaskDeleteBlockReason(task, tasks)
+  const deleteMessage = deleteError || deleteBlockReason
+
+  async function handleDeleteTask() {
+    if (deleteBlockReason) {
+      setDeleteError(deleteBlockReason)
+      return
+    }
+
+    const taskName = task.name || `Task ${task.id}`
+    const shouldDelete = window.confirm(
+      `Delete ${taskName}? This action cannot be undone.`
+    )
+
+    if (!shouldDelete) return
+
+    try {
+      setIsDeleting(true)
+      setDeleteError('')
+      await onDeleteTask?.(task.id)
+    } catch (error) {
+      setDeleteError(error.message || 'Failed to delete task')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   return (
     <div className="selected-task-panel">
@@ -47,8 +81,8 @@ function SelectedTaskPanel({ task, assignedRobot, onBack, onViewRobot }) {
             </p>
           </div>
 
-          <span className={`task-priority ${task.priorityType}`}>
-            {getPriorityType(task.priority)}
+          <span className={`task-priority ${priorityType}`}>
+            {priorityType}
           </span>
         </div>
 
@@ -111,7 +145,7 @@ function SelectedTaskPanel({ task, assignedRobot, onBack, onViewRobot }) {
           <span>Dependencies:</span>
           <strong>
             {dependencies.length > 0
-              ? dependencies.map(formatDependency).join(', ')
+              ? dependencies.map(id => formatDependency(id, tasks)).join(', ')
               : 'None'}
           </strong>
         </div>
@@ -126,9 +160,18 @@ function SelectedTaskPanel({ task, assignedRobot, onBack, onViewRobot }) {
           </button>
         )}
 
-        <button type="button" className="delete-task-button">
-          Delete Task
+        <button
+          type="button"
+          className="delete-task-button"
+          onClick={handleDeleteTask}
+          disabled={isDeleting || Boolean(deleteBlockReason)}
+        >
+          {isDeleting ? 'Deleting...' : 'Delete Task'}
         </button>
+
+        {deleteMessage && (
+          <p className="task-delete-error">{deleteMessage}</p>
+        )}
       </div>
     </div>
   )

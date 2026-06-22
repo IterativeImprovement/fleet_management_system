@@ -32,6 +32,79 @@ export function getTaskStatusType(status) {
   return 'unknown'
 }
 
+export const TASK_DELETE_ASSIGNED_MESSAGE =
+  'Cannot delete a task that is assigned or in progress'
+
+function normaliseWayPoint(wayPoint) {
+  if (!wayPoint) return null
+
+  const latitude = Number(wayPoint.latitude)
+  const longitude = Number(wayPoint.longitude)
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+
+  return {
+    ...wayPoint,
+    latitude,
+    longitude,
+  }
+}
+
+function normaliseTaskType(type) {
+  const value = String(type || 'STANDARD').trim().toUpperCase()
+
+  return value === 'STANDARDTRANSPORT' ? 'STANDARD' : value
+}
+
+export function normaliseDependencyIds(dependencyIds = []) {
+  if (!Array.isArray(dependencyIds)) return []
+
+  const uniqueIds = new Map()
+
+  dependencyIds.forEach(dependency => {
+    const id = typeof dependency === 'object' ? dependency?.id : dependency
+    const numericId = Number(id)
+
+    if (
+      id === null ||
+      id === undefined ||
+      id === '' ||
+      !Number.isFinite(numericId)
+    ) return
+
+    uniqueIds.set(String(numericId), numericId)
+  })
+
+  return [...uniqueIds.values()]
+}
+
+export function getTaskDeleteBlockReason(task, tasks = []) {
+  if (!task) return 'Task could not be found'
+
+  const status = String(task?.status || '').toUpperCase()
+
+  if (
+    (task.robotId !== null && task.robotId !== undefined) ||
+    status === 'ASSIGNED' ||
+    status === 'IN_PROGRESS'
+  ) {
+    return TASK_DELETE_ASSIGNED_MESSAGE
+  }
+
+  const dependentTask = tasks.find(candidate =>
+    String(candidate.id) !== String(task?.id) &&
+    normaliseDependencyIds(candidate.dependencyIds).some(
+      dependencyId => String(dependencyId) === String(task?.id)
+    )
+  )
+
+  if (dependentTask) {
+    return `${dependentTask.name || `Task ${dependentTask.id}`} depends on this task`
+  }
+
+  return ''
+}
+
 export function createTask({
   id,
   priority,
@@ -44,27 +117,26 @@ export function createTask({
   startWayPoint,
   endWayPoint,
   robotId = null,
-  tasks = [],
-  dependencies = tasks,
+  dependencyIds = [],
 }) {
+  const numericPriority = Number(priority)
+
   return {
     id,
-    priority,
-    priorityType: getPriorityType(priority),
+    priority: numericPriority,
 
-    name: name.trim(),
-    description: description.trim(),
-    type,
-    status,
+    name: String(name || '').trim(),
+    description: String(description || '').trim(),
+    type: normaliseTaskType(type),
+    status: String(status || 'PENDING_ASSIGNMENT').trim().toUpperCase(),
 
     startDateTime,
     completionDateTime,
 
-    startWayPoint,
-    endWayPoint,
+    startWayPoint: normaliseWayPoint(startWayPoint),
+    endWayPoint: normaliseWayPoint(endWayPoint),
 
     robotId,
-    tasks: dependencies,
-    dependencies,
+    dependencyIds: normaliseDependencyIds(dependencyIds),
   }
 }

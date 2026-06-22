@@ -74,11 +74,15 @@ public class TaskService {
         return new TaskResponseDTO(task);
     }
 
+    @Transactional
     public void deleteTask(Long id) {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new TaskNotFoundException(id));
         String taskString = task.toString();
+
+        clusterService.removeTaskFromClusterCaches(task);
         taskRepository.delete(task);
+        taskRepository.flush();
 
         System.out.println("Task deleted successfully!\n" + taskString);
     }

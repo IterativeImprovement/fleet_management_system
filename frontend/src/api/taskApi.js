@@ -11,17 +11,33 @@ async function getErrorMessage(response) {
   }
 }
 
-// turns the string passed in from the backend into an object
-function parseWaypointString(wpStr) {
-  if (!wpStr || typeof wpStr !== 'string') return null;
+function parseWaypoint(wayPoint) {
+  if (!wayPoint) return null
 
-  const parts = wpStr.split(',');
-  if (parts.length !== 2) return null;
+  if (typeof wayPoint === 'object') {
+    const latitude = Number(wayPoint.latitude)
+    const longitude = Number(wayPoint.longitude)
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+
+    return {
+      latitude,
+      longitude,
+    }
+  }
+
+  const parts = wayPoint.split(',')
+  if (parts.length !== 2) return null
+
+  const latitude = Number(parts[0].trim())
+  const longitude = Number(parts[1].trim())
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
 
   return {
-    latitude: parts[0].trim(),
-    longitude: parts[1].trim()
-  };
+    latitude,
+    longitude,
+  }
 }
 
 export function normaliseTaskFromBackend(task) {
@@ -34,10 +50,10 @@ export function normaliseTaskFromBackend(task) {
     status: task.status ?? 'PENDING_ASSIGNMENT',
     startDateTime: task.startDateTime ?? '',
     completionDateTime: task.completionDateTime ?? '',
-    startWayPoint: parseWaypointString(task.startWayPointStr || task.startWayPoint),
-    endWayPoint: parseWaypointString(task.endWayPointStr || task.endWayPoint),
+    startWayPoint: parseWaypoint(task.startWayPointStr || task.startWayPoint),
+    endWayPoint: parseWaypoint(task.endWayPointStr || task.endWayPoint),
     robotId: task.robotId ?? task.robot?.id ?? null,
-    dependencies: task.dependencies ?? task.dependencyIds ?? task.tasks ?? [],
+    dependencyIds: task.dependencyIds ?? task.dependencies ?? task.tasks ?? [],
   })
 }
 
@@ -79,9 +95,9 @@ function wayPointToString(wayPoint) {
 }
 
 function getDependencyIds(task) {
-  const dependencies = task.dependencies ?? task.tasks ?? []
+  const dependencyIds = task.dependencyIds ?? []
 
-  return dependencies
+  return dependencyIds
     .map(dependency =>
       typeof dependency === 'object' ? dependency.id : dependency
     )
@@ -132,4 +148,18 @@ export async function createTaskInBackend(task) {
   const data = await response.json()
 
   return normaliseTaskFromBackend(data)
+}
+
+export async function deleteTaskInBackend(taskId) {
+  const response = await fetch(`${TASK_ENDPOINT}/${taskId}`, {
+    method: 'DELETE',
+    headers: {
+      Accept: 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const message = await getErrorMessage(response)
+    throw new Error(`Delete task failed (${response.status}): ${message}`)
+  }
 }

@@ -79,10 +79,6 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
       return
     }
 
-    const dependencyTasks = dependencyId
-      ? tasks.filter(task => String(task.id) === dependencyId)
-      : []
-
     const newTask = createTask({
       id: Date.now(),
       name: trimmedName,
@@ -94,7 +90,7 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
       startWayPoint: parseWayPoint(trimmedStartWayPoint),
       endWayPoint: parseWayPoint(trimmedEndWayPoint),
       robotId: null,
-      tasks: dependencyTasks,
+      dependencyIds: dependencyId ? [Number(dependencyId)] : [],
     })
 
     try {

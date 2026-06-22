@@ -17,6 +17,7 @@ function Sidebar({
   onSelectTask,
   onAddTask,
   onAddRobot,
+  onDeleteTask,
   onDeleteRobot,
 }) {
   const [isAddingTask, setIsAddingTask] = useState(false)
@@ -125,7 +126,9 @@ function Sidebar({
         ) : selectedTask ? (
           <SelectedTaskPanel
             task={selectedTask}
+            tasks={tasks}
             assignedRobot={selectedTaskAssignedRobot}
+            onDeleteTask={onDeleteTask}
             onBack={() => {
               onSelectTask(null)
               onSelectRobot(null)

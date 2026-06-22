@@ -12,7 +12,11 @@ import Sidebar from './components/Sidebar'
 import LiveMap from './components/LiveMap'
 import AlertLog from './components/AlertLog'
 
-import { getTasks, createTaskInBackend } from './api/taskApi'
+import {
+  getTasks,
+  createTaskInBackend,
+  deleteTaskInBackend,
+} from './api/taskApi'
 import {
   getRobots,
   createRobotInBackend,
@@ -29,6 +33,7 @@ import {
   reconcileRobotTaskIds,
   ROBOT_DELETE_ASSIGNED_TASKS_MESSAGE,
 } from './utils/robotUtils'
+import { getTaskDeleteBlockReason } from './utils/taskUtils'
 
 function shouldUseMockData() {
   return (
@@ -332,6 +337,33 @@ function App() {
     return savedRobot
   }
 
+  async function handleDeleteTask(taskId) {
+    const taskToDelete = tasks.find(
+      task => String(task.id) === String(taskId)
+    )
+    const deleteBlockReason = getTaskDeleteBlockReason(taskToDelete, tasks)
+
+    if (deleteBlockReason) {
+      throw new Error(deleteBlockReason)
+    }
+
+    if (!useMockData) {
+      await deleteTaskInBackend(taskId)
+    }
+
+    setTasks(prevTasks =>
+      prevTasks.filter(task => String(task.id) !== String(taskId))
+    )
+    setSelectedTaskId(null)
+    setSelectedRobotId(null)
+    setActiveTab('tasks')
+
+    console.log(
+      useMockData ? 'Deleted demo task locally:' : 'Deleted task from backend:',
+      taskId
+    )
+  }
+
   async function handleDeleteRobot(robotId) {
     if (useMockData) {
       const robotToDelete = representedRobots.find(
@@ -390,6 +422,7 @@ function App() {
         onChangeTab={setActiveTab}
         onAddTask={handleAddTask}
         onAddRobot={handleAddRobot}
+        onDeleteTask={handleDeleteTask}
         onDeleteRobot={handleDeleteRobot}
       />
 
