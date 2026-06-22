@@ -196,19 +196,23 @@ function LiveMap({
 
     robots
       .filter(robot =>
-        Number.isFinite(Number(robot.latitude)) &&
-        Number.isFinite(Number(robot.longitude))
+        robot.position !== null &&
+        Number.isFinite(Number(robot.position.latitude)) &&
+        Number.isFinite(Number(robot.position.longitude))
       )
       .forEach(robot => {
         const statusType = getRobotStatusType(robot.status)
-        const isSelected = robot.id === selectedRobotId
+        const isSelected = String(robot.id) === String(selectedRobotId)
 
         const className = `robot-marker ${statusType} ${
           isSelected ? 'selected' : ''
         }`.trim()
 
         const marker = L.circleMarker(
-          [Number(robot.latitude), Number(robot.longitude)],
+          [
+            Number(robot.position.latitude),
+            Number(robot.position.longitude),
+          ],
           {
             radius: isSelected ? 9 : 7,
             className,

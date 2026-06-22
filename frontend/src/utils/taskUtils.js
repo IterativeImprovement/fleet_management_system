@@ -43,7 +43,7 @@ export function createTask({
   completionDateTime = '',
   startWayPoint,
   endWayPoint,
-  robot = null,
+  robotId = null,
   tasks = [],
   dependencies = tasks,
 }) {
@@ -63,7 +63,7 @@ export function createTask({
     startWayPoint,
     endWayPoint,
 
-    robot,
+    robotId,
     tasks: dependencies,
     dependencies,
   }

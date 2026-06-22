@@ -7,7 +7,7 @@ import {
 function TaskRow({ task, isSelected, onSelectTask }) {
   const statusType = getTaskStatusType(task.status)
   const statusLabel = getTaskStatusLabel(task.status)
-  const assignedRobotName = task.robot?.name || task.robot?.id
+  const assignedRobotId = task.robotId
 
   return (
     <div
@@ -31,9 +31,9 @@ function TaskRow({ task, isSelected, onSelectTask }) {
           {statusLabel}
         </span>
 
-        {assignedRobotName && (
+        {assignedRobotId && (
           <span>
-            Assigned to {assignedRobotName}
+            Assigned to Robot {assignedRobotId}
           </span>
         )}
       </p>

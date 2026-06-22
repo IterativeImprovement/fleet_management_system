@@ -29,13 +29,12 @@ function Sidebar({
     task => String(task.id) === String(selectedTaskId)
   )
   const selectedTaskAssignedRobot =
-    selectedTask?.robot ||
-    robots.find(robot =>
-      robot.tasks?.some(task => {
-        const robotTaskId = typeof task === 'object' ? task.id : task
-
-        return String(robotTaskId) === String(selectedTask?.id)
-      })
+    robots.find(
+      robot =>
+        String(robot.id) === String(selectedTask?.robotId) ||
+        robot.taskIds.some(
+          taskId => String(taskId) === String(selectedTask?.id)
+        )
     )
 
   function handleOpenRobotTab() {

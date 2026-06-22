@@ -5,10 +5,6 @@ import {
   getRobotTypeLabel,
 } from '../utils/robotUtils'
 
-function getTaskId(task) {
-  return typeof task === 'object' ? task.id : task
-}
-
 function formatWaypoint(wayPoint) {
   if (!wayPoint) return null
 
@@ -25,10 +21,10 @@ function formatTaskRoute(task) {
 }
 
 function getAssignedTasks(robot, tasks) {
-  const robotTaskIds = robot.tasks?.map(getTaskId) || []
+  const robotTaskIds = robot.taskIds || []
 
   const assignedFromTaskList = tasks.filter(task => {
-    const taskRobotId = task.robot?.id
+    const taskRobotId = task.robotId
     const taskIsInRobotList = robotTaskIds.some(
       taskId => String(taskId) === String(task.id)
     )
@@ -38,7 +34,7 @@ function getAssignedTasks(robot, tasks) {
 
   if (assignedFromTaskList.length > 0) return assignedFromTaskList
 
-  return robot.tasks || []
+  return robotTaskIds
 }
 
 function SelectedRobotPanel({

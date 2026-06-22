@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 
 import './App.css'
 
 import { mockRobots } from './data/mockRobots'
 import { mockAlerts } from './data/mockAlerts'
 import { mockObstacles } from './data/mockObstacle'
+import { mockTasks } from './data/mockTasks'
 
 import Topbar from './components/Topbar'
 import Sidebar from './components/Sidebar'
@@ -23,14 +24,45 @@ import {
   getTaskRouteEndpoints,
   hasValidTaskRouteEndpoints,
 } from './utils/routeUtils'
+import { reconcileRobotTaskIds } from './utils/robotUtils'
+
+function shouldUseMockData() {
+  return (
+    import.meta.env.VITE_USE_MOCK_DATA === 'true' ||
+    new URLSearchParams(window.location.search).get('mock') === 'true'
+  )
+}
+
+function createDemoRouteCoordinates(task) {
+  const startLat = Number(task.startWayPoint.latitude)
+  const startLng = Number(task.startWayPoint.longitude)
+  const endLat = Number(task.endWayPoint.latitude)
+  const endLng = Number(task.endWayPoint.longitude)
+
+  const latDelta = endLat - startLat
+  const lngDelta = endLng - startLng
+
+  return [
+    [startLat, startLng],
+    [startLat + latDelta * 0.3, startLng + lngDelta * 0.2],
+    [startLat + latDelta * 0.55, startLng + lngDelta * 0.55],
+    [startLat + latDelta * 0.8, startLng + lngDelta * 0.75],
+    [endLat, endLng],
+  ]
+}
 
 function App() {
+  const [useMockData] = useState(shouldUseMockData)
   const [selectedRobotId, setSelectedRobotId] = useState(null)
   const [selectedTaskId, setSelectedTaskId] = useState(null)
 
-  const [tasks, setTasks] = useState([])
-  const [robots, setRobots] = useState(mockRobots)
+  const [tasks, setTasks] = useState(() => (useMockData ? mockTasks : []))
+  const [robots, setRobots] = useState(() => (useMockData ? mockRobots : []))
   const [activeTab, setActiveTab] = useState('robots')
+  const representedRobots = useMemo(
+    () => reconcileRobotTaskIds(robots, tasks),
+    [robots, tasks]
+  )
 
   const [routesByTaskId, setRoutesByTaskId] = useState({})
   const [routeErrorsByTaskId, setRouteErrorsByTaskId] = useState({})
@@ -38,6 +70,8 @@ function App() {
   const routeCacheRef = useRef({})
 
   useEffect(() => {
+    if (useMockData) return
+
     let isCancelled = false
 
     async function loadRobotsFromBackend() {
@@ -69,9 +103,11 @@ function App() {
     return () => {
       isCancelled = true
     }
-  }, [])
+  }, [useMockData])
 
   useEffect(() => {
+    if (useMockData) return
+
     let isCancelled = false
 
     async function loadTasksFromBackend() {
@@ -103,7 +139,7 @@ function App() {
     return () => {
       isCancelled = true
     }
-  }, [])
+  }, [useMockData])
 
   useEffect(() => {
     let isCancelled = false
@@ -135,12 +171,19 @@ function App() {
             let routeData = routeCacheRef.current[routeKey]
 
             if (!routeData) {
-              const data = await getRouteGeometry(start, end)
-              const coordinates = decodePolyline(data.routeGeometry)
+              if (useMockData) {
+                routeData = {
+                  coordinates: createDemoRouteCoordinates(task),
+                  summary: null,
+                }
+              } else {
+                const data = await getRouteGeometry(start, end)
+                const coordinates = decodePolyline(data.routeGeometry)
 
-              routeData = {
-                coordinates,
-                summary: data.routeSummary,
+                routeData = {
+                  coordinates,
+                  summary: data.routeSummary,
+                }
               }
 
               routeCacheRef.current[routeKey] = routeData
@@ -172,30 +215,28 @@ function App() {
     return () => {
       isCancelled = true
     }
-  }, [tasks])
+  }, [tasks, useMockData])
 
   const routeErrorCount = Object.keys(routeErrorsByTaskId).length
 
   function getTaskIdFromRobot(robot) {
-    const currentTask = robot?.tasks?.[0]
-
-    if (!currentTask) return null
-
-    return typeof currentTask === 'object' ? currentTask.id : currentTask
+    return robot?.taskIds?.[0] ?? null
   }
 
   function robotHasTask(robot, taskId) {
-    return robot.tasks?.some(task => {
-      const robotTaskId = typeof task === 'object' ? task.id : task
-
-      return String(robotTaskId) === String(taskId)
-    })
+    return robot.taskIds.some(
+      robotTaskId => String(robotTaskId) === String(taskId)
+    )
   }
 
   function getRobotIdFromTask(task) {
-    if (task?.robot?.id) return task.robot.id
+    if (task?.robotId !== null && task?.robotId !== undefined) {
+      return task.robotId
+    }
 
-    const assignedRobot = robots.find(robot => robotHasTask(robot, task?.id))
+    const assignedRobot = representedRobots.find(robot =>
+      robotHasTask(robot, task?.id)
+    )
 
     return assignedRobot?.id || null
   }
@@ -204,7 +245,7 @@ function App() {
     setSelectedRobotId(robotId)
 
     if (robotId) {
-      const selectedRobot = robots.find(
+      const selectedRobot = representedRobots.find(
         robot => String(robot.id) === String(robotId)
       )
       const currentTaskId = getTaskIdFromRobot(selectedRobot)
@@ -227,6 +268,19 @@ function App() {
   }
 
   async function handleAddTask(newTask) {
+    if (useMockData) {
+      setTasks(prevTasks => [
+        ...prevTasks.filter(task => String(task.id) !== String(newTask.id)),
+        newTask,
+      ])
+      setSelectedTaskId(newTask.id)
+      setActiveTab('tasks')
+
+      console.log('Created demo task locally:', newTask)
+
+      return newTask
+    }
+
     try {
       const savedTask = await createTaskInBackend(newTask)
 
@@ -247,6 +301,19 @@ function App() {
   }
 
   async function handleAddRobot(newRobot) {
+    if (useMockData) {
+      setRobots(prevRobots => [
+        ...prevRobots.filter(robot => String(robot.id) !== String(newRobot.id)),
+        newRobot,
+      ])
+      setSelectedRobotId(newRobot.id)
+      setActiveTab('robots')
+
+      console.log('Created demo robot locally:', newRobot)
+
+      return newRobot
+    }
+
     const savedRobot = await createRobotInBackend(newRobot)
 
     setRobots(prevRobots => [
@@ -262,6 +329,27 @@ function App() {
   }
 
   async function handleDeleteRobot(robotId) {
+    if (useMockData) {
+      setRobots(prevRobots =>
+        prevRobots.filter(robot => String(robot.id) !== String(robotId))
+      )
+
+      setTasks(prevTasks =>
+        prevTasks.map(task =>
+          String(task.robotId) === String(robotId)
+            ? { ...task, robotId: null }
+            : task
+        )
+      )
+
+      setSelectedRobotId(null)
+      setSelectedTaskId(null)
+      setActiveTab('robots')
+
+      console.log('Deleted demo robot locally:', robotId)
+      return
+    }
+
     await deleteRobotInBackend(robotId)
 
     setRobots(prevRobots =>
@@ -270,8 +358,8 @@ function App() {
 
     setTasks(prevTasks =>
       prevTasks.map(task =>
-        String(task.robot?.id) === String(robotId)
-          ? { ...task, robot: null }
+        String(task.robotId) === String(robotId)
+          ? { ...task, robotId: null }
           : task
       )
     )
@@ -288,7 +376,7 @@ function App() {
       <Topbar />
 
       <Sidebar
-        robots={robots}
+        robots={representedRobots}
         tasks={tasks}
         selectedRobotId={selectedRobotId}
         selectedTaskId={selectedTaskId}
@@ -302,7 +390,7 @@ function App() {
       />
 
       <LiveMap
-        robots={robots}
+        robots={representedRobots}
         obstacles={mockObstacles}
         routesByTaskId={routesByTaskId}
         selectedTaskId={selectedTaskId}

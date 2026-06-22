@@ -93,7 +93,7 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
       completionDateTime: normaliseDateTime(completionDateTime),
       startWayPoint: parseWayPoint(trimmedStartWayPoint),
       endWayPoint: parseWayPoint(trimmedEndWayPoint),
-      robot: null,
+      robotId: null,
       tasks: dependencyTasks,
     })
 

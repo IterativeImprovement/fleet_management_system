@@ -1,4 +1,4 @@
-import { createTask } from '../utils/taskUtils'
+import { createTask } from '../utils/taskUtils.js'
 
 const TASK_ENDPOINT = '/task'
 
@@ -24,7 +24,7 @@ function parseWaypointString(wpStr) {
   };
 }
 
-function normaliseTaskFromBackend(task) {
+export function normaliseTaskFromBackend(task) {
   return createTask({
     id: task.id,
     priority: Number(task.priority),
@@ -36,7 +36,7 @@ function normaliseTaskFromBackend(task) {
     completionDateTime: task.completionDateTime ?? '',
     startWayPoint: parseWaypointString(task.startWayPointStr || task.startWayPoint),
     endWayPoint: parseWaypointString(task.endWayPointStr || task.endWayPoint),
-    robot: task.robot ?? null,
+    robotId: task.robotId ?? task.robot?.id ?? null,
     dependencies: task.dependencies ?? task.dependencyIds ?? task.tasks ?? [],
   })
 }
