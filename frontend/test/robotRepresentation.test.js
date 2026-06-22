@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import { normaliseRobotFromBackend } from '../src/api/robotApi.js'
 import { normaliseTaskFromBackend } from '../src/api/taskApi.js'
 import {
+  canDeleteRobot,
   createRobot,
   reconcileRobotTaskIds,
 } from '../src/utils/robotUtils.js'
@@ -85,4 +86,16 @@ test('task ownership is normalized to robotId and reconciled into robots', () =>
 
   assert.equal(task.robotId, 9)
   assert.deepEqual(reconcileRobotTaskIds(robots, [task])[0].taskIds, [12])
+})
+
+test('only robots without assigned tasks can be deleted', () => {
+  const unassignedRobot = createRobot({ id: 1, name: 'R-001' })
+  const assignedRobot = createRobot({
+    id: 2,
+    name: 'R-002',
+    taskIds: [12],
+  })
+
+  assert.equal(canDeleteRobot(unassignedRobot), true)
+  assert.equal(canDeleteRobot(assignedRobot), false)
 })

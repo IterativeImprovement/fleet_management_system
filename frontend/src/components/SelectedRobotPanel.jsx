@@ -3,6 +3,8 @@ import {
   getRobotStatusLabel,
   getRobotStatusType,
   getRobotTypeLabel,
+  canDeleteRobot,
+  ROBOT_DELETE_ASSIGNED_TASKS_MESSAGE,
 } from '../utils/robotUtils'
 
 function formatWaypoint(wayPoint) {
@@ -50,8 +52,16 @@ function SelectedRobotPanel({
   const statusLabel = getRobotStatusLabel(robot.status)
   const assignedTasks = getAssignedTasks(robot, tasks)
   const currentTask = assignedTasks[0]
+  const hasAssignedTasks = !canDeleteRobot(robot)
+  const deleteMessage =
+    deleteError || (hasAssignedTasks ? ROBOT_DELETE_ASSIGNED_TASKS_MESSAGE : '')
 
   async function handleDeleteRobot() {
+    if (hasAssignedTasks) {
+      setDeleteError(ROBOT_DELETE_ASSIGNED_TASKS_MESSAGE)
+      return
+    }
+
     const robotName = robot.name || `Robot ${robot.id}`
     const shouldDelete = window.confirm(
       `Delete ${robotName}? This action cannot be undone.`
@@ -140,12 +150,14 @@ function SelectedRobotPanel({
           type="button"
           className="danger-action"
           onClick={handleDeleteRobot}
-          disabled={isDeleting}
+          disabled={isDeleting || hasAssignedTasks}
         >
           {isDeleting ? 'Deleting...' : 'Delete Robot'}
         </button>
 
-        {deleteError && <p className="selected-action-error">{deleteError}</p>}
+        {deleteMessage && (
+          <p className="selected-action-error">{deleteMessage}</p>
+        )}
       </div>
     </div>
   )

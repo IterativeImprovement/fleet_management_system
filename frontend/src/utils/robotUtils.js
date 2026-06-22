@@ -35,6 +35,13 @@ export function getRobotTypeLabel(type) {
   return 'Unknown'
 }
 
+export const ROBOT_DELETE_ASSIGNED_TASKS_MESSAGE =
+  "Complete or unassign this robot's tasks before deleting it."
+
+export function canDeleteRobot(robot) {
+  return (robot?.taskIds?.length ?? 0) === 0
+}
+
 export function normaliseRobotType(type) {
   const value = String(type || 'UNINITIALISED').trim().toUpperCase()
 

@@ -24,7 +24,11 @@ import {
   getTaskRouteEndpoints,
   hasValidTaskRouteEndpoints,
 } from './utils/routeUtils'
-import { reconcileRobotTaskIds } from './utils/robotUtils'
+import {
+  canDeleteRobot,
+  reconcileRobotTaskIds,
+  ROBOT_DELETE_ASSIGNED_TASKS_MESSAGE,
+} from './utils/robotUtils'
 
 function shouldUseMockData() {
   return (
@@ -330,16 +334,16 @@ function App() {
 
   async function handleDeleteRobot(robotId) {
     if (useMockData) {
-      setRobots(prevRobots =>
-        prevRobots.filter(robot => String(robot.id) !== String(robotId))
+      const robotToDelete = representedRobots.find(
+        robot => String(robot.id) === String(robotId)
       )
 
-      setTasks(prevTasks =>
-        prevTasks.map(task =>
-          String(task.robotId) === String(robotId)
-            ? { ...task, robotId: null }
-            : task
-        )
+      if (!canDeleteRobot(robotToDelete)) {
+        throw new Error(ROBOT_DELETE_ASSIGNED_TASKS_MESSAGE)
+      }
+
+      setRobots(prevRobots =>
+        prevRobots.filter(robot => String(robot.id) !== String(robotId))
       )
 
       setSelectedRobotId(null)

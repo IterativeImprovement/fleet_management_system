@@ -25,6 +25,13 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(400, ex.getMessage()));
     }
 
+    @ExceptionHandler(RobotHasAssignedTasksException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(RobotHasAssignedTasksException ex) {
+        log.warn("Conflict: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(409, ex.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
         log.error("Unexpected error", ex); // logs full stack trace
