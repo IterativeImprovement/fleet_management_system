@@ -1,6 +1,7 @@
 package com.siyu.fleet_mgmt_sys.service;
 
 import com.siyu.fleet_mgmt_sys.dto.RobotRequestDTO;
+import com.siyu.fleet_mgmt_sys.exception.RobotHasAssignedTasksException;
 import com.siyu.fleet_mgmt_sys.exception.RobotNotFoundException;
 import com.siyu.fleet_mgmt_sys.exception.TaskNotFoundException;
 import com.siyu.fleet_mgmt_sys.model.enums.RobotStatus;
@@ -17,7 +18,6 @@ import com.siyu.fleet_mgmt_sys.specification.RobotSpecification;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -58,7 +58,7 @@ public class RobotService {
                 .orElseThrow(() -> new RobotNotFoundException(id));
 
         if (!robot.getTasks().isEmpty()) {
-            throw new IllegalStateException("Cannot delete robot with assigned tasks");
+            throw new RobotHasAssignedTasksException(id);
         }
 
         robotRepository.delete(robot);
