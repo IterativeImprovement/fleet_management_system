@@ -1,8 +1,8 @@
 package com.siyu.fleet_mgmt_sys.service.task.submission;
 
 import com.siyu.fleet_mgmt_sys.exception.ClusterNotFoundException;
-import com.siyu.fleet_mgmt_sys.model.Cluster;
-import com.siyu.fleet_mgmt_sys.model.Task;
+import com.siyu.fleet_mgmt_sys.model.task.Cluster;
+import com.siyu.fleet_mgmt_sys.model.task.Task;
 import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
 import com.siyu.fleet_mgmt_sys.model.enums.TaskStatus;
 import com.siyu.fleet_mgmt_sys.repository.TaskClusterRepository;

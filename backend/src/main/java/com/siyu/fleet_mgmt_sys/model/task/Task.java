@@ -1,6 +1,9 @@
-package com.siyu.fleet_mgmt_sys.model;
+package com.siyu.fleet_mgmt_sys.model.task;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.siyu.fleet_mgmt_sys.model.Location;
+import com.siyu.fleet_mgmt_sys.model.Route;
+import com.siyu.fleet_mgmt_sys.model.WayPoint;
 import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
 import com.siyu.fleet_mgmt_sys.model.enums.TaskStatus;
 import com.siyu.fleet_mgmt_sys.model.enums.TaskType;
@@ -105,20 +108,4 @@ public class Task {
     public String toString() {
         return "Task { id: " + id + ", name: " + name + " }\n";
     } // this makes it easier to read a lists of tasks
-//
-//    public String toStringDetailed() {
-//        return "Task {\n" +
-//                "  id: " + id + "\n" +
-//                "  name: '" + name + "'\n" +
-//                "  priority: " + priority + "\n" +
-//                "  description: '" + description + "'\n" +
-//                "  type: '" + type + "'\n" +
-//                "  startDateTime: " + startDateTime + "\n" +
-//                "  completionDateTime: " + completionDateTime + "\n" +
-//                "  startWayPoint: " + (startWayPoint != null ? startWayPoint.toString() : "null") + "\n" +
-//                "  endWayPoint: " + (endWayPoint != null ? endWayPoint.toString() : "null") + "\n" +
-//                "  robot: " + (robot != null ? robot.toString() : "null") + "\n" +
-//                "  dependencies:  " + dependencies.toString() +
-//                "}";
-//    }
 }

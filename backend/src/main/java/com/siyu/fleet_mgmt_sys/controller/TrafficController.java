@@ -1,6 +1,6 @@
 package com.siyu.fleet_mgmt_sys.controller;
 
-import com.siyu.fleet_mgmt_sys.dto.LtaTrafficSpeedBandResponseDTO;
+import com.siyu.fleet_mgmt_sys.dto.external.LtaTrafficSpeedBandResponseDTO;
 import com.siyu.fleet_mgmt_sys.service.external.TrafficSpeedBandService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

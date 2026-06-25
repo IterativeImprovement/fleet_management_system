@@ -1,7 +1,7 @@
 package com.siyu.fleet_mgmt_sys.service.task.submission;
 
 import com.siyu.fleet_mgmt_sys.model.Route;
-import com.siyu.fleet_mgmt_sys.model.Task;
+import com.siyu.fleet_mgmt_sys.model.task.Task;
 import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
 import com.siyu.fleet_mgmt_sys.model.enums.TaskStatus;
 import com.siyu.fleet_mgmt_sys.repository.TaskRepository;

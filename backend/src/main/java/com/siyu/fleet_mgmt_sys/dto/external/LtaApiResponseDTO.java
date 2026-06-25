@@ -1,4 +1,4 @@
-package com.siyu.fleet_mgmt_sys.dto;
+package com.siyu.fleet_mgmt_sys.dto.external;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
@@ -6,7 +6,7 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * Wrapper matching the LTA DataMall OData response envelope:
+ * Wrapper matching the LTA ODataMall Data response envelope:
  * {
  *   "odata.metadata": "...",
  *   "value": [ ... ]

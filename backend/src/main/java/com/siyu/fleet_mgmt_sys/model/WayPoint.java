@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "WayPoint")
+@Table(name = "waypoints")
 @Getter
 @Setter
 @NoArgsConstructor

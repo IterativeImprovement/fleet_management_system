@@ -1,7 +1,9 @@
 package com.siyu.fleet_mgmt_sys.service.external;
 
-import com.siyu.fleet_mgmt_sys.dto.LtaApiResponseDTO;
-import com.siyu.fleet_mgmt_sys.dto.LtaTrafficSpeedBandResponseDTO;
+import com.siyu.fleet_mgmt_sys.dto.external.LtaApiResponseDTO;
+import com.siyu.fleet_mgmt_sys.dto.external.LtaTrafficSpeedBandResponseDTO;
+import com.siyu.fleet_mgmt_sys.model.RoadSegment;
+import com.siyu.fleet_mgmt_sys.repository.RoadSegmentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,10 +27,11 @@ public class TrafficSpeedBandService {
     private static final int PAGE_SIZE = 500;
 
     // Limits num of concurrent calls made to the API
-    private static final int BATCH_SIZE = 20;
+    private static final int BATCH_SIZE = 15;
     private final ExecutorService executor = Executors.newFixedThreadPool(BATCH_SIZE);
 
     private final RestTemplate ltaRestTemplate;
+    private final RoadSegmentRepository roadSegmentRepository;
 
     @Value("${lta.datamall.base-url}")
     private String baseUrl;
@@ -85,6 +88,9 @@ public class TrafficSpeedBandService {
         }
 
         log.info("Total traffic speed band records fetched concurrently: {}", results.size());
+
+        // stores road segments into Database if database is empty
+        persistRoadSegmentsIfEmpty(results);
         return results;
     }
 
@@ -106,20 +112,49 @@ public class TrafficSpeedBandService {
         }
     }
 
-    public List<LtaTrafficSpeedBandResponseDTO> getSpeedBandsByCategory(String category) {
-        return getAllSpeedBands().stream()
-                .filter(band -> category.equalsIgnoreCase(band.getRoadCategory()))
+
+    /**
+     * This populates the local database with road segments if not already populated.
+     * This will happen at most once (typically on initial loading of the web application).
+     */
+
+    private void persistRoadSegmentsIfEmpty(List<LtaTrafficSpeedBandResponseDTO> data) {
+        if (roadSegmentRepository.count() > 0) {
+            return;
+        }
+
+        List<RoadSegment> segments = data.stream()
+                .map(dto -> {
+                    RoadSegment seg = new RoadSegment();
+                    seg.setId(Long.parseLong(dto.getLinkId())); // converts string to long
+                    seg.setRoadName(dto.getRoadName());
+                    seg.setRoadCategory(dto.getRoadCategory());
+                    seg.setStartLat(dto.getStartLat());
+                    seg.setStartLon(dto.getStartLon());
+                    seg.setEndLat(dto.getEndLat());
+                    seg.setEndLon(dto.getEndLon());
+                    return seg;
+                })
                 .toList();
+
+        roadSegmentRepository.saveAll(segments);
+        log.info("Persisted {} road segments.", segments.size());
     }
 
-    public List<LtaTrafficSpeedBandResponseDTO> getSpeedBandsByBandNumber(int bandNumber) {
-        if (bandNumber < 1 || bandNumber > 8) {
-            throw new IllegalArgumentException("Speed band must be between 1 and 8");
-        }
-        return getAllSpeedBands().stream()
-                .filter(band -> band.getSpeedBand() == bandNumber)
-                .toList();
-    }
+//    public List<LtaTrafficSpeedBandResponseDTO> getSpeedBandsByCategory(String category) {
+//        return getAllSpeedBands().stream()
+//                .filter(band -> category.equalsIgnoreCase(band.getRoadCategory()))
+//                .toList();
+//    }
+//
+//    public List<LtaTrafficSpeedBandResponseDTO> getSpeedBandsByBandNumber(int bandNumber) {
+//        if (bandNumber < 1 || bandNumber > 8) {
+//            throw new IllegalArgumentException("Speed band must be between 1 and 8");
+//        }
+//        return getAllSpeedBands().stream()
+//                .filter(band -> band.getSpeedBand() == bandNumber)
+//                .toList();
+//    }
 
     private HttpHeaders buildHeaders() {
         HttpHeaders headers = new HttpHeaders();

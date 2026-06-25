@@ -1,7 +1,7 @@
 package com.siyu.fleet_mgmt_sys.service;
 
 import com.siyu.fleet_mgmt_sys.exception.RobotHasAssignedTasksException;
-import com.siyu.fleet_mgmt_sys.model.Task;
+import com.siyu.fleet_mgmt_sys.model.task.Task;
 import com.siyu.fleet_mgmt_sys.model.robot.Robot;
 import com.siyu.fleet_mgmt_sys.model.robot.StandardRobot;
 import com.siyu.fleet_mgmt_sys.repository.RobotRepository;

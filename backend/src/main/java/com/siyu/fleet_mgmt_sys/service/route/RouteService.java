@@ -5,7 +5,7 @@ package com.siyu.fleet_mgmt_sys.service.route;
 
 // At the moment, Route Service simply converts the OneMapResponseDTO into a normal Route object
 // In the future, 
-import com.siyu.fleet_mgmt_sys.dto.OneMapRouteResponseDTO;
+import com.siyu.fleet_mgmt_sys.dto.external.OneMapRouteResponseDTO;
 import com.siyu.fleet_mgmt_sys.model.Route;
 import com.siyu.fleet_mgmt_sys.model.WayPoint;
 import com.siyu.fleet_mgmt_sys.service.external.OneMapService;

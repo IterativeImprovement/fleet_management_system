@@ -1,6 +1,6 @@
 package com.siyu.fleet_mgmt_sys.service.external;
 
-import com.siyu.fleet_mgmt_sys.dto.OneMapRouteResponseDTO;
+import com.siyu.fleet_mgmt_sys.dto.external.OneMapRouteResponseDTO;
 import com.siyu.fleet_mgmt_sys.dto.OneMapSearchResponseDTO;
 import com.siyu.fleet_mgmt_sys.model.WayPoint;
 import org.jspecify.annotations.NonNull;

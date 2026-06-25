@@ -1,6 +1,6 @@
 package com.siyu.fleet_mgmt_sys.controller;
 
-import com.siyu.fleet_mgmt_sys.dto.OneMapRouteResponseDTO;
+import com.siyu.fleet_mgmt_sys.dto.external.OneMapRouteResponseDTO;
 import com.siyu.fleet_mgmt_sys.service.route.RouteService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

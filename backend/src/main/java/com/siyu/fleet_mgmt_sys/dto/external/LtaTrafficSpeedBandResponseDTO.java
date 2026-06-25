@@ -1,4 +1,4 @@
-package com.siyu.fleet_mgmt_sys.dto;
+package com.siyu.fleet_mgmt_sys.dto.external;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
@@ -19,43 +19,43 @@ import lombok.Data;
 @Data
 public class LtaTrafficSpeedBandResponseDTO {
 
-    /** Road name/description */
+    // Road name/description
     @JsonProperty("RoadName")
     private String roadName;
 
-    /** Road category: A=Expressway, B=Major arterial, C=Arterial, D=Minor, E=Small */
+    // Road category: A=Expressway, B=Major arterial, C=Arterial, D=Minor, E=Small
     @JsonProperty("RoadCategory")
     private String roadCategory;
 
-    /** Speed band (1–8), where 1 is fastest and 8 is slowest */
+    // Speed band (1–8), where 1 is fastest and 8 is slowest
     @JsonProperty("SpeedBand")
     private int speedBand;
 
-    /** Minimum speed of the band (km/h) */
+    // Minimum speed of the band (km/h)
     @JsonProperty("MinimumSpeed")
     private String minimumSpeed;
 
-    /** Maximum speed of the band (km/h) */
+    // Maximum speed of the band (km/h)
     @JsonProperty("MaximumSpeed")
     private String maximumSpeed;
 
-    /** WGS84 start latitude of the road link */
+    // WGS84 start latitude of the road link
     @JsonProperty("StartLat")
     private double startLat;
 
-    /** WGS84 start longitude of the road link */
+    // WGS84 start longitude of the road link
     @JsonProperty("StartLon")
     private double startLon;
 
-    /** WGS84 end latitude of the road link */
+    // WGS84 end latitude of the road link
     @JsonProperty("EndLat")
     private double endLat;
 
-    /** WGS84 end longitude of the road link */
+    // WGS84 end longitude of the road link
     @JsonProperty("EndLon")
     private double endLon;
 
-    /** Link ID of the road segment */
+    // Link ID of the road segment
     @JsonProperty("LinkID")
     private String linkId;
 }
