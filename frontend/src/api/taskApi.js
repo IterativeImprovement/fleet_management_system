@@ -56,6 +56,7 @@ function parseLocation(location) {
     latitude,
     longitude,
     source: location.source ?? '',
+    externalId: location.externalId ?? '',
   }
 }
 

@@ -2,6 +2,7 @@ package com.siyu.fleet_mgmt_sys.controller;
 
 import com.siyu.fleet_mgmt_sys.dto.LocationRequestDTO;
 import com.siyu.fleet_mgmt_sys.dto.LocationResponseDTO;
+import com.siyu.fleet_mgmt_sys.dto.OneMapLocationRequestDTO;
 import com.siyu.fleet_mgmt_sys.service.location.LocationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -35,6 +36,15 @@ public class LocationController {
     @PostMapping
     public ResponseEntity<LocationResponseDTO> createCustomLocation(@RequestBody LocationRequestDTO request) {
         LocationResponseDTO result = locationService.createCustomLocation(request);
+        return ResponseEntity.created(URI.create("/locations/" + result.getId()))
+                .body(result);
+    }
+
+    @PostMapping("/onemap")
+    public ResponseEntity<LocationResponseDTO> saveSelectedOneMapLocation(
+            @RequestBody OneMapLocationRequestDTO request
+    ) {
+        LocationResponseDTO result = locationService.saveSelectedOneMapLocation(request);
         return ResponseEntity.created(URI.create("/locations/" + result.getId()))
                 .body(result);
     }

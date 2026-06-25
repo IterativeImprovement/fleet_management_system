@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react'
-import { createCustomLocation, searchLocations } from '../api/locationApi'
+import {
+  createCustomLocation,
+  saveSelectedOneMapLocation,
+  searchLocations,
+} from '../api/locationApi'
 import { createTask } from '../utils/taskUtils'
 
 const LOCATION_SEARCH_DEBOUNCE_MS = 350
@@ -106,7 +110,7 @@ function LocationPicker({
                 {results.map(location => (
                   <button
                     type="button"
-                    key={`${location.source}-${location.id}`}
+                    key={`${location.source}-${location.id ?? location.externalId}`}
                     className="location-result"
                     onClick={() => onSelectLocation(location)}
                   >
@@ -315,18 +319,39 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
     }
   }
 
-  function handleSelectStartLocation(location) {
-    setSelectedStartLocation(location)
-    setStartLocationQuery(location.name)
-    setStartLocationResults([])
-    setError('')
+  async function persistSelectedLocation(location) {
+    if (
+      String(location.source || '').toUpperCase() === 'ONEMAP' &&
+      (location.id === null || location.id === undefined || location.id === '')
+    ) {
+      return saveSelectedOneMapLocation(location)
+    }
+
+    return location
   }
 
-  function handleSelectEndLocation(location) {
-    setSelectedEndLocation(location)
-    setEndLocationQuery(location.name)
-    setEndLocationResults([])
-    setError('')
+  async function handleSelectStartLocation(location) {
+    try {
+      setError('')
+      const savedLocation = await persistSelectedLocation(location)
+      setSelectedStartLocation(savedLocation)
+      setStartLocationQuery(savedLocation.name)
+      setStartLocationResults([])
+    } catch (selectError) {
+      setError(selectError.message || 'Failed to save selected start location')
+    }
+  }
+
+  async function handleSelectEndLocation(location) {
+    try {
+      setError('')
+      const savedLocation = await persistSelectedLocation(location)
+      setSelectedEndLocation(savedLocation)
+      setEndLocationQuery(savedLocation.name)
+      setEndLocationResults([])
+    } catch (selectError) {
+      setError(selectError.message || 'Failed to save selected end location')
+    }
   }
 
   async function resolveLocation({
@@ -340,6 +365,10 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
     if (!isCustom) {
       if (!selectedLocation) {
         throw new Error(`${label} location must be selected`)
+      }
+
+      if (selectedLocation.id === null || selectedLocation.id === undefined || selectedLocation.id === '') {
+        selectedLocation = await persistSelectedLocation(selectedLocation)
       }
 
       validateLocationCoordinates(

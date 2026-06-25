@@ -14,6 +14,7 @@ public class LocationResponseDTO {
     private double latitude;
     private double longitude;
     private String source;
+    private String externalId;
 
     public LocationResponseDTO(Location location) {
         this.id = location.getId();
@@ -23,5 +24,26 @@ public class LocationResponseDTO {
         this.latitude = location.getLatitude();
         this.longitude = location.getLongitude();
         this.source = location.getSource() != null ? location.getSource().name() : null;
+        this.externalId = location.getExternalId();
+    }
+
+    public LocationResponseDTO(
+            Long id,
+            String name,
+            String address,
+            String postalCode,
+            double latitude,
+            double longitude,
+            String source,
+            String externalId
+    ) {
+        this.id = id;
+        this.name = name;
+        this.address = address;
+        this.postalCode = postalCode;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.source = source;
+        this.externalId = externalId;
     }
 }

@@ -2,6 +2,7 @@ package com.siyu.fleet_mgmt_sys.service.location;
 
 import com.siyu.fleet_mgmt_sys.dto.LocationRequestDTO;
 import com.siyu.fleet_mgmt_sys.dto.LocationResponseDTO;
+import com.siyu.fleet_mgmt_sys.dto.OneMapLocationRequestDTO;
 import com.siyu.fleet_mgmt_sys.dto.OneMapSearchResponseDTO;
 import com.siyu.fleet_mgmt_sys.exception.LocationNotFoundException;
 import com.siyu.fleet_mgmt_sys.model.Location;
@@ -17,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -32,10 +32,10 @@ public class LocationService {
     private final LocationRepository locationRepository;
     private final OneMapService oneMapService;
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<LocationResponseDTO> searchLocations(String query) {
         String trimmedQuery = cleanRequired(query, "Search query is required.");
-        Map<String, Location> locationsByKey = new LinkedHashMap<>();
+        Map<String, LocationResponseDTO> locationsByKey = new LinkedHashMap<>();
 
         locationRepository
                 .findTop10ByNameContainingIgnoreCaseOrAddressContainingIgnoreCaseOrPostalCodeContainingIgnoreCase(
@@ -43,19 +43,21 @@ public class LocationService {
                         trimmedQuery,
                         trimmedQuery
                 )
-                .forEach(location -> locationsByKey.put(locationKey(location), location));
+                .forEach(location -> locationsByKey.put(locationKey(location), new LocationResponseDTO(location)));
 
         try {
             oneMapService.searchLocations(trimmedQuery).stream()
-                    .map(this::saveOneMapLocation)
-                    .filter(Objects::nonNull)
-                    .forEach(location -> locationsByKey.put(locationKey(location), location));
+                    .map(this::toOneMapLocationResponse)
+                    .forEach(location -> {
+                        if (location != null) {
+                            locationsByKey.putIfAbsent(locationKey(location), location);
+                        }
+                    });
         } catch (Exception ex) {
             log.warn("OneMap location search failed for '{}': {}", trimmedQuery, ex.getMessage());
         }
 
         return locationsByKey.values().stream()
-                .map(LocationResponseDTO::new)
                 .toList();
     }
 
@@ -81,6 +83,38 @@ public class LocationService {
         return new LocationResponseDTO(locationRepository.save(location));
     }
 
+    @Transactional
+    public LocationResponseDTO saveSelectedOneMapLocation(OneMapLocationRequestDTO request) {
+        if (request == null) {
+            throw new IllegalArgumentException("OneMap location request is required.");
+        }
+
+        String name = cleanRequired(request.getName(), "Location name is required.");
+        double latitude = requireCoordinate(request.getLatitude(), "Latitude is required.");
+        double longitude = requireCoordinate(request.getLongitude(), "Longitude is required.");
+        validateSingaporeBounds(latitude, longitude);
+
+        String postalCode = cleanNil(request.getPostalCode());
+        String externalId = cleanOptional(request.getExternalId());
+        if (externalId == null) {
+            externalId = buildOneMapExternalId(name, postalCode, latitude, longitude);
+        }
+
+        Location location = locationRepository
+                .findBySourceAndExternalId(LocationSource.ONEMAP, externalId)
+                .orElseGet(Location::new);
+
+        location.setName(name);
+        location.setAddress(cleanNil(request.getAddress()));
+        location.setPostalCode(postalCode);
+        location.setLatitude(latitude);
+        location.setLongitude(longitude);
+        location.setSource(LocationSource.ONEMAP);
+        location.setExternalId(externalId);
+
+        return new LocationResponseDTO(locationRepository.save(location));
+    }
+
     @Transactional(readOnly = true)
     public Location getLocationOrThrow(Long id) {
         if (id == null) {
@@ -96,7 +130,7 @@ public class LocationService {
         return new LocationResponseDTO(getLocationOrThrow(id));
     }
 
-    private Location saveOneMapLocation(OneMapSearchResponseDTO.SearchResult result) {
+    private LocationResponseDTO toOneMapLocationResponse(OneMapSearchResponseDTO.SearchResult result) {
         if (result == null) return null;
 
         Double latitude = parseCoordinate(result.getLatitude());
@@ -111,23 +145,31 @@ public class LocationService {
         String postalCode = cleanNil(result.getPostal());
         String externalId = buildOneMapExternalId(name, postalCode, latitude, longitude);
 
-        Location location = locationRepository
+        return locationRepository
                 .findBySourceAndExternalId(LocationSource.ONEMAP, externalId)
-                .orElseGet(Location::new);
-
-        location.setName(name);
-        location.setAddress(cleanNil(result.getAddress()));
-        location.setPostalCode(postalCode);
-        location.setLatitude(latitude);
-        location.setLongitude(longitude);
-        location.setSource(LocationSource.ONEMAP);
-        location.setExternalId(externalId);
-
-        return locationRepository.save(location);
+                .map(LocationResponseDTO::new)
+                .orElseGet(() -> new LocationResponseDTO(
+                        null,
+                        name,
+                        cleanNil(result.getAddress()),
+                        postalCode,
+                        latitude,
+                        longitude,
+                        LocationSource.ONEMAP.name(),
+                        externalId
+                ));
     }
 
     private String locationKey(Location location) {
         if (location.getSource() == LocationSource.ONEMAP && location.getExternalId() != null) {
+            return location.getSource() + ":" + location.getExternalId();
+        }
+
+        return "id:" + location.getId();
+    }
+
+    private String locationKey(LocationResponseDTO location) {
+        if (LocationSource.ONEMAP.name().equals(location.getSource()) && location.getExternalId() != null) {
             return location.getSource() + ":" + location.getExternalId();
         }
 

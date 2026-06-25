@@ -21,6 +21,7 @@ function normaliseLocation(location) {
     latitude,
     longitude,
     source: location.source ?? 'CUSTOM',
+    externalId: location.externalId ?? '',
   }
 }
 
@@ -71,6 +72,32 @@ export async function createCustomLocation(location) {
   if (!response.ok) {
     const message = await getErrorMessage(response)
     throw new Error(`Create location failed (${response.status}): ${message}`)
+  }
+
+  const data = await response.json()
+  return normaliseLocation(data)
+}
+
+export async function saveSelectedOneMapLocation(location) {
+  const response = await fetch(`${LOCATION_ENDPOINT}/onemap`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: location.name,
+      address: location.address || '',
+      postalCode: location.postalCode || '',
+      latitude: Number(location.latitude),
+      longitude: Number(location.longitude),
+      externalId: location.externalId || '',
+    }),
+  })
+
+  if (!response.ok) {
+    const message = await getErrorMessage(response)
+    throw new Error(`Save OneMap location failed (${response.status}): ${message}`)
   }
 
   const data = await response.json()
