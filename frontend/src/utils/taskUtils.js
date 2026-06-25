@@ -50,6 +50,21 @@ function normaliseWayPoint(wayPoint) {
   }
 }
 
+function normaliseLocation(location) {
+  if (!location) return null
+
+  const latitude = Number(location.latitude)
+  const longitude = Number(location.longitude)
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+
+  return {
+    ...location,
+    latitude,
+    longitude,
+  }
+}
+
 function normaliseTaskType(type) {
   const value = String(type || 'STANDARD').trim().toUpperCase()
 
@@ -114,6 +129,10 @@ export function createTask({
   status = 'PENDING_ASSIGNMENT',
   startDateTime = '',
   completionDateTime = '',
+  startLocationId = null,
+  endLocationId = null,
+  startLocation = null,
+  endLocation = null,
   startWayPoint,
   endWayPoint,
   robotId = null,
@@ -137,6 +156,11 @@ export function createTask({
 
     startDateTime,
     completionDateTime,
+
+    startLocationId,
+    endLocationId,
+    startLocation: normaliseLocation(startLocation),
+    endLocation: normaliseLocation(endLocation),
 
     startWayPoint: normaliseWayPoint(startWayPoint),
     endWayPoint: normaliseWayPoint(endWayPoint),

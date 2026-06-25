@@ -11,6 +11,12 @@ function formatWaypoint(wayPoint) {
   return `${wayPoint.latitude}, ${wayPoint.longitude}`
 }
 
+function formatLocation(location, wayPoint) {
+  if (!location) return formatWaypoint(wayPoint)
+
+  return `${location.name} (${formatWaypoint(location)})`
+}
+
 function formatDateTime(dateTime) {
   if (!dateTime) return '-'
   return dateTime.replace('T', ' ')
@@ -123,13 +129,13 @@ function SelectedTaskPanel({
         </div>
 
         <div className="task-detail-row">
-          <span>Start Waypoint:</span>
-          <strong>{formatWaypoint(task.startWayPoint)}</strong>
+          <span>Start Location:</span>
+          <strong>{formatLocation(task.startLocation, task.startWayPoint)}</strong>
         </div>
 
         <div className="task-detail-row">
-          <span>End Waypoint:</span>
-          <strong>{formatWaypoint(task.endWayPoint)}</strong>
+          <span>End Location:</span>
+          <strong>{formatLocation(task.endLocation, task.endWayPoint)}</strong>
         </div>
 
         <div className="task-detail-row">
