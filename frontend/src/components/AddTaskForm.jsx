@@ -1,5 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createCustomLocation, searchLocations } from '../api/locationApi'
 import { createTask } from '../utils/taskUtils'
+
+const LOCATION_SEARCH_DEBOUNCE_MS = 350
+const MIN_LOCATION_QUERY_LENGTH = 2
 
 const SINGAPORE_BOUNDS = {
   minLatitude: 1.1304,
@@ -8,14 +12,170 @@ const SINGAPORE_BOUNDS = {
   maxLongitude: 104.0850,
 }
 
-function parseWayPoint(value) {
-  const [latitude, longitude] = value.split(',').map(part => Number(part.trim()))
+function isWithinSingapore(latitude, longitude) {
+  return (
+    latitude >= SINGAPORE_BOUNDS.minLatitude &&
+    latitude <= SINGAPORE_BOUNDS.maxLatitude &&
+    longitude >= SINGAPORE_BOUNDS.minLongitude &&
+    longitude <= SINGAPORE_BOUNDS.maxLongitude
+  )
+}
 
+function normaliseDateTime(value) {
+  if (!value) return ''
+  return value.length === 16 ? `${value}:00` : value
+}
+
+function locationToWayPoint(location) {
   return {
-    id: Date.now(),
-    latitude,
-    longitude,
+    id: location.id,
+    latitude: Number(location.latitude),
+    longitude: Number(location.longitude),
   }
+}
+
+function formatLocationMeta(location) {
+  return [
+    location.address,
+    location.postalCode ? `Singapore ${location.postalCode}` : '',
+    location.source,
+  ].filter(Boolean).join(' | ')
+}
+
+function validateLocationCoordinates(latitude, longitude, label) {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    throw new Error(`${label} location must have valid latitude and longitude`)
+  }
+
+  if (!isWithinSingapore(latitude, longitude)) {
+    throw new Error(`${label} location must be within Singapore`)
+  }
+}
+
+function LocationPicker({
+  label,
+  query,
+  onQueryChange,
+  selectedLocation,
+  onSelectLocation,
+  results,
+  onSearch,
+  isSearching,
+  isCustom,
+  onCustomChange,
+  customName,
+  onCustomNameChange,
+  customLatitude,
+  onCustomLatitudeChange,
+  customLongitude,
+  onCustomLongitudeChange,
+}) {
+  return (
+    <section className="location-picker">
+      <div className="location-picker-header">
+        <label>
+          {label} Location
+          <div className="location-search-shell">
+            <div className="location-search-row">
+              <input
+                type="search"
+                value={query}
+                onChange={event => onQueryChange(event.target.value)}
+                onKeyDown={event => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    onSearch()
+                  }
+                }}
+                placeholder="name / postal"
+                disabled={isCustom}
+              />
+
+              <button
+                type="button"
+                className="location-search-button"
+                onClick={onSearch}
+                disabled={isCustom || isSearching}
+              >
+                {isSearching ? 'Searching...' : 'Search'}
+              </button>
+            </div>
+
+            {!isCustom && results.length > 0 && (
+              <div className="location-results">
+                {results.map(location => (
+                  <button
+                    type="button"
+                    key={`${location.source}-${location.id}`}
+                    className="location-result"
+                    onClick={() => onSelectLocation(location)}
+                  >
+                    <strong>{location.name}</strong>
+                    <span>{formatLocationMeta(location)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </label>
+
+        {selectedLocation && !isCustom && (
+          <div className="selected-location">
+            <strong>{selectedLocation.name}</strong>
+            <span>{formatLocationMeta(selectedLocation)}</span>
+          </div>
+        )}
+
+      </div>
+
+      <label className="location-checkbox">
+        <input
+          type="checkbox"
+          checked={isCustom}
+          onChange={event => onCustomChange(event.target.checked)}
+        />
+        Create custom {label.toLowerCase()} location
+      </label>
+
+      {isCustom && (
+        <div className="custom-location-fields">
+          <label>
+            Custom Location Name
+            <input
+              type="text"
+              value={customName}
+              onChange={event => onCustomNameChange(event.target.value)}
+              placeholder="Warehouse entrance"
+            />
+          </label>
+
+          <div className="coordinate-grid">
+            <label>
+              Latitude
+              <input
+                type="number"
+                step="any"
+                value={customLatitude}
+                onChange={event => onCustomLatitudeChange(event.target.value)}
+                placeholder="1.2653"
+              />
+            </label>
+
+            <label>
+              Longitude
+              <input
+                type="number"
+                step="any"
+                value={customLongitude}
+                onChange={event => onCustomLongitudeChange(event.target.value)}
+                placeholder="103.8206"
+              />
+            </label>
+          </div>
+        </div>
+      )}
+    </section>
+  )
 }
 
 function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
@@ -25,37 +185,212 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
   const [priority, setPriority] = useState(2)
   const [startDateTime, setStartDateTime] = useState('')
   const [completionDateTime, setCompletionDateTime] = useState('')
-  const [startWayPointStr, setStartWayPointStr] = useState('')
-  const [endWayPointStr, setEndWayPointStr] = useState('')
   const [dependencyId, setDependencyId] = useState('')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  function isValidWayPoint(value) {
-    const parts = value.split(',')
+  const [startLocationQuery, setStartLocationQuery] = useState('')
+  const [endLocationQuery, setEndLocationQuery] = useState('')
+  const [startLocationResults, setStartLocationResults] = useState([])
+  const [endLocationResults, setEndLocationResults] = useState([])
+  const [selectedStartLocation, setSelectedStartLocation] = useState(null)
+  const [selectedEndLocation, setSelectedEndLocation] = useState(null)
+  const [isSearchingStart, setIsSearchingStart] = useState(false)
+  const [isSearchingEnd, setIsSearchingEnd] = useState(false)
 
-    if (parts.length !== 2) return false
+  const [isCustomStartLocation, setIsCustomStartLocation] = useState(false)
+  const [isCustomEndLocation, setIsCustomEndLocation] = useState(false)
+  const [startCustomName, setStartCustomName] = useState('')
+  const [startCustomLatitude, setStartCustomLatitude] = useState('')
+  const [startCustomLongitude, setStartCustomLongitude] = useState('')
+  const [endCustomName, setEndCustomName] = useState('')
+  const [endCustomLatitude, setEndCustomLatitude] = useState('')
+  const [endCustomLongitude, setEndCustomLongitude] = useState('')
 
-    const latitude = Number(parts[0].trim())
-    const longitude = Number(parts[1].trim())
+  useEffect(() => {
+    const trimmedQuery = startLocationQuery.trim()
 
-    return Number.isFinite(latitude) && Number.isFinite(longitude)
+    if (
+      isCustomStartLocation ||
+      trimmedQuery.length < MIN_LOCATION_QUERY_LENGTH ||
+      selectedStartLocation?.name === trimmedQuery
+    ) {
+      setStartLocationResults([])
+      setIsSearchingStart(false)
+      return
+    }
+
+    let isActive = true
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        setIsSearchingStart(true)
+        const results = await searchLocations(trimmedQuery)
+
+        if (isActive) {
+          setStartLocationResults(results)
+          setError('')
+        }
+      } catch (searchError) {
+        if (isActive) {
+          setError(searchError.message || 'Failed to search start locations')
+        }
+      } finally {
+        if (isActive) {
+          setIsSearchingStart(false)
+        }
+      }
+    }, LOCATION_SEARCH_DEBOUNCE_MS)
+
+    return () => {
+      isActive = false
+      window.clearTimeout(timeoutId)
+    }
+  }, [isCustomStartLocation, selectedStartLocation, startLocationQuery])
+
+  useEffect(() => {
+    const trimmedQuery = endLocationQuery.trim()
+
+    if (
+      isCustomEndLocation ||
+      trimmedQuery.length < MIN_LOCATION_QUERY_LENGTH ||
+      selectedEndLocation?.name === trimmedQuery
+    ) {
+      setEndLocationResults([])
+      setIsSearchingEnd(false)
+      return
+    }
+
+    let isActive = true
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        setIsSearchingEnd(true)
+        const results = await searchLocations(trimmedQuery)
+
+        if (isActive) {
+          setEndLocationResults(results)
+          setError('')
+        }
+      } catch (searchError) {
+        if (isActive) {
+          setError(searchError.message || 'Failed to search end locations')
+        }
+      } finally {
+        if (isActive) {
+          setIsSearchingEnd(false)
+        }
+      }
+    }, LOCATION_SEARCH_DEBOUNCE_MS)
+
+    return () => {
+      isActive = false
+      window.clearTimeout(timeoutId)
+    }
+  }, [endLocationQuery, isCustomEndLocation, selectedEndLocation])
+
+  async function handleLocationSearch(role) {
+    const isStart = role === 'start'
+    const query = isStart ? startLocationQuery : endLocationQuery
+    const setResults = isStart ? setStartLocationResults : setEndLocationResults
+    const setSearching = isStart ? setIsSearchingStart : setIsSearchingEnd
+    const label = isStart ? 'Start' : 'End'
+
+    if (!query.trim()) {
+      setError(`${label} location search is required`)
+      return
+    }
+
+    try {
+      setSearching(true)
+      setError('')
+      const results = await searchLocations(query)
+      setResults(results)
+
+      if (results.length === 0) {
+        setError(`No ${label.toLowerCase()} locations found`)
+      }
+    } catch (searchError) {
+      setError(searchError.message || `Failed to search ${label.toLowerCase()} locations`)
+    } finally {
+      setSearching(false)
+    }
   }
 
-  function isWithinSingapore(value) {
-    const { latitude, longitude } = parseWayPoint(value)
-
-    return (
-      latitude >= SINGAPORE_BOUNDS.minLatitude &&
-      latitude <= SINGAPORE_BOUNDS.maxLatitude &&
-      longitude >= SINGAPORE_BOUNDS.minLongitude &&
-      longitude <= SINGAPORE_BOUNDS.maxLongitude
-    )
+  function handleSelectStartLocation(location) {
+    setSelectedStartLocation(location)
+    setStartLocationQuery(location.name)
+    setStartLocationResults([])
+    setError('')
   }
 
-  function normaliseDateTime(value) {
-    if (!value) return ''
-    return value.length === 16 ? `${value}:00` : value
+  function handleSelectEndLocation(location) {
+    setSelectedEndLocation(location)
+    setEndLocationQuery(location.name)
+    setEndLocationResults([])
+    setError('')
+  }
+
+  async function resolveLocation({
+    isCustom,
+    selectedLocation,
+    customName,
+    customLatitude,
+    customLongitude,
+    label,
+  }) {
+    if (!isCustom) {
+      if (!selectedLocation) {
+        throw new Error(`${label} location must be selected`)
+      }
+
+      validateLocationCoordinates(
+        Number(selectedLocation.latitude),
+        Number(selectedLocation.longitude),
+        label
+      )
+
+      return selectedLocation
+    }
+
+    const trimmedName = customName.trim()
+    const latitude = Number(customLatitude)
+    const longitude = Number(customLongitude)
+
+    if (!trimmedName) {
+      throw new Error(`${label} custom location name is required`)
+    }
+
+    validateLocationCoordinates(latitude, longitude, label)
+
+    return createCustomLocation({
+      name: trimmedName,
+      latitude,
+      longitude,
+    })
+  }
+
+  function resetForm() {
+    setName('')
+    setDescription('')
+    setType('STANDARD')
+    setPriority(2)
+    setStartDateTime('')
+    setCompletionDateTime('')
+    setDependencyId('')
+    setStartLocationQuery('')
+    setEndLocationQuery('')
+    setStartLocationResults([])
+    setEndLocationResults([])
+    setSelectedStartLocation(null)
+    setSelectedEndLocation(null)
+    setIsCustomStartLocation(false)
+    setIsCustomEndLocation(false)
+    setStartCustomName('')
+    setStartCustomLatitude('')
+    setStartCustomLongitude('')
+    setEndCustomName('')
+    setEndCustomLatitude('')
+    setEndCustomLongitude('')
+    setError('')
   }
 
   async function handleSubmit(event) {
@@ -64,8 +399,6 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
     const trimmedName = name.trim()
     const trimmedDescription = description.trim()
     const trimmedType = type.trim()
-    const trimmedStartWayPoint = startWayPointStr.trim()
-    const trimmedEndWayPoint = endWayPointStr.trim()
 
     if (!trimmedName) {
       setError('Task name is required')
@@ -100,54 +433,47 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
       return
     }
 
-    if (!isValidWayPoint(trimmedStartWayPoint)) {
-      setError('Start waypoint must be in latitude,longitude format')
-      return
-    }
-
-    if (!isValidWayPoint(trimmedEndWayPoint)) {
-      setError('End waypoint must be in latitude,longitude format')
-      return
-    }
-
-    if (!isWithinSingapore(trimmedStartWayPoint)) {
-      setError('Start waypoint must be within Singapore')
-      return
-    }
-
-    if (!isWithinSingapore(trimmedEndWayPoint)) {
-      setError('End waypoint must be within Singapore')
-      return
-    }
-
-    const newTask = createTask({
-      id: Date.now(),
-      name: trimmedName,
-      description: trimmedDescription,
-      type: trimmedType,
-      priority: Number(priority),
-      startDateTime: normaliseDateTime(startDateTime),
-      completionDateTime: normaliseDateTime(completionDateTime),
-      startWayPoint: parseWayPoint(trimmedStartWayPoint),
-      endWayPoint: parseWayPoint(trimmedEndWayPoint),
-      robotId: null,
-      dependencyIds: dependencyId ? [Number(dependencyId)] : [],
-    })
-
     try {
       setIsSubmitting(true)
-      await onAddTask(newTask)
-
-      setName('')
-      setDescription('')
-      setType('STANDARD')
-      setPriority(2)
-      setStartDateTime('')
-      setCompletionDateTime('')
-      setStartWayPointStr('')
-      setEndWayPointStr('')
-      setDependencyId('')
       setError('')
+
+      const startLocation = await resolveLocation({
+        isCustom: isCustomStartLocation,
+        selectedLocation: selectedStartLocation,
+        customName: startCustomName,
+        customLatitude: startCustomLatitude,
+        customLongitude: startCustomLongitude,
+        label: 'Start',
+      })
+      const endLocation = await resolveLocation({
+        isCustom: isCustomEndLocation,
+        selectedLocation: selectedEndLocation,
+        customName: endCustomName,
+        customLatitude: endCustomLatitude,
+        customLongitude: endCustomLongitude,
+        label: 'End',
+      })
+
+      const newTask = createTask({
+        id: Date.now(),
+        name: trimmedName,
+        description: trimmedDescription,
+        type: trimmedType,
+        priority: Number(priority),
+        startDateTime: normaliseDateTime(startDateTime),
+        completionDateTime: normaliseDateTime(completionDateTime),
+        startLocationId: startLocation.id,
+        endLocationId: endLocation.id,
+        startLocation,
+        endLocation,
+        startWayPoint: locationToWayPoint(startLocation),
+        endWayPoint: locationToWayPoint(endLocation),
+        robotId: null,
+        dependencyIds: dependencyId ? [Number(dependencyId)] : [],
+      })
+
+      await onAddTask(newTask)
+      resetForm()
     } catch (submitError) {
       setError(submitError.message || 'Failed to add task')
     } finally {
@@ -182,7 +508,7 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
             setDescription(event.target.value)
             setError('')
           }}
-          placeholder="Transport from Tuas to Harbourfront"
+          placeholder="Transport from Tuas to HarbourFront"
           required
         />
       </label>
@@ -240,33 +566,83 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
         />
       </label>
 
-      <label>
-        Start Waypoint
-        <input
-          type="text"
-          value={startWayPointStr}
-          onChange={event => {
-            setStartWayPointStr(event.target.value)
-            setError('')
-          }}
-          placeholder="1.3081,103.8551"
-          required
-        />
-      </label>
+      <LocationPicker
+        label="Start"
+        query={startLocationQuery}
+        onQueryChange={value => {
+          setStartLocationQuery(value)
+          setSelectedStartLocation(null)
+          setError('')
+        }}
+        selectedLocation={selectedStartLocation}
+        onSelectLocation={handleSelectStartLocation}
+        results={startLocationResults}
+        onSearch={() => handleLocationSearch('start')}
+        isSearching={isSearchingStart}
+        isCustom={isCustomStartLocation}
+        onCustomChange={checked => {
+          setIsCustomStartLocation(checked)
+          if (checked) {
+            setSelectedStartLocation(null)
+            setStartLocationResults([])
+          }
+          setError('')
+        }}
+        customName={startCustomName}
+        onCustomNameChange={value => {
+          setStartCustomName(value)
+          setError('')
+        }}
+        customLatitude={startCustomLatitude}
+        onCustomLatitudeChange={value => {
+          setStartCustomLatitude(value)
+          setError('')
+        }}
+        customLongitude={startCustomLongitude}
+        onCustomLongitudeChange={value => {
+          setStartCustomLongitude(value)
+          setError('')
+        }}
+      />
 
-      <label>
-        End Waypoint
-        <input
-          type="text"
-          value={endWayPointStr}
-          onChange={event => {
-            setEndWayPointStr(event.target.value)
-            setError('')
-          }}
-          placeholder="1.2739,103.8012"
-          required
-        />
-      </label>
+      <LocationPicker
+        label="End"
+        query={endLocationQuery}
+        onQueryChange={value => {
+          setEndLocationQuery(value)
+          setSelectedEndLocation(null)
+          setError('')
+        }}
+        selectedLocation={selectedEndLocation}
+        onSelectLocation={handleSelectEndLocation}
+        results={endLocationResults}
+        onSearch={() => handleLocationSearch('end')}
+        isSearching={isSearchingEnd}
+        isCustom={isCustomEndLocation}
+        onCustomChange={checked => {
+          setIsCustomEndLocation(checked)
+          if (checked) {
+            setSelectedEndLocation(null)
+            setEndLocationResults([])
+          }
+          setError('')
+        }}
+        customName={endCustomName}
+        onCustomNameChange={value => {
+          setEndCustomName(value)
+          setError('')
+        }}
+        customLatitude={endCustomLatitude}
+        onCustomLatitudeChange={value => {
+          setEndCustomLatitude(value)
+          setError('')
+        }}
+        customLongitude={endCustomLongitude}
+        onCustomLongitudeChange={value => {
+          setEndCustomLongitude(value)
+          setError('')
+        }}
+      />
 
       <label>
         Dependency
@@ -278,7 +654,7 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
 
           {tasks.map(task => (
             <option key={task.id} value={task.id}>
-              {task.id} — {task.name || 'Unnamed task'}
+              {task.id} - {task.name || 'Unnamed task'}
             </option>
           ))}
         </select>

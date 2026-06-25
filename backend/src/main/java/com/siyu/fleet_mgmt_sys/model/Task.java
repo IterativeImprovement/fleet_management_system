@@ -66,6 +66,14 @@ public class Task {
     private WayPoint endWayPoint;
 
     @ManyToOne
+    @JoinColumn(name = "start_location_id")
+    private Location startLocation;
+
+    @ManyToOne
+    @JoinColumn(name = "end_location_id")
+    private Location endLocation;
+
+    @ManyToOne
     @JoinColumn(name = "robot_id")
     private Robot robot;
 

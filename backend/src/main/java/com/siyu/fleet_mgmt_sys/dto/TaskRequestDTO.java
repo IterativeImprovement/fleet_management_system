@@ -17,6 +17,8 @@ public class TaskRequestDTO {
     private Integer priority;
     private LocalDateTime startDateTime; // 2026-05-21T14:49:33
     private LocalDateTime completionDateTime;
+    private Long startLocationId;
+    private Long endLocationId;
     private String startWayPointStr;  // "1.3081,103.8551"
     private String endWayPointStr;    // "1.2739,103.8012"
     private List<Long> dependencyIds = new ArrayList<>();;
