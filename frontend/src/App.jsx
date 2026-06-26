@@ -22,7 +22,10 @@ import {
   createRobotInBackend,
   deleteRobotInBackend,
 } from './api/robotApi'
-import { getRouteGeometry } from './api/routeApi'
+import {
+  getRouteGeometry,
+  getColoredRouteSegments,
+} from './api/routeApi'
 import {
   decodePolyline,
   getTaskRouteEndpoints,
@@ -77,6 +80,7 @@ function App() {
   const [routeErrorsByTaskId, setRouteErrorsByTaskId] = useState({})
   const [isLoadingRoutes, setIsLoadingRoutes] = useState(false)
   const routeCacheRef = useRef({})
+  const [coloredSegmentsByTaskId, setColoredSegmentsByTaskId] = useState({})
 
   useEffect(() => {
     if (useMockData) return
@@ -238,6 +242,36 @@ function App() {
       isCancelled = true
     }
   }, [tasks, useMockData])
+
+  useEffect(() => {
+    if (!selectedTaskId || useMockData) return
+
+    // find the selected task so we can get its start/end coordinates
+    const selectedTask = tasks.find(t => String(t.id) === String(selectedTaskId))
+    if (!selectedTask || !hasValidTaskRouteEndpoints(selectedTask)) return
+
+    let isCancelled = false
+
+    async function loadColoredSegments() {
+      try {
+        const { start, end } = getTaskRouteEndpoints(selectedTask)
+        const segments = await getColoredRouteSegments(start, end)
+
+        if (!isCancelled) {
+          setColoredSegmentsByTaskId(prev => ({
+            ...prev,
+            [selectedTaskId]: segments,
+          }))
+        }
+      } catch (error) {
+        console.error('Failed to load colored route:', error)
+      }
+    }
+
+    loadColoredSegments()
+
+    return () => { isCancelled = true }
+  }, [selectedTaskId, tasks, useMockData])
 
   const routeErrorCount = Object.keys(routeErrorsByTaskId).length
 
@@ -449,6 +483,7 @@ function App() {
         routeErrorCount={routeErrorCount}
         onSelectRobot={handleSelectRobot}
         onSelectTask={handleSelectTask}
+        coloredSegmentsByTaskId={coloredSegmentsByTaskId}
       />
 
       <AlertLog alerts={mockAlerts} />
