@@ -1,10 +1,11 @@
 package com.siyu.fleet_mgmt_sys.service.external;
 
-import com.siyu.fleet_mgmt_sys.dto.OneMapRouteResponseDTO;
+import com.siyu.fleet_mgmt_sys.dto.external.OneMapRouteResponseDTO;
 import com.siyu.fleet_mgmt_sys.dto.OneMapSearchResponseDTO;
 import com.siyu.fleet_mgmt_sys.model.WayPoint;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -15,9 +16,20 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 
+
+/**
+ * Connects to the OneMap API to retrieve basic Routing information (Soon to be replaced by LTA Traffic-related calculations)
+ *
+ */
+
 @Service
 public class OneMapService {
     private final RestTemplate restTemplate = new RestTemplate();
+
+
+    @Value("${onemap.api-key}")
+    private String apiKey;
+
 
     public OneMapRouteResponseDTO getRoute(String start, String end, String... blockages) {
 
@@ -83,7 +95,9 @@ public class OneMapService {
                 "," +
                 endWp.getLongitude();
 
-        HttpEntity<String> entity = getStringHttpEntity();
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + this.apiKey);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
 
         ResponseEntity<OneMapRouteResponseDTO> response = restTemplate.exchange(
                 url,

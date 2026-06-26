@@ -1,6 +1,7 @@
 package com.siyu.fleet_mgmt_sys.model;
 
 import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
+import com.siyu.fleet_mgmt_sys.model.task.Task;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
