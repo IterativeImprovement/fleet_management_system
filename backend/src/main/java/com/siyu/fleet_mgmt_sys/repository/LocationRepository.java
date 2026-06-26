@@ -17,4 +17,10 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
     );
 
     Optional<Location> findBySourceAndExternalId(LocationSource source, String externalId);
+
+    Optional<Location> findFirstBySourceAndLatitudeAndLongitude(
+            LocationSource source,
+            double latitude,
+            double longitude
+    );
 }

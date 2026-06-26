@@ -1,5 +1,6 @@
 package com.siyu.fleet_mgmt_sys.exception;
 
+import com.siyu.fleet_mgmt_sys.dto.LocationConflictResponseDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -30,6 +31,20 @@ public class GlobalExceptionHandler {
         log.warn("Conflict: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(409, ex.getMessage()));
+    }
+
+    @ExceptionHandler(CustomLocationRenameRequiredException.class)
+    public ResponseEntity<LocationConflictResponseDTO> handleCustomLocationRenameRequired(
+            CustomLocationRenameRequiredException ex
+    ) {
+        log.warn("Custom location rename confirmation required: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new LocationConflictResponseDTO(
+                        409,
+                        ex.getMessage(),
+                        ex.getExistingLocation(),
+                        ex.getProposedName()
+                ));
     }
 
     @ExceptionHandler(Exception.class)

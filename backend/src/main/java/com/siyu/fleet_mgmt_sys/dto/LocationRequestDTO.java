@@ -11,4 +11,5 @@ public class LocationRequestDTO {
     private String postalCode;
     private Double latitude;
     private Double longitude;
+    private Boolean confirmRename;
 }

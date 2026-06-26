@@ -4,6 +4,7 @@ import com.siyu.fleet_mgmt_sys.dto.LocationRequestDTO;
 import com.siyu.fleet_mgmt_sys.dto.LocationResponseDTO;
 import com.siyu.fleet_mgmt_sys.dto.OneMapLocationRequestDTO;
 import com.siyu.fleet_mgmt_sys.dto.OneMapSearchResponseDTO;
+import com.siyu.fleet_mgmt_sys.exception.CustomLocationRenameRequiredException;
 import com.siyu.fleet_mgmt_sys.exception.LocationNotFoundException;
 import com.siyu.fleet_mgmt_sys.model.Location;
 import com.siyu.fleet_mgmt_sys.model.enums.LocationSource;
@@ -15,9 +16,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -35,18 +40,29 @@ public class LocationService {
     @Transactional(readOnly = true)
     public List<LocationResponseDTO> searchLocations(String query) {
         String trimmedQuery = cleanRequired(query, "Search query is required.");
+        List<String> searchQueries = buildLocationSearchQueries(trimmedQuery);
         Map<String, LocationResponseDTO> locationsByKey = new LinkedHashMap<>();
 
-        locationRepository
-                .findTop10ByNameContainingIgnoreCaseOrAddressContainingIgnoreCaseOrPostalCodeContainingIgnoreCase(
-                        trimmedQuery,
-                        trimmedQuery,
-                        trimmedQuery
-                )
-                .forEach(location -> locationsByKey.put(locationKey(location), new LocationResponseDTO(location)));
+        searchQueries.forEach(searchQuery -> locationRepository
+                    .findTop10ByNameContainingIgnoreCaseOrAddressContainingIgnoreCaseOrPostalCodeContainingIgnoreCase(
+                            searchQuery,
+                            searchQuery,
+                            searchQuery
+                    )
+                    .forEach(location -> locationsByKey.put(locationKey(location), new LocationResponseDTO(location))));
 
+        searchQueries.forEach(searchQuery -> addOneMapSearchResults(searchQuery, locationsByKey));
+
+        return locationsByKey.values().stream()
+                .sorted(Comparator.comparingInt(
+                        (LocationResponseDTO location) -> relevanceScore(location, trimmedQuery)
+                ).reversed())
+                .toList();
+    }
+
+    private void addOneMapSearchResults(String query, Map<String, LocationResponseDTO> locationsByKey) {
         try {
-            oneMapService.searchLocations(trimmedQuery).stream()
+            oneMapService.searchLocations(query).stream()
                     .map(this::toOneMapLocationResponse)
                     .forEach(location -> {
                         if (location != null) {
@@ -54,11 +70,8 @@ public class LocationService {
                         }
                     });
         } catch (Exception ex) {
-            log.warn("OneMap location search failed for '{}': {}", trimmedQuery, ex.getMessage());
+            log.warn("OneMap location search failed for '{}': {}", query, ex.getMessage());
         }
-
-        return locationsByKey.values().stream()
-                .toList();
     }
 
     @Transactional
@@ -72,13 +85,44 @@ public class LocationService {
         double longitude = requireCoordinate(request.getLongitude(), "Longitude is required.");
         validateSingaporeBounds(latitude, longitude);
 
-        Location location = new Location();
+        String address = cleanOptional(request.getAddress());
+        String postalCode = cleanOptional(request.getPostalCode());
+        String externalId = buildCustomExternalId(latitude, longitude);
+        Location location = locationRepository
+                .findBySourceAndExternalId(LocationSource.CUSTOM, externalId)
+                .orElseGet(() -> locationRepository
+                        .findFirstBySourceAndLatitudeAndLongitude(LocationSource.CUSTOM, latitude, longitude)
+                        .orElse(null));
+
+        if (location != null) {
+            boolean isRename = !location.getName().equals(name);
+            if (isRename && !Boolean.TRUE.equals(request.getConfirmRename())) {
+                throw new CustomLocationRenameRequiredException(new LocationResponseDTO(location), name);
+            }
+
+            location.setName(name);
+            if (address != null) {
+                location.setAddress(address);
+            }
+            if (postalCode != null) {
+                location.setPostalCode(postalCode);
+            }
+            location.setLatitude(latitude);
+            location.setLongitude(longitude);
+            location.setSource(LocationSource.CUSTOM);
+            location.setExternalId(externalId);
+
+            return new LocationResponseDTO(locationRepository.save(location));
+        }
+
+        location = new Location();
         location.setName(name);
-        location.setAddress(cleanOptional(request.getAddress()));
-        location.setPostalCode(cleanOptional(request.getPostalCode()));
+        location.setAddress(address);
+        location.setPostalCode(postalCode);
         location.setLatitude(latitude);
         location.setLongitude(longitude);
         location.setSource(LocationSource.CUSTOM);
+        location.setExternalId(externalId);
 
         return new LocationResponseDTO(locationRepository.save(location));
     }
@@ -161,7 +205,7 @@ public class LocationService {
     }
 
     private String locationKey(Location location) {
-        if (location.getSource() == LocationSource.ONEMAP && location.getExternalId() != null) {
+        if (location.getSource() != null && location.getExternalId() != null) {
             return location.getSource() + ":" + location.getExternalId();
         }
 
@@ -169,7 +213,7 @@ public class LocationService {
     }
 
     private String locationKey(LocationResponseDTO location) {
-        if (LocationSource.ONEMAP.name().equals(location.getSource()) && location.getExternalId() != null) {
+        if (location.getSource() != null && location.getExternalId() != null) {
             return location.getSource() + ":" + location.getExternalId();
         }
 
@@ -181,6 +225,61 @@ public class LocationService {
                 + cleanForKey(postalCode) + "|"
                 + latitude + "|"
                 + longitude;
+    }
+
+    private String buildCustomExternalId(double latitude, double longitude) {
+        return String.format(Locale.ROOT, "%.6f|%.6f", latitude, longitude);
+    }
+
+    private List<String> buildLocationSearchQueries(String query) {
+        Set<String> queries = new LinkedHashSet<>();
+        queries.add(query);
+
+        String simplified = query
+                .replaceAll("(?i)\\b(mrt|station|bus|stop|interchange)\\b", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+        if (!simplified.isBlank()) {
+            queries.add(simplified);
+        }
+
+        String[] tokens = simplified.split("\\s+");
+        if (tokens.length > 1 && !tokens[0].isBlank()) {
+            queries.add(tokens[0]);
+        }
+
+        return queries.stream().toList();
+    }
+
+    private int relevanceScore(LocationResponseDTO location, String query) {
+        String normalizedQuery = query.toLowerCase(Locale.ROOT);
+        String normalizedName = cleanForSearch(location.getName());
+        String searchableText = String.join(" ",
+                normalizedName,
+                cleanForSearch(location.getAddress()),
+                cleanForSearch(location.getPostalCode())
+        );
+
+        int score = searchableText.contains(normalizedQuery) ? 100 : 0;
+        if (normalizedName.equals(normalizedQuery)) {
+            score += 1000;
+        } else if (normalizedName.startsWith(normalizedQuery)) {
+            score += 250;
+        }
+        if (LocationSource.CUSTOM.name().equals(location.getSource())) {
+            score += 25;
+        }
+        for (String token : normalizedQuery.split("\\s+")) {
+            if (!token.isBlank() && searchableText.contains(token)) {
+                score += 10;
+            }
+        }
+
+        return score;
+    }
+
+    private String cleanForSearch(String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT);
     }
 
     private String cleanForKey(String value) {

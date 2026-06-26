@@ -1,11 +1,19 @@
 const LOCATION_ENDPOINT = '/locations'
 
-async function getErrorMessage(response) {
+export class CustomLocationConflictError extends Error {
+  constructor(message, existingLocation, proposedName) {
+    super(message)
+    this.name = 'CustomLocationConflictError'
+    this.existingLocation = existingLocation
+    this.proposedName = proposedName
+  }
+}
+
+async function getErrorData(response) {
   try {
-    const data = await response.json()
-    return data.message || data.error || JSON.stringify(data)
+    return await response.json()
   } catch {
-    return response.statusText || 'Unknown error'
+    return null
   }
 }
 
@@ -25,6 +33,12 @@ function normaliseLocation(location) {
   }
 }
 
+function getErrorMessage(response, data) {
+  if (!data) return response.statusText || 'Unknown error'
+
+  return data.message || data.error || JSON.stringify(data)
+}
+
 export async function searchLocations(query) {
   const trimmedQuery = String(query || '').trim()
   if (!trimmedQuery) return []
@@ -40,7 +54,8 @@ export async function searchLocations(query) {
   )
 
   if (!response.ok) {
-    const message = await getErrorMessage(response)
+    const data = await getErrorData(response)
+    const message = getErrorMessage(response, data)
     throw new Error(`Location search failed (${response.status}): ${message}`)
   }
 
@@ -53,7 +68,7 @@ export async function searchLocations(query) {
   return data.map(normaliseLocation)
 }
 
-export async function createCustomLocation(location) {
+export async function createCustomLocation(location, options = {}) {
   const response = await fetch(LOCATION_ENDPOINT, {
     method: 'POST',
     headers: {
@@ -66,11 +81,22 @@ export async function createCustomLocation(location) {
       postalCode: location.postalCode || '',
       latitude: Number(location.latitude),
       longitude: Number(location.longitude),
+      confirmRename: Boolean(options.confirmRename),
     }),
   })
 
   if (!response.ok) {
-    const message = await getErrorMessage(response)
+    const data = await getErrorData(response)
+    const message = getErrorMessage(response, data)
+
+    if (response.status === 409 && data?.existingLocation) {
+      throw new CustomLocationConflictError(
+        message,
+        normaliseLocation(data.existingLocation),
+        data.proposedName || location.name
+      )
+    }
+
     throw new Error(`Create location failed (${response.status}): ${message}`)
   }
 
@@ -96,7 +122,8 @@ export async function saveSelectedOneMapLocation(location) {
   })
 
   if (!response.ok) {
-    const message = await getErrorMessage(response)
+    const data = await getErrorData(response)
+    const message = getErrorMessage(response, data)
     throw new Error(`Save OneMap location failed (${response.status}): ${message}`)
   }
 

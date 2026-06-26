@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   createCustomLocation,
+  CustomLocationConflictError,
   saveSelectedOneMapLocation,
   searchLocations,
 } from '../api/locationApi'
@@ -330,6 +331,28 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
     return location
   }
 
+  async function createOrRenameCustomLocation(location, label) {
+    try {
+      return await createCustomLocation(location)
+    } catch (locationError) {
+      if (!(locationError instanceof CustomLocationConflictError)) {
+        throw locationError
+      }
+
+      const existingName = locationError.existingLocation?.name || 'this location'
+      const proposedName = locationError.proposedName || location.name
+      const shouldRename = window.confirm(
+        `A custom ${label.toLowerCase()} location already exists here as "${existingName}". Rename it to "${proposedName}" and use it for this task?`
+      )
+
+      if (!shouldRename) {
+        throw new Error(`${label} custom location already exists as "${existingName}"`)
+      }
+
+      return createCustomLocation(location, { confirmRename: true })
+    }
+  }
+
   async function handleSelectStartLocation(location) {
     try {
       setError('')
@@ -390,11 +413,11 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
 
     validateLocationCoordinates(latitude, longitude, label)
 
-    return createCustomLocation({
+    return createOrRenameCustomLocation({
       name: trimmedName,
       latitude,
       longitude,
-    })
+    }, label)
   }
 
   function resetForm() {
