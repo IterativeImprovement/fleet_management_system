@@ -40,6 +40,26 @@ function parseWaypoint(wayPoint) {
   }
 }
 
+function parseLocation(location) {
+  if (!location) return null
+
+  const latitude = Number(location.latitude)
+  const longitude = Number(location.longitude)
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+
+  return {
+    id: location.id,
+    name: location.name ?? '',
+    address: location.address ?? '',
+    postalCode: location.postalCode ?? '',
+    latitude,
+    longitude,
+    source: location.source ?? '',
+    externalId: location.externalId ?? '',
+  }
+}
+
 export function normaliseTaskFromBackend(task) {
   return createTask({
     id: task.id,
@@ -50,6 +70,10 @@ export function normaliseTaskFromBackend(task) {
     status: task.status ?? 'PENDING_ASSIGNMENT',
     startDateTime: task.startDateTime ?? '',
     completionDateTime: task.completionDateTime ?? '',
+    startLocationId: task.startLocationId ?? task.startLocation?.id ?? null,
+    endLocationId: task.endLocationId ?? task.endLocation?.id ?? null,
+    startLocation: parseLocation(task.startLocation),
+    endLocation: parseLocation(task.endLocation),
     startWayPoint: parseWaypoint(task.startWayPointStr || task.startWayPoint),
     endWayPoint: parseWaypoint(task.endWayPointStr || task.endWayPoint),
     robotId: task.robotId ?? task.robot?.id ?? null,
@@ -118,18 +142,39 @@ function normaliseTaskTypeForBackend(type) {
   return value
 }
 
+function getLocationId(locationId, location) {
+  const id = locationId ?? location?.id
+  const numericId = Number(id)
+
+  return Number.isFinite(numericId) ? numericId : null
+}
+
 function taskToCreateRequest(task) {
-  return {
+  const request = {
     name: task.name,
     description: task.description,
     type: normaliseTaskTypeForBackend(task.type),
     priority: task.priority,
     startDateTime: task.startDateTime,
     completionDateTime: task.completionDateTime,
-    startWayPointStr: wayPointToString(task.startWayPoint),
-    endWayPointStr: wayPointToString(task.endWayPoint),
     dependencyIds: getDependencyIds(task),
   }
+  const startLocationId = getLocationId(task.startLocationId, task.startLocation)
+  const endLocationId = getLocationId(task.endLocationId, task.endLocation)
+
+  if (startLocationId !== null) {
+    request.startLocationId = startLocationId
+  } else {
+    request.startWayPointStr = wayPointToString(task.startWayPoint)
+  }
+
+  if (endLocationId !== null) {
+    request.endLocationId = endLocationId
+  } else {
+    request.endWayPointStr = wayPointToString(task.endWayPoint)
+  }
+
+  return request
 }
 
 export async function createTaskInBackend(task) {

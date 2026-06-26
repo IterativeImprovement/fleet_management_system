@@ -41,3 +41,22 @@ export async function getRouteGeometry(start, end) {
     raw: data,
   }
 }
+
+export async function getColoredRouteSegments(start, end) {
+  if (!start || !end) {
+    throw new Error('Start and end coordinates are required')
+  }
+
+  const params = new URLSearchParams({ start, end })
+  const response = await fetch(`/route/colored-coords?${params.toString()}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  })
+
+  if (!response.ok) {
+    const message = await getErrorMessage(response)
+    throw new Error(`Colored route request failed (${response.status}): ${message}`)
+  }
+
+  return response.json()
+}

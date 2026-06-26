@@ -1,8 +1,9 @@
 package com.siyu.fleet_mgmt_sys.service.task.submission;
 
 import com.siyu.fleet_mgmt_sys.exception.ClusterNotFoundException;
-import com.siyu.fleet_mgmt_sys.model.Cluster;
-import com.siyu.fleet_mgmt_sys.model.Task;
+import com.siyu.fleet_mgmt_sys.model.WayPoint;
+import com.siyu.fleet_mgmt_sys.model.task.Cluster;
+import com.siyu.fleet_mgmt_sys.model.task.Task;
 import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
 import com.siyu.fleet_mgmt_sys.model.enums.TaskStatus;
 import com.siyu.fleet_mgmt_sys.repository.TaskClusterRepository;
@@ -39,13 +40,13 @@ public class TaskClusterService { // this service clusters tasks that are close 
 
     private void assignPointToCluster(Task task, boolean isStart) { // assigns start and end points to potentially different clusters
         List<Cluster> clusters = clusterRepository.findAll();
+        WayPoint wayPoint = isStart ? task.getStartWayPoint() : task.getEndWayPoint();
+        if (wayPoint == null) {
+            throw new IllegalArgumentException((isStart ? "Start" : "End") + " waypoint is required for clustering.");
+        }
 
-        double lat = isStart
-                ? task.getStartWayPoint().getLatitude()
-                : task.getEndWayPoint().getLatitude();
-        double lng = isStart
-                ? task.getStartWayPoint().getLongitude()
-                : task.getEndWayPoint().getLongitude();
+        double lat = wayPoint.getLatitude();
+        double lng = wayPoint.getLongitude();
 
         Cluster match = clusters.stream()
                 .filter(c -> isWithinThreshold(c, lat, lng))
@@ -102,18 +103,20 @@ public class TaskClusterService { // this service clusters tasks that are close 
                 .toList();
 
         List<double[]> points = new ArrayList<>();
-        startTasks.forEach(t -> points.add(new double[]{
-                t.getStartWayPoint().getLatitude(), t.getStartWayPoint().getLongitude()
-        }));
-        endTasks.forEach(t -> points.add(new double[]{
-                t.getEndWayPoint().getLatitude(), t.getEndWayPoint().getLongitude()
-        }));
+        startTasks.forEach(t -> addPoint(points, t.getStartWayPoint()));
+        endTasks.forEach(t -> addPoint(points, t.getEndWayPoint()));
 
         double avgLat = points.stream().mapToDouble(p -> p[0]).average().orElse(cluster.getCentroidLat());
         double avgLng = points.stream().mapToDouble(p -> p[1]).average().orElse(cluster.getCentroidLng());
 
         cluster.setCentroidLat(avgLat);
         cluster.setCentroidLng(avgLng);
+    }
+
+    private void addPoint(List<double[]> points, WayPoint wayPoint) {
+        if (wayPoint != null) {
+            points.add(new double[]{wayPoint.getLatitude(), wayPoint.getLongitude()});
+        }
     }
 
     private double haversineMetres(double lat1, double lng1, double lat2, double lng2) { // calculates distance between two points on earth

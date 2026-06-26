@@ -1,4 +1,4 @@
-package com.siyu.fleet_mgmt_sys.model;
+package com.siyu.fleet_mgmt_sys.model.task;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+@Table(name = "clusters")
 @Data
 @NoArgsConstructor
 public class Cluster {

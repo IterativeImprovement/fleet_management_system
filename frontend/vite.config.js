@@ -26,6 +26,13 @@ export default defineConfig({
         secure: false,
       },
 
+      // for locations
+      '/locations': {
+        target: 'http://backend-api:8080',
+        changeOrigin: true,
+        secure: false,
+      },
+
       // for robot
       '/robot': {
         target: 'http://backend-api:8080',

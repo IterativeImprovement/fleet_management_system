@@ -1,8 +1,8 @@
 package com.siyu.fleet_mgmt_sys.service.task.allocation;
 
-import com.siyu.fleet_mgmt_sys.model.Cluster;
+import com.siyu.fleet_mgmt_sys.model.task.Cluster;
 import com.siyu.fleet_mgmt_sys.model.enums.RobotStatus;
-import com.siyu.fleet_mgmt_sys.model.Task;
+import com.siyu.fleet_mgmt_sys.model.task.Task;
 import com.siyu.fleet_mgmt_sys.model.enums.TaskStatus;
 import com.siyu.fleet_mgmt_sys.model.robot.LargeRobot;
 import com.siyu.fleet_mgmt_sys.model.robot.Robot;

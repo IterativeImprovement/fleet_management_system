@@ -3,7 +3,8 @@ package com.siyu.fleet_mgmt_sys.service.task;
 import com.siyu.fleet_mgmt_sys.dto.TaskRequestDTO;
 import com.siyu.fleet_mgmt_sys.dto.TaskResponseDTO;
 import com.siyu.fleet_mgmt_sys.exception.TaskNotFoundException;
-import com.siyu.fleet_mgmt_sys.model.Task;
+import com.siyu.fleet_mgmt_sys.model.task.Task;
+import com.siyu.fleet_mgmt_sys.model.Location;
 import com.siyu.fleet_mgmt_sys.model.WayPoint;
 import com.siyu.fleet_mgmt_sys.model.enums.RobotStatus;
 import com.siyu.fleet_mgmt_sys.model.enums.TaskStatus;
@@ -13,6 +14,7 @@ import com.siyu.fleet_mgmt_sys.repository.RobotRepository;
 import com.siyu.fleet_mgmt_sys.repository.TaskRepository;
 import com.siyu.fleet_mgmt_sys.repository.WayPointRepository;
 import com.siyu.fleet_mgmt_sys.service.task.allocation.TaskAllocationService;
+import com.siyu.fleet_mgmt_sys.service.location.LocationService;
 import com.siyu.fleet_mgmt_sys.service.task.submission.TaskClusterService;
 import com.siyu.fleet_mgmt_sys.service.task.submission.TaskSubmissionPipeline;
 import com.siyu.fleet_mgmt_sys.specification.TaskSpecification;
@@ -35,13 +37,16 @@ public class TaskService {
     private final TaskDependencyService dependencyService;
     private final TaskClusterService clusterService;
     private final TaskAllocationService allocationService;
+    private final LocationService locationService;
 
     @Transactional
     public TaskResponseDTO createTask(TaskRequestDTO req) {
         validateCreateRequest(req);
 
-        WayPoint start = new WayPoint(req.getStartWayPointStr());
-        WayPoint end = new WayPoint(req.getEndWayPointStr());
+        ResolvedWaypoint resolvedStart = resolveWaypoint(req.getStartLocationId(), req.getStartWayPointStr());
+        ResolvedWaypoint resolvedEnd = resolveWaypoint(req.getEndLocationId(), req.getEndWayPointStr());
+        WayPoint start = resolvedStart.wayPoint();
+        WayPoint end = resolvedEnd.wayPoint();
 
         if (!isWithinSingapore(start.getLatitude(), start.getLongitude())
                 || !isWithinSingapore(end.getLatitude(), end.getLongitude())) {
@@ -69,6 +74,8 @@ public class TaskService {
         task.setPriority(req.getPriority());
         task.setStartWayPoint(savedStart);
         task.setEndWayPoint(savedEnd);
+        task.setStartLocation(resolvedStart.location());
+        task.setEndLocation(resolvedEnd.location());
         task.setStartDateTime(req.getStartDateTime());
         task.setCompletionDateTime(req.getCompletionDateTime());
         task.setType(taskType);
@@ -117,14 +124,18 @@ public class TaskService {
         if (req.getStartDateTime() != null) task.setStartDateTime(req.getStartDateTime());
         if (req.getCompletionDateTime() != null) task.setCompletionDateTime(req.getCompletionDateTime());
 
-        if (req.getStartWayPointStr() != null) {
-            WayPoint start = wayPointRepository.save(new WayPoint(req.getStartWayPointStr()));
+        if (req.getStartLocationId() != null || req.getStartWayPointStr() != null) {
+            ResolvedWaypoint resolvedStart = resolveWaypoint(req.getStartLocationId(), req.getStartWayPointStr());
+            WayPoint start = wayPointRepository.save(resolvedStart.wayPoint());
             task.setStartWayPoint(start);
+            task.setStartLocation(resolvedStart.location());
         }
 
-        if (req.getEndWayPointStr() != null) {
-            WayPoint end = wayPointRepository.save(new WayPoint(req.getEndWayPointStr()));
+        if (req.getEndLocationId() != null || req.getEndWayPointStr() != null) {
+            ResolvedWaypoint resolvedEnd = resolveWaypoint(req.getEndLocationId(), req.getEndWayPointStr());
+            WayPoint end = wayPointRepository.save(resolvedEnd.wayPoint());
             task.setEndWayPoint(end);
+            task.setEndLocation(resolvedEnd.location());
         }
 
         if (req.getDependencyIds() != null && !req.getDependencyIds().isEmpty()) {
@@ -200,9 +211,22 @@ public class TaskService {
         if (req.getPriority() == null || req.getPriority() < 1 || req.getPriority() > 3) {
             throw new IllegalArgumentException("Task priority must be between 1 and 3.");
         }
-        if (req.getStartWayPointStr() == null || req.getStartWayPointStr().isBlank()
-                || req.getEndWayPointStr() == null || req.getEndWayPointStr().isBlank()) {
-            throw new IllegalArgumentException("Start and end waypoints are required.");
+        boolean hasStartLocation = req.getStartLocationId() != null;
+        boolean hasEndLocation = req.getEndLocationId() != null;
+        boolean hasStartWayPoint = req.getStartWayPointStr() != null && !req.getStartWayPointStr().isBlank();
+        boolean hasEndWayPoint = req.getEndWayPointStr() != null && !req.getEndWayPointStr().isBlank();
+
+        if (!hasStartLocation && !hasStartWayPoint) {
+            throw new IllegalArgumentException("Start location is required.");
+        }
+        if (!hasEndLocation && !hasEndWayPoint) {
+            throw new IllegalArgumentException("End location is required.");
+        }
+        if (hasStartLocation && hasStartWayPoint) {
+            throw new IllegalArgumentException("Provide either start location id or start waypoint, not both.");
+        }
+        if (hasEndLocation && hasEndWayPoint) {
+            throw new IllegalArgumentException("Provide either end location id or end waypoint, not both.");
         }
         if (req.getStartDateTime() == null || req.getCompletionDateTime() == null) {
             throw new IllegalArgumentException("Start and completion times are required.");
@@ -225,6 +249,25 @@ public class TaskService {
             case "LARGE" -> TaskType.LARGE;
             default -> throw new IllegalArgumentException("Unknown task type: " + type);
         };
+    }
+
+    private ResolvedWaypoint resolveWaypoint(Long locationId, String wayPointStr) {
+        if (locationId != null) {
+            Location location = locationService.getLocationOrThrow(locationId);
+            return new ResolvedWaypoint(
+                    location,
+                    new WayPoint(location.getLatitude(), location.getLongitude())
+            );
+        }
+
+        if (wayPointStr == null || wayPointStr.isBlank()) {
+            throw new IllegalArgumentException("Waypoint is required.");
+        }
+
+        return new ResolvedWaypoint(null, new WayPoint(wayPointStr));
+    }
+
+    private record ResolvedWaypoint(Location location, WayPoint wayPoint) {
     }
 
 }

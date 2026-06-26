@@ -1,6 +1,6 @@
 package com.siyu.fleet_mgmt_sys.dto;
 
-import com.siyu.fleet_mgmt_sys.model.Task;
+import com.siyu.fleet_mgmt_sys.model.task.Task;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -17,6 +17,10 @@ public class TaskResponseDTO {
     private int priority;
     private LocalDateTime startDateTime;
     private LocalDateTime completionDateTime;
+    private Long startLocationId;
+    private Long endLocationId;
+    private LocationResponseDTO startLocation;
+    private LocationResponseDTO endLocation;
     private String startWayPointStr;
     private String endWayPointStr;
     private String status;
@@ -33,6 +37,10 @@ public class TaskResponseDTO {
         this.priority = task.getPriority();
         this.startDateTime = task.getStartDateTime();
         this.completionDateTime = task.getCompletionDateTime();
+        this.startLocationId = task.getStartLocation() != null ? task.getStartLocation().getId() : null;
+        this.endLocationId = task.getEndLocation() != null ? task.getEndLocation().getId() : null;
+        this.startLocation = task.getStartLocation() != null ? new LocationResponseDTO(task.getStartLocation()) : null;
+        this.endLocation = task.getEndLocation() != null ? new LocationResponseDTO(task.getEndLocation()) : null;
 
         this.startWayPointStr = task.getStartWayPoint() != null ?
                 task.getStartWayPoint().getLatitude() + "," + task.getStartWayPoint().getLongitude() : null;
