@@ -39,13 +39,23 @@ public class TrafficSpeedBandService {
     @Value("${lta.datamall.api-key}")
     private String apiKey;
 
+    private List<LtaTrafficSpeedBandResponseDTO> cachedBands = null;
+    private long cacheExpiresAt = 0;
+    private static final long CACHE_TTL_MS = 2 * 60 * 1000;
 
     /**
      * This function asynchronously fetches all speed band info from the LTA API
+     * 
      * @return Speed band information for all roads
      */
 
     public List<LtaTrafficSpeedBandResponseDTO> getAllSpeedBands() {
+
+        long now = System.currentTimeMillis();
+        if (cachedBands != null && now < cacheExpiresAt) {
+            return cachedBands; // instant return, no HTTP calls
+        }
+
         HttpEntity<Void> entity = new HttpEntity<>(buildHeaders());
 
         List<LtaTrafficSpeedBandResponseDTO> firstPage = fetchPage(0, entity);
@@ -91,6 +101,8 @@ public class TrafficSpeedBandService {
 
         // stores road segments into Database if database is empty
         persistRoadSegmentsIfEmpty(results);
+        cachedBands = results;
+        cacheExpiresAt = now + CACHE_TTL_MS;
         return results;
     }
 
@@ -103,7 +115,8 @@ public class TrafficSpeedBandService {
                     url, HttpMethod.GET, entity, LtaApiResponseDTO.class);
 
             LtaApiResponseDTO body = response.getBody();
-            if (body == null || body.getValue() == null) return List.of();
+            if (body == null || body.getValue() == null)
+                return List.of();
 
             return body.getValue();
         } catch (RestClientException e) {
@@ -112,10 +125,11 @@ public class TrafficSpeedBandService {
         }
     }
 
-
     /**
-     * This populates the local database with road segments if not already populated.
-     * This will happen at most once (typically on initial loading of the web application).
+     * This populates the local database with road segments if not already
+     * populated.
+     * This will happen at most once (typically on initial loading of the web
+     * application).
      */
 
     private void persistRoadSegmentsIfEmpty(List<LtaTrafficSpeedBandResponseDTO> data) {
@@ -141,20 +155,22 @@ public class TrafficSpeedBandService {
         log.info("Persisted {} road segments.", segments.size());
     }
 
-//    public List<LtaTrafficSpeedBandResponseDTO> getSpeedBandsByCategory(String category) {
-//        return getAllSpeedBands().stream()
-//                .filter(band -> category.equalsIgnoreCase(band.getRoadCategory()))
-//                .toList();
-//    }
-//
-//    public List<LtaTrafficSpeedBandResponseDTO> getSpeedBandsByBandNumber(int bandNumber) {
-//        if (bandNumber < 1 || bandNumber > 8) {
-//            throw new IllegalArgumentException("Speed band must be between 1 and 8");
-//        }
-//        return getAllSpeedBands().stream()
-//                .filter(band -> band.getSpeedBand() == bandNumber)
-//                .toList();
-//    }
+    // public List<LtaTrafficSpeedBandResponseDTO> getSpeedBandsByCategory(String
+    // category) {
+    // return getAllSpeedBands().stream()
+    // .filter(band -> category.equalsIgnoreCase(band.getRoadCategory()))
+    // .toList();
+    // }
+    //
+    // public List<LtaTrafficSpeedBandResponseDTO> getSpeedBandsByBandNumber(int
+    // bandNumber) {
+    // if (bandNumber < 1 || bandNumber > 8) {
+    // throw new IllegalArgumentException("Speed band must be between 1 and 8");
+    // }
+    // return getAllSpeedBands().stream()
+    // .filter(band -> band.getSpeedBand() == bandNumber)
+    // .toList();
+    // }
 
     private HttpHeaders buildHeaders() {
         HttpHeaders headers = new HttpHeaders();
