@@ -7,6 +7,8 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+// not in use, will slowly phase out of project
+
 @Repository
 public interface WayPointRepository extends JpaRepository<WayPoint, Long> {
     @Query("SELECT w.id FROM WayPoint w")

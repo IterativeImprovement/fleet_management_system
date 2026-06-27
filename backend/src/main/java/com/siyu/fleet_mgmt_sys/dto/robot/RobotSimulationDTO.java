@@ -1,4 +1,4 @@
-package com.siyu.fleet_mgmt_sys.dto;
+package com.siyu.fleet_mgmt_sys.dto.robot;
 
 import com.siyu.fleet_mgmt_sys.model.enums.RobotStatus;
 import lombok.AllArgsConstructor;

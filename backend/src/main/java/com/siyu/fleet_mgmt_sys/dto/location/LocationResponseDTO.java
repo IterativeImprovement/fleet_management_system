@@ -1,4 +1,4 @@
-package com.siyu.fleet_mgmt_sys.dto;
+package com.siyu.fleet_mgmt_sys.dto.location;
 
 import com.siyu.fleet_mgmt_sys.model.Location;
 import lombok.Data;

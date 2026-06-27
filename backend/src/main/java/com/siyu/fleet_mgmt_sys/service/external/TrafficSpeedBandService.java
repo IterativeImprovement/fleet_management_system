@@ -2,8 +2,8 @@ package com.siyu.fleet_mgmt_sys.service.external;
 
 import com.siyu.fleet_mgmt_sys.dto.external.LtaApiResponseDTO;
 import com.siyu.fleet_mgmt_sys.dto.external.LtaTrafficSpeedBandResponseDTO;
-import com.siyu.fleet_mgmt_sys.model.RoadSegment;
-import com.siyu.fleet_mgmt_sys.repository.RoadSegmentRepository;
+import com.siyu.fleet_mgmt_sys.model.Road;
+import com.siyu.fleet_mgmt_sys.repository.RoadRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,7 +31,7 @@ public class TrafficSpeedBandService {
     private final ExecutorService executor = Executors.newFixedThreadPool(BATCH_SIZE);
 
     private final RestTemplate ltaRestTemplate;
-    private final RoadSegmentRepository roadSegmentRepository;
+    private final RoadRepository roadRepository;
 
     @Value("${lta.datamall.base-url}")
     private String baseUrl;
@@ -119,13 +119,13 @@ public class TrafficSpeedBandService {
      */
 
     private void persistRoadSegmentsIfEmpty(List<LtaTrafficSpeedBandResponseDTO> data) {
-        if (roadSegmentRepository.count() > 0) {
+        if (roadRepository.count() > 0) {
             return;
         }
 
-        List<RoadSegment> segments = data.stream()
+        List<Road> segments = data.stream()
                 .map(dto -> {
-                    RoadSegment seg = new RoadSegment();
+                    Road seg = new Road();
                     seg.setId(Long.parseLong(dto.getLinkId())); // converts string to long
                     seg.setRoadName(dto.getRoadName());
                     seg.setRoadCategory(dto.getRoadCategory());
@@ -137,7 +137,7 @@ public class TrafficSpeedBandService {
                 })
                 .toList();
 
-        roadSegmentRepository.saveAll(segments);
+        roadRepository.saveAll(segments);
         log.info("Persisted {} road segments.", segments.size());
     }
 

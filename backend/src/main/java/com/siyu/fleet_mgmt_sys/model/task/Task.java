@@ -94,6 +94,10 @@ public class Task {
     @ManyToOne(fetch = FetchType.LAZY)
     private Cluster endCluster;
 
+    private boolean simulated = false;
+
+    private Long simulationId = null; 
+
     /* methods */
 
     public void setDependencies(List<Task> tasks) {

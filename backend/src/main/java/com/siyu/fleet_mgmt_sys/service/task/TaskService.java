@@ -1,8 +1,8 @@
 package com.siyu.fleet_mgmt_sys.service.task;
 
-import com.siyu.fleet_mgmt_sys.dto.TaskRequestDTO;
-import com.siyu.fleet_mgmt_sys.dto.TaskResponseDTO;
-import com.siyu.fleet_mgmt_sys.exception.TaskNotFoundException;
+import com.siyu.fleet_mgmt_sys.dto.task.TaskRequestDTO;
+import com.siyu.fleet_mgmt_sys.dto.task.TaskResponseDTO;
+import com.siyu.fleet_mgmt_sys.exception.notfoundexception.TaskNotFoundException;
 import com.siyu.fleet_mgmt_sys.model.task.Task;
 import com.siyu.fleet_mgmt_sys.model.Location;
 import com.siyu.fleet_mgmt_sys.model.WayPoint;
