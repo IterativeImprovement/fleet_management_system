@@ -1,6 +1,6 @@
 package com.siyu.fleet_mgmt_sys.service.task.submission;
 
-import com.siyu.fleet_mgmt_sys.exception.ClusterNotFoundException;
+import com.siyu.fleet_mgmt_sys.exception.notfoundexception.ClusterNotFoundException;
 import com.siyu.fleet_mgmt_sys.model.WayPoint;
 import com.siyu.fleet_mgmt_sys.model.task.Cluster;
 import com.siyu.fleet_mgmt_sys.model.task.Task;

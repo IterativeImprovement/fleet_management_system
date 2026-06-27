@@ -1,5 +1,6 @@
 package com.siyu.fleet_mgmt_sys.dto;
 
+import com.siyu.fleet_mgmt_sys.dto.location.LocationResponseDTO;
 import com.siyu.fleet_mgmt_sys.exception.ErrorResponse;
 import lombok.Getter;
 

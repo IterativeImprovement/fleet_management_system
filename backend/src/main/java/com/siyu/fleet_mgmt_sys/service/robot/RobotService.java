@@ -1,9 +1,9 @@
-package com.siyu.fleet_mgmt_sys.service;
+package com.siyu.fleet_mgmt_sys.service.robot;
 
-import com.siyu.fleet_mgmt_sys.dto.RobotRequestDTO;
+import com.siyu.fleet_mgmt_sys.dto.robot.RobotRequestDTO;
 import com.siyu.fleet_mgmt_sys.exception.RobotHasAssignedTasksException;
-import com.siyu.fleet_mgmt_sys.exception.RobotNotFoundException;
-import com.siyu.fleet_mgmt_sys.exception.TaskNotFoundException;
+import com.siyu.fleet_mgmt_sys.exception.notfoundexception.RobotNotFoundException;
+import com.siyu.fleet_mgmt_sys.exception.notfoundexception.TaskNotFoundException;
 import com.siyu.fleet_mgmt_sys.model.enums.RobotStatus;
 import com.siyu.fleet_mgmt_sys.model.enums.TaskStatus;
 import com.siyu.fleet_mgmt_sys.model.robot.LargeRobot;

@@ -1,14 +1,19 @@
 package com.siyu.fleet_mgmt_sys.service.simulation;
 
 import com.siyu.fleet_mgmt_sys.dto.simulation.SimulationConfig;
-import com.siyu.fleet_mgmt_sys.model.simulation.SimulationResult;
-import com.siyu.fleet_mgmt_sys.model.simulation.SimulationEvent;
+import com.siyu.fleet_mgmt_sys.model.enums.LocationSource;
 import com.siyu.fleet_mgmt_sys.model.enums.SimulationEventType;
 import com.siyu.fleet_mgmt_sys.model.enums.TaskType;
-import com.siyu.fleet_mgmt_sys.repository.RoadSegmentRepository;
-import com.siyu.fleet_mgmt_sys.repository.RobotRepository;
-import com.siyu.fleet_mgmt_sys.repository.WayPointRepository;
+import com.siyu.fleet_mgmt_sys.model.simulation.SimulationEvent;
+import com.siyu.fleet_mgmt_sys.model.simulation.SimulationResult;
+import com.siyu.fleet_mgmt_sys.model.simulation.SimulationRun;
+import com.siyu.fleet_mgmt_sys.repository.LocationRepository;
+import com.siyu.fleet_mgmt_sys.repository.RoadRepository;
+import com.siyu.fleet_mgmt_sys.repository.SimulationRunRepository;
+import com.siyu.fleet_mgmt_sys.service.external.OneMapService;
+import com.siyu.fleet_mgmt_sys.service.external.TrafficSpeedBandService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -18,43 +23,90 @@ import java.util.stream.Collectors;
  * Generates a deterministic SimulationResult from a given seed.
  * The same seed will always produce the same set of events.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SimulationEngine {
 
-    private final WayPointRepository waypointRepository;
-    private final RobotRepository robotRepository;
-    private final RoadSegmentRepository roadSegmentRepository;
+    private final LocationRepository locationRepository;
+    private final RoadRepository roadRepository;
+    private final SimulationRunRepository simulationRunRepository;
+    private final SimulationRobotSeeder simulationRobotSeeder;
+    private final OneMapService oneMapService;
+    private final TrafficSpeedBandService trafficSpeedBandService;
 
     public SimulationResult generate(SimulationConfig config) {
+        // Ensure locations are populated before generation
+        oneMapService.populateIfEmpty();
 
-        // Fetch reference IDs from DB once, upfront
-        List<Long> waypointIds = waypointRepository.findAllIds();
-        List<Long> robotIds = robotRepository.findAllIds();
-        List<Long> roadSegmentIds = roadSegmentRepository.findAllIds();
+        // Ensure roads are populated before generation
+        trafficSpeedBandService.populateIfEmpty(); // this method also saves the speed bands
 
-        // Seed independent RNG streams — each stream is isolated from the others
+        // Step 1: Get simulation ID (sequential)
+        SimulationRun run = new SimulationRun();
+        run.setSeed(config.getSeed());
+        run = simulationRunRepository.save(run);
+        Long simulationId = run.getId();
+        log.info("Created simulation run with id={}, seed={}", simulationId, config.getSeed());
+
+        // Step 2: Create and save simulation robots
+        List<Long> robotIds = simulationRobotSeeder.seed(config, simulationId);
+        log.info("Seeded {} robots for simulationId={}", robotIds.size(), simulationId);
+
+        // Step 3: Fetch location and roads from DB
+        List<Long> locationIds = locationRepository.findAllIdsBySource(LocationSource.ONEMAP);
+        List<Long> roadIds = roadRepository.findAllIds();
+
+        log.info("Simulation reference data: locations={}, robots={}, roadSegments={}",
+                locationIds.size(), robotIds.size(), roadIds.size());
+
+        // Error logs
+        if (locationIds.isEmpty()) {
+            log.error("No locations found in database - task events cannot be generated");
+            throw new IllegalStateException("No locations found in database. Please populate locations before running a simulation.");
+        }
+        if (robotIds.isEmpty()) {
+            log.warn("No robots seeded. Malfunction events will not be generated");
+        }
+        if (roadIds.isEmpty()) {
+            log.warn("No road segments found in database. Obstruction events will not be generated");
+        }
+
+        // Step 4: Seed independent RNG streams
         Random taskRng        = new Random(config.getSeed() ^ 0xAAAA_AAAAL);
         Random malfunctionRng = new Random(config.getSeed() ^ 0xBBBB_BBBBL);
         Random obstructionRng = new Random(config.getSeed() ^ 0xCCCC_CCCCL);
 
-        // Generate task events first — dependency resolution requires them to exist
-        List<SimulationEvent> taskEvents = generateTaskEvents(config, taskRng, waypointIds);
+        // Step 5: Generate events
+        List<SimulationEvent> taskEvents = generateTaskEvents(config, taskRng, locationIds);
+        log.info("Generated {} task events", taskEvents.size());
 
-        List<SimulationEvent> allEvents = new ArrayList<>();
-        allEvents.addAll(taskEvents);
-        allEvents.addAll(generateMalfunctionEvents(config, malfunctionRng, robotIds));
-        allEvents.addAll(generateObstructionEvents(config, obstructionRng, roadSegmentIds));
+        List<SimulationEvent> allEvents = new ArrayList<>(taskEvents);
 
-        // Sort all events by simTime
+        if (!robotIds.isEmpty()) {
+            List<SimulationEvent> malfunctionEvents = generateMalfunctionEvents(config, malfunctionRng, robotIds);
+            log.info("Generated {} malfunction events", malfunctionEvents.size());
+            allEvents.addAll(malfunctionEvents);
+        }
+
+        if (!roadIds.isEmpty()) {
+            List<SimulationEvent> obstructionEvents = generateObstructionEvents(config, obstructionRng, roadIds);
+            log.info("Generated {} obstruction events", obstructionEvents.size());
+            allEvents.addAll(obstructionEvents);
+        }
+
+        // Step 6: Sort all events by simTime
         allEvents.sort(Comparator.comparingDouble(SimulationEvent::getSimTime));
 
-        // Assign final sequential IDs after sorting
+        // Step 7: Assign final sequential IDs after sorting
         for (int i = 0; i < allEvents.size(); i++) {
             allEvents.get(i).setEventId((long) (i + 1));
         }
 
+        log.info("Simulation complete: {} total events generated with seed={}", allEvents.size(), config.getSeed());
+
         return SimulationResult.builder()
+                .simulationId(simulationId)
                 .seed(config.getSeed())
                 .config(config)
                 .events(allEvents)
@@ -78,8 +130,11 @@ public class SimulationEngine {
             Long end;
             do { end = pickOne(waypointIds, rng); } while (end.equals(start));
 
+            // Assigns a random type
             TaskType type = pickableTypes[rng.nextInt(pickableTypes.length)];
-            int priority = rng.nextInt(5) + 1;
+
+            // Assigns a random priority
+            int priority = rng.nextInt(config.getSmallestPriority(), config.getLargestPriority());
 
             // Completion deadline: simTime + random offset between min and max
             double range = config.getMaxTaskCompletionSeconds() - config.getMinTaskCompletionSeconds();
@@ -102,7 +157,8 @@ public class SimulationEngine {
                     poolIndices.set(j, tmp);
                 }
 
-                int numDeps = Math.min(rng.nextInt(config.getMaxDependentTasks()) + 1, poolIndices.size());
+                int maxDeps = Math.max(1, config.getMaxDependentTasks());
+                int numDeps = Math.min(rng.nextInt(maxDeps) + 1, poolIndices.size()); // offset due to 1-indexing
                 dependencyIndices.put(counter, new ArrayList<>(poolIndices.subList(0, numDeps)));
             }
 
@@ -123,7 +179,6 @@ public class SimulationEngine {
         }
 
         // Resolve dependency indices to position-based IDs (1-indexed)
-        // These are temporary — final IDs are assigned after sorting in generate()
         for (Map.Entry<Integer, List<Integer>> entry : dependencyIndices.entrySet()) {
             SimulationEvent dependent = events.get(entry.getKey());
             List<Long> depIds = entry.getValue().stream()
@@ -184,6 +239,7 @@ public class SimulationEngine {
     }
 
     private <T> T pickOne(List<T> list, Random rng) {
+        if (list == null || list.isEmpty()) throw new IllegalStateException("Cannot pick from empty or null list");
         return list.get(rng.nextInt(list.size()));
     }
 }

@@ -2,12 +2,12 @@ package com.siyu.fleet_mgmt_sys.service.external;
 
 import com.siyu.fleet_mgmt_sys.dto.external.LtaApiResponseDTO;
 import com.siyu.fleet_mgmt_sys.dto.external.LtaTrafficSpeedBandResponseDTO;
-import com.siyu.fleet_mgmt_sys.model.RoadSegment;
-import com.siyu.fleet_mgmt_sys.repository.RoadSegmentRepository;
+import com.siyu.fleet_mgmt_sys.repository.RoadRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -25,13 +25,14 @@ public class TrafficSpeedBandService {
 
     private static final String ENDPOINT_PATH = "/v4/TrafficSpeedBands";
     private static final int PAGE_SIZE = 500;
+    private final JdbcTemplate jdbcTemplate;
 
     // Limits num of concurrent calls made to the API
     private static final int BATCH_SIZE = 15;
     private final ExecutorService executor = Executors.newFixedThreadPool(BATCH_SIZE);
 
     private final RestTemplate ltaRestTemplate;
-    private final RoadSegmentRepository roadSegmentRepository;
+    private final RoadRepository roadRepository;
 
     @Value("${lta.datamall.base-url}")
     private String baseUrl;
@@ -132,45 +133,48 @@ public class TrafficSpeedBandService {
      * application).
      */
 
-    private void persistRoadSegmentsIfEmpty(List<LtaTrafficSpeedBandResponseDTO> data) {
-        if (roadSegmentRepository.count() > 0) {
+    public void persistRoadSegmentsIfEmpty(List<LtaTrafficSpeedBandResponseDTO> data) {
+        if (roadRepository.count() > 0) {
             return;
         }
 
-        List<RoadSegment> segments = data.stream()
-                .map(dto -> {
-                    RoadSegment seg = new RoadSegment();
-                    seg.setId(Long.parseLong(dto.getLinkId())); // converts string to long
-                    seg.setRoadName(dto.getRoadName());
-                    seg.setRoadCategory(dto.getRoadCategory());
-                    seg.setStartLat(dto.getStartLat());
-                    seg.setStartLon(dto.getStartLon());
-                    seg.setEndLat(dto.getEndLat());
-                    seg.setEndLon(dto.getEndLon());
-                    return seg;
-                })
-                .toList();
+        String sql = "INSERT INTO roads (id, road_name, road_category, start_lat, start_lon, end_lat, end_lon) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-        roadSegmentRepository.saveAll(segments);
-        log.info("Persisted {} road segments.", segments.size());
+        jdbcTemplate.batchUpdate(sql, data, 1000, (ps, dto) -> {
+            ps.setLong(1, Long.parseLong(dto.getLinkId()));
+            ps.setString(2, dto.getRoadName());
+            ps.setString(3, dto.getRoadCategory());
+            ps.setDouble(4, dto.getStartLat());
+            ps.setDouble(5, dto.getStartLon());
+            ps.setDouble(6, dto.getEndLat());
+            ps.setDouble(7, dto.getEndLon());
+        });
+
+        log.info("Persisted {} road segments via batch insert.", data.size());
     }
 
-    // public List<LtaTrafficSpeedBandResponseDTO> getSpeedBandsByCategory(String
-    // category) {
-    // return getAllSpeedBands().stream()
-    // .filter(band -> category.equalsIgnoreCase(band.getRoadCategory()))
-    // .toList();
-    // }
-    //
-    // public List<LtaTrafficSpeedBandResponseDTO> getSpeedBandsByBandNumber(int
-    // bandNumber) {
-    // if (bandNumber < 1 || bandNumber > 8) {
-    // throw new IllegalArgumentException("Speed band must be between 1 and 8");
-    // }
-    // return getAllSpeedBands().stream()
-    // .filter(band -> band.getSpeedBand() == bandNumber)
-    // .toList();
-    // }
+    public void populateIfEmpty() {
+        if (roadRepository.count() > 0) {
+            log.info("Road segments already populated, skipping LTA API fetch.");
+            return;
+        }
+        log.info("Road segments empty, fetching from LTA API...");
+        getAllSpeedBands();
+    }
+//    public List<LtaTrafficSpeedBandResponseDTO> getSpeedBandsByCategory(String category) {
+//        return getAllSpeedBands().stream()
+//                .filter(band -> category.equalsIgnoreCase(band.getRoadCategory()))
+//                .toList();
+//    }
+//
+//    public List<LtaTrafficSpeedBandResponseDTO> getSpeedBandsByBandNumber(int bandNumber) {
+//        if (bandNumber < 1 || bandNumber > 8) {
+//            throw new IllegalArgumentException("Speed band must be between 1 and 8");
+//        }
+//        return getAllSpeedBands().stream()
+//                .filter(band -> band.getSpeedBand() == bandNumber)
+//                .toList();
+//    }
 
     private HttpHeaders buildHeaders() {
         HttpHeaders headers = new HttpHeaders();

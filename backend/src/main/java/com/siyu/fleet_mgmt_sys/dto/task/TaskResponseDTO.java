@@ -1,5 +1,6 @@
-package com.siyu.fleet_mgmt_sys.dto;
+package com.siyu.fleet_mgmt_sys.dto.task;
 
+import com.siyu.fleet_mgmt_sys.dto.location.LocationResponseDTO;
 import com.siyu.fleet_mgmt_sys.model.task.Task;
 import lombok.Data;
 import lombok.NoArgsConstructor;

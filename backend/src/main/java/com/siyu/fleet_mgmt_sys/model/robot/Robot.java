@@ -61,6 +61,10 @@ public abstract class Robot {
     @ManyToOne
     private Cluster currentCluster;
 
+    private boolean simulated = false;
+
+    private Long simulationId = null;
+
     /* methods */
 
     protected Robot(String name) {

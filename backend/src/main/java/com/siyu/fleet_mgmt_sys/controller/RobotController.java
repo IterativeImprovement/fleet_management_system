@@ -1,9 +1,11 @@
 package com.siyu.fleet_mgmt_sys.controller;
 
-import com.siyu.fleet_mgmt_sys.dto.RobotRequestDTO;
-import com.siyu.fleet_mgmt_sys.dto.RobotSimulationDTO;
+import com.siyu.fleet_mgmt_sys.dto.robot.RobotRequestDTO;
+import com.siyu.fleet_mgmt_sys.dto.robot.RobotResponseDTO;
+import com.siyu.fleet_mgmt_sys.dto.robot.RobotSimulationDTO;
 import com.siyu.fleet_mgmt_sys.model.robot.Robot;
-import com.siyu.fleet_mgmt_sys.service.RobotService;
+import com.siyu.fleet_mgmt_sys.service.robot.RobotMapper;
+import com.siyu.fleet_mgmt_sys.service.robot.RobotService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -19,12 +21,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RobotController {
     private final RobotService robotService;
+    private final RobotMapper robotMapper;
 
     @PostMapping
-    public ResponseEntity<Robot> createRobot(@RequestBody RobotRequestDTO req) {
+    public ResponseEntity<RobotResponseDTO> createRobot(@RequestBody RobotRequestDTO req) {
         Robot result = robotService.createRobot(req);
         return ResponseEntity.created(URI.create("/robot/" + result.getId()))
-                .body(result);
+                .body(robotMapper.toDTO(result));
     }
 
     /*
@@ -45,8 +48,8 @@ public class RobotController {
     */
 
     @GetMapping("/{id}") // GET localhost:8080/robot/id
-    public ResponseEntity<Robot> getRobot(@PathVariable Long id) {
-        return ResponseEntity.ok(robotService.getRobot(id));
+    public ResponseEntity<RobotResponseDTO> getRobot(@PathVariable Long id) {
+        return ResponseEntity.ok(robotMapper.toDTO(robotService.getRobot(id)));
     }
 
     @DeleteMapping("/{id}") // DELETE localhost:8080/robot/id
@@ -66,17 +69,20 @@ public class RobotController {
      */
 
     @PatchMapping("/{id}")
-    public ResponseEntity<Robot> updateRobot(@PathVariable Long id, @RequestBody RobotRequestDTO req) {
-        return ResponseEntity.ok(robotService.updateRobot(id, req));
+    public ResponseEntity<RobotResponseDTO> updateRobot(@PathVariable Long id, @RequestBody RobotRequestDTO req) {
+        return ResponseEntity.ok(robotMapper.toDTO(robotService.updateRobot(id, req)));
     }
 
     @GetMapping // GET localhost:8080/robots?taskIds=1&taskIds=2&taskIds=3
-    public ResponseEntity<List<Robot>> filterRobots(
+    public ResponseEntity<List<RobotResponseDTO>> filterRobots(
             @RequestParam(required = false) String status, // refer to RobotStatus for possible statuses
             @RequestParam(required = false) String type,
             @RequestParam(required = false) List<Long> taskIds // finds all robots that are assigned these tasks
     ) {
-        return ResponseEntity.ok(robotService.filterRobots(status, type, taskIds));
+        return ResponseEntity.ok(robotService.filterRobots(status, type, taskIds)
+                .stream()
+                .map(robotMapper::toDTO)
+                .toList());
     }
 
     @PatchMapping("/{id}/base")

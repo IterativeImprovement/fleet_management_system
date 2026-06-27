@@ -1,5 +1,6 @@
 package com.siyu.fleet_mgmt_sys.model;
 
+import com.siyu.fleet_mgmt_sys.model.enums.RoadStatus;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -8,11 +9,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "road_segments")
+@Table(name = "roads")
 @Getter
 @Setter
 @NoArgsConstructor
-public class RoadSegment {
+public class Road {
     @Id
     private Long id;
 
@@ -23,6 +24,8 @@ public class RoadSegment {
     private double startLon;
     private double endLat;
     private double endLon;
+
+    private RoadStatus status = RoadStatus.UNOBSTRUCTED; // default value
 }
 
 /* Example Json (Speed data does not need to be stored, so omitted)

@@ -12,4 +12,5 @@ public class SimulationResult {
     private long seed;
     private SimulationConfig config;
     private List<SimulationEvent> events;
+    private Long simulationId;
 }

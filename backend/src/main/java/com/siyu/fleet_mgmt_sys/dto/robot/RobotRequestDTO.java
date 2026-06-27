@@ -1,4 +1,4 @@
-package com.siyu.fleet_mgmt_sys.dto;
+package com.siyu.fleet_mgmt_sys.dto.robot;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
