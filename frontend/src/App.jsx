@@ -81,6 +81,7 @@ function App() {
   const [isLoadingRoutes, setIsLoadingRoutes] = useState(false)
   const routeCacheRef = useRef({})
   const [coloredSegmentsByTaskId, setColoredSegmentsByTaskId] = useState({})
+  const fetchedColoredTaskIdsRef = useRef(new Set())
 
   useEffect(() => {
     if (useMockData) return
@@ -244,34 +245,44 @@ function App() {
   }, [tasks, useMockData])
 
   useEffect(() => {
-    if (!selectedTaskId || useMockData) return
+    if (useMockData) return
 
-    // find the selected task so we can get its start/end coordinates
-    const selectedTask = tasks.find(t => String(t.id) === String(selectedTaskId))
-    if (!selectedTask || !hasValidTaskRouteEndpoints(selectedTask)) return
+    const taskIds = Object.keys(routesByTaskId)
+    if (taskIds.length === 0) return
+
+    const unfetchedTaskIds = taskIds.filter(
+      id => !fetchedColoredTaskIdsRef.current.has(id)
+    )
+    if (unfetchedTaskIds.length === 0) return
 
     let isCancelled = false
 
-    async function loadColoredSegments() {
-      try {
-        const { start, end } = getTaskRouteEndpoints(selectedTask)
-        const segments = await getColoredRouteSegments(start, end)
+    async function prefetchColoredSegments() {
+      await Promise.all(
+        unfetchedTaskIds.map(async taskId => {
+          const task = tasks.find(t => String(t.id) === String(taskId))
+          if (!task || !hasValidTaskRouteEndpoints(task)) return
 
-        if (!isCancelled) {
-          setColoredSegmentsByTaskId(prev => ({
-            ...prev,
-            [selectedTaskId]: segments,
-          }))
-        }
-      } catch (error) {
-        console.error('Failed to load colored route:', error)
-      }
+          try {
+            const { start, end } = getTaskRouteEndpoints(task)
+            const segments = await getColoredRouteSegments(start, end)
+
+            fetchedColoredTaskIdsRef.current.add(taskId)
+
+            if (!isCancelled) {
+              setColoredSegmentsByTaskId(prev => ({ ...prev, [taskId]: segments }))
+            }
+          } catch (error) {
+            console.error(`Failed to prefetch colored route for task ${taskId}:`, error)
+          }
+        })
+      )
     }
 
-    loadColoredSegments()
+    prefetchColoredSegments()
 
     return () => { isCancelled = true }
-  }, [selectedTaskId, tasks, useMockData])
+  }, [routesByTaskId, tasks, useMockData])
 
   const routeErrorCount = Object.keys(routeErrorsByTaskId).length
 
