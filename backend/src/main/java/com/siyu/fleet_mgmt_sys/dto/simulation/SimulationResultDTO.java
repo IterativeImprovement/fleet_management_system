@@ -11,5 +11,6 @@ import java.util.List;
 @Builder
 public class SimulationResultDTO {
     private long seed;
+    private Long simulationId;
     private List<SimulationEventDTO> events;
 }

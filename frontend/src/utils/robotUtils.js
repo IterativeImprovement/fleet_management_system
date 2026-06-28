@@ -7,6 +7,7 @@ export function getRobotStatusLabel(status) {
   if (value === 'MOVING_TO_MAINTENANCE') return 'Moving to Maintenance'
   if (value === 'CHARGING') return 'Charging'
   if (value === 'NEED_MAINTENANCE') return 'Needs Maintenance'
+  if (value === 'BLOCKED') return 'Blocked'
   if (value === 'ERROR') return 'Error'
 
   return 'Unknown'
@@ -21,6 +22,7 @@ export function getRobotStatusType(status) {
   if (value === 'MOVING_TO_MAINTENANCE') return 'maintenance'
   if (value === 'CHARGING') return 'charging'
   if (value === 'NEED_MAINTENANCE') return 'maintenance'
+  if (value === 'BLOCKED') return 'blocked'
   if (value === 'ERROR') return 'error'
 
   return 'unknown'

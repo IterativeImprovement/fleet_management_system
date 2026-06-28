@@ -39,6 +39,28 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+
+      // for simulation
+      '/simulation': {
+        target: 'http://backend-api:8080',
+        changeOrigin: true,
+        secure: false,
+      },
+
+      // for road
+      '/road': {
+        target: 'http://backend-api:8080',
+        changeOrigin: true,
+        secure: false,
+      },
+
+      // for websocket (robot position updates)
+      '/ws': {
+        target: 'ws://backend-api:8080',
+        ws: true,
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 })

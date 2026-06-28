@@ -14,6 +14,7 @@ public class SimulationMapper {
     public SimulationResultDTO toDTO(SimulationResult result) {
         return SimulationResultDTO.builder()
                 .seed(result.getSeed())
+                .simulationId(result.getSimulationId())
                 .events(result.getEvents().stream()
                         .map(this::toEventDTO)
                         .collect(Collectors.toList()))

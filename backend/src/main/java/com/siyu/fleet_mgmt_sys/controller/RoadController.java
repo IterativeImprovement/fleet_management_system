@@ -13,6 +13,11 @@ import org.springframework.web.bind.annotation.*;
 public class RoadController {
     private final RoadService roadService;
 
+    @GetMapping("/{id}")
+    public ResponseEntity<RoadResponseDTO> getRoad(@PathVariable Long id) {
+        return ResponseEntity.ok(roadService.getRoad(id));
+    }
+
     @PatchMapping("/{id}")
     public ResponseEntity<RoadResponseDTO> updateRoadStatus(@PathVariable Long id, @RequestBody String newStatus) {
         return ResponseEntity.ok(roadService.updateRoadStatus(id, newStatus));

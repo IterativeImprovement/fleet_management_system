@@ -33,6 +33,11 @@ public class TaskAllocationService {
     public void assignNextTask(Robot robot) {
         Cluster robotCluster = robot.getCurrentCluster();
 
+        // robot is not currently in any cluster (e.g. idle at base) - nothing to assign
+        if (robotCluster == null) {
+            return;
+        }
+
         // step 1: look for the top task in the local cluster first
         Task bestTask = getTopTaskForRobot(robot, robotCluster);
 

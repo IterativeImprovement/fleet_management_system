@@ -15,6 +15,12 @@ public class RoadService {
 
     private final RoadMapper roadMapper;
 
+    public RoadResponseDTO getRoad(Long id) {
+        Road road = roadRepository.findById(id)
+                .orElseThrow(() -> new RoadNotFoundException(id));
+        return roadMapper.toDTO(road);
+    }
+
     public RoadResponseDTO updateRoadStatus(Long id, String newStatus) {
         Road road = roadRepository.findById(id)
                 .orElseThrow(() -> new RoadNotFoundException(id));

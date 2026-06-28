@@ -81,6 +81,11 @@ public class TaskService {
         task.setType(taskType);
         task.setDependencies(dependencies);
 
+        if (req.getSimulationId() != null) {
+            task.setSimulated(true);
+            task.setSimulationId(req.getSimulationId());
+        }
+
         Task savedTask = taskSubmissionPipeline.submitTask(task);
         System.out.println("Task created successfully!\n" + savedTask.toString());
         return new TaskResponseDTO(savedTask);
@@ -162,6 +167,7 @@ public class TaskService {
                 .toList();
     }
 
+    @Transactional
     public void completeTask(Long taskId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new TaskNotFoundException(taskId));
@@ -172,13 +178,20 @@ public class TaskService {
         task.setRobot(null);
         taskRepository.save(task);
 
-        robot.getTasks().remove(task);
-
         // release any tasks that were waiting on this one
         dependencyService.releaseUnblockedTasks(task);
 
         // refresh cluster cache
-        clusterService.refreshTopTasks(task.getEndCluster().getId());
+        if (task.getEndCluster() != null) {
+            clusterService.refreshTopTasks(task.getEndCluster().getId());
+        }
+
+        // a task may have no assigned robot (e.g. completed straight from the pool)
+        if (robot == null) {
+            return;
+        }
+
+        robot.getTasks().remove(task);
 
         if (robot.getTasks().isEmpty()) {
             robot.setStatus(RobotStatus.IDLE);

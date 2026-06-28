@@ -44,9 +44,11 @@ public class RobotService {
         return savedRobot;
     }
 
+    @Transactional
     public Robot getRobot(Long id) {
         Robot robot = robotRepository.findById(id)
                 .orElseThrow(() -> new RobotNotFoundException(id));
+        robot.getTasks().size(); // initialise lazy tasks collection within the session
         System.out.println("Robot retrieved successfully!\n" + robot.toStringDetailed());
         return robot;
     }
@@ -65,6 +67,7 @@ public class RobotService {
         System.out.println("Robot" + id +  "deleted successfully!\n");
     }
 
+    @Transactional
     public Robot updateRobot(Long id, RobotRequestDTO req) {
         Robot robot = robotRepository.findById(id)
                 .orElseThrow(() -> new RobotNotFoundException(id));
@@ -100,9 +103,12 @@ public class RobotService {
             });
         }
 
-        return robotRepository.save(robot);
+        Robot saved = robotRepository.save(robot);
+        saved.getTasks().size(); // initialise lazy tasks so the response can be mapped after the transaction
+        return saved;
     }
 
+    @Transactional
     public List<Robot> filterRobots(String status, String type, List<Long> taskIds) {
         RobotStatus robotStatus = status != null ? RobotStatus.valueOf(status.toUpperCase()) : null; // convert to RobotStatus
 
@@ -110,10 +116,13 @@ public class RobotService {
                 RobotSpecification.filter(robotStatus, type, taskIds)
         );
 
+        robots.forEach(robot -> robot.getTasks().size()); // initialise lazy tasks within the session
+
         System.out.println("Retrieved filtered robots: " + robots);
         return robots;
     }
 
+    @Transactional
     public void setToBase(Long robotId) {
         Robot robot = robotRepository.findById(robotId)
                 .orElseThrow(() -> new RobotNotFoundException(robotId));

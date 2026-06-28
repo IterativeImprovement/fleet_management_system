@@ -12,10 +12,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /*
@@ -89,17 +91,17 @@ public class TaskClusterService { // this service clusters tasks that are close 
     }
 
     private void updateCentroid(Cluster cluster) {
-        updateCentroid(cluster, null);
+        updateCentroid(cluster, (Set<Long>) null);
     }
 
-    private void updateCentroid(Cluster cluster, Long excludedTaskId) {
+    private void updateCentroid(Cluster cluster, Set<Long> excludedTaskIds) {
         // average start tasks' startpoints
         List<Task> startTasks = cluster.getStartTasks().stream()
-                .filter(task -> excludedTaskId == null || !excludedTaskId.equals(task.getId()))
+                .filter(task -> excludedTaskIds == null || !excludedTaskIds.contains(task.getId()))
                 .toList();
         // average end tasks' endpoints
         List<Task> endTasks = cluster.getEndTasks().stream()
-                .filter(task -> excludedTaskId == null || !excludedTaskId.equals(task.getId()))
+                .filter(task -> excludedTaskIds == null || !excludedTaskIds.contains(task.getId()))
                 .toList();
 
         List<double[]> points = new ArrayList<>();
@@ -163,15 +165,35 @@ public class TaskClusterService { // this service clusters tasks that are close 
 
     @Transactional
     public void removeTaskFromClusterCaches(Task task) {
+        removeTasksFromClusterCaches(List.of(task));
+    }
+
+    /**
+     * Detaches a batch of tasks from every cluster that references them, then
+     * recomputes each affected cluster's centroid and top tasks once, excluding
+     * the whole batch. Removing tasks one-by-one is unsafe here: a cluster's new
+     * top task could be picked from another task that is also about to be
+     * deleted, leaving a dangling reference when the batch is flushed.
+     */
+    @Transactional
+    public void removeTasksFromClusterCaches(Collection<Task> tasks) {
+        if (tasks.isEmpty()) return;
+
+        Set<Long> removedTaskIds = tasks.stream()
+                .map(Task::getId)
+                .collect(Collectors.toSet());
+
         Map<Long, Cluster> affectedClusters = new LinkedHashMap<>();
-        addCluster(affectedClusters, task.getStartCluster());
-        addCluster(affectedClusters, task.getEndCluster());
-        clusterRepository.findByTopStandardTaskOrTopLargeTask(task, task)
-                .forEach(cluster -> addCluster(affectedClusters, cluster));
+        for (Task task : tasks) {
+            addCluster(affectedClusters, task.getStartCluster());
+            addCluster(affectedClusters, task.getEndCluster());
+            clusterRepository.findByTopStandardTaskOrTopLargeTask(task, task)
+                    .forEach(cluster -> addCluster(affectedClusters, cluster));
+        }
 
         affectedClusters.values().forEach(cluster -> {
-            updateCentroid(cluster, task.getId());
-            updateTopTasks(cluster, task.getId());
+            updateCentroid(cluster, removedTaskIds);
+            updateTopTasks(cluster, removedTaskIds);
         });
         clusterRepository.saveAll(affectedClusters.values());
         clusterRepository.flush();
@@ -183,9 +205,9 @@ public class TaskClusterService { // this service clusters tasks that are close 
         }
     }
 
-    private void updateTopTasks(Cluster cluster, Long excludedTaskId) {
+    private void updateTopTasks(Cluster cluster, Set<Long> excludedTaskIds) {
         List<Task> pending = cluster.getStartTasks().stream() // only tasks that start in this cluster will be considered
-                .filter(task -> excludedTaskId == null || !excludedTaskId.equals(task.getId()))
+                .filter(task -> excludedTaskIds == null || !excludedTaskIds.contains(task.getId()))
                 .filter(t -> t.getStatus() == TaskStatus.PENDING_ASSIGNMENT) // retrieves pending tasks
                 .toList();
 

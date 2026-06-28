@@ -1,10 +1,8 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 
 import './App.css'
 
 import { mockRobots } from './data/mockRobots'
-import { mockAlerts } from './data/mockAlerts'
-import { mockObstacles } from './data/mockObstacle'
 import { mockTasks } from './data/mockTasks'
 
 import Topbar from './components/Topbar'
@@ -37,6 +35,7 @@ import {
   ROBOT_DELETE_ASSIGNED_TASKS_MESSAGE,
 } from './utils/robotUtils'
 import { getTaskDeleteBlockReason } from './utils/taskUtils'
+import { useSimulationPlayback } from './hooks/useSimulationPlayback'
 
 function shouldUseMockData() {
   return (
@@ -83,76 +82,60 @@ function App() {
   const [coloredSegmentsByTaskId, setColoredSegmentsByTaskId] = useState({})
   const fetchedColoredTaskIdsRef = useRef(new Set())
 
+  const loadRobotsFromBackend = useCallback(async () => {
+    if (useMockData) return
+    try {
+      const backendRobots = await getRobots()
+      setRobots(backendRobots)
+      setSelectedRobotId(current => {
+        if (!current) return null
+        return backendRobots.some(r => String(r.id) === String(current)) ? current : null
+      })
+    } catch (error) {
+      console.error('Failed to load robots from backend.', error)
+    }
+  }, [useMockData])
+
+  const loadTasksFromBackend = useCallback(async () => {
+    if (useMockData) return
+    try {
+      const backendTasks = await getTasks()
+      setTasks(backendTasks)
+      setSelectedTaskId(current => {
+        if (!current) return null
+        return backendTasks.some(t => String(t.id) === String(current)) ? current : null
+      })
+    } catch (error) {
+      console.error('Failed to load tasks from backend.', error)
+    }
+  }, [useMockData])
+
+  const simulation = useSimulationPlayback({
+    onTaskCreated: useCallback((task) => {
+      setTasks(prev => [...prev.filter(t => String(t.id) !== String(task.id)), task])
+    }, []),
+    onRefetchAll: useCallback(() => {
+      loadRobotsFromBackend()
+      loadTasksFromBackend()
+    }, [loadRobotsFromBackend, loadTasksFromBackend]),
+  })
+
   useEffect(() => {
     if (useMockData) return
-
-    let isCancelled = false
-
-    async function loadRobotsFromBackend() {
-      try {
-        const backendRobots = await getRobots()
-
-        if (isCancelled) return
-
-        setRobots(backendRobots)
-
-        setSelectedRobotId(currentRobotId => {
-          if (!currentRobotId) return null
-
-          const robotStillExists = backendRobots.some(
-            robot => String(robot.id) === String(currentRobotId)
-          )
-
-          return robotStillExists ? currentRobotId : null
-        })
-
-        console.log('Loaded robots from backend:', backendRobots)
-      } catch (error) {
-        console.error('Failed to load robots from backend. Using mock robots.', error)
-      }
-    }
-
-    loadRobotsFromBackend()
-
-    return () => {
-      isCancelled = true
-    }
+    let cancelled = false
+    getRobots()
+      .then(data => { if (!cancelled) setRobots(data) })
+      .catch(err => console.error('Failed to load robots.', err))
+    return () => { cancelled = true }
   }, [useMockData])
 
   useEffect(() => {
     if (useMockData) return
-
-    let isCancelled = false
-
-    async function loadTasksFromBackend() {
-      try {
-        const backendTasks = await getTasks()
-
-        if (isCancelled) return
-
-        setTasks(backendTasks)
-
-        setSelectedTaskId(currentTaskId => {
-          if (!currentTaskId) return null
-
-          const taskStillExists = backendTasks.some(
-            task => String(task.id) === String(currentTaskId)
-          )
-
-          return taskStillExists ? currentTaskId : null
-        })
-
-        console.log('Loaded tasks from backend:', backendTasks)
-      } catch (error) {
-        console.error('Failed to load tasks from backend.', error)
-      }
-    }
-
-    loadTasksFromBackend()
-
-    return () => {
-      isCancelled = true
-    }
+    let cancelled = false
+    getTasks()
+      .then(data => { if (!cancelled) setTasks(data) })
+      .catch(err => console.error('Failed to load tasks.', err))
+    return () => { cancelled = true }
   }, [useMockData])
 
   useEffect(() => {
@@ -244,45 +227,48 @@ function App() {
     }
   }, [tasks, useMockData])
 
+  // Colored routes are only shown for the selected task, so we fetch the
+  // colored segments on demand when the selection changes (one request at a
+  // time) instead of prefetching every task. Prefetching every task floods the
+  // slow /route/colored-coords endpoint during simulation, where many tasks are
+  // created in quick succession, so the segments for the task you click rarely
+  // arrive in time. Results are cached in coloredSegmentsByTaskId, so
+  // re-selecting a task is instant.
   useEffect(() => {
     if (useMockData) return
+    if (!selectedTaskId) return
 
-    const taskIds = Object.keys(routesByTaskId)
-    if (taskIds.length === 0) return
+    // Already fetched (or in cache) for this task.
+    if (fetchedColoredTaskIdsRef.current.has(String(selectedTaskId))) return
 
-    const unfetchedTaskIds = taskIds.filter(
-      id => !fetchedColoredTaskIdsRef.current.has(id)
-    )
-    if (unfetchedTaskIds.length === 0) return
+    // Wait until the plain route for this task has loaded.
+    const route = routesByTaskId[selectedTaskId]
+    if (!route) return
+
+    const task = tasks.find(t => String(t.id) === String(selectedTaskId))
+    if (!task || !hasValidTaskRouteEndpoints(task)) return
 
     let isCancelled = false
 
-    async function prefetchColoredSegments() {
-      await Promise.all(
-        unfetchedTaskIds.map(async taskId => {
-          const task = tasks.find(t => String(t.id) === String(taskId))
-          if (!task || !hasValidTaskRouteEndpoints(task)) return
+    async function fetchSelectedColoredSegments() {
+      try {
+        const { start, end } = getTaskRouteEndpoints(task)
+        const segments = await getColoredRouteSegments(start, end)
 
-          try {
-            const { start, end } = getTaskRouteEndpoints(task)
-            const segments = await getColoredRouteSegments(start, end)
+        fetchedColoredTaskIdsRef.current.add(String(selectedTaskId))
 
-            fetchedColoredTaskIdsRef.current.add(taskId)
-
-            if (!isCancelled) {
-              setColoredSegmentsByTaskId(prev => ({ ...prev, [taskId]: segments }))
-            }
-          } catch (error) {
-            console.error(`Failed to prefetch colored route for task ${taskId}:`, error)
-          }
-        })
-      )
+        if (!isCancelled) {
+          setColoredSegmentsByTaskId(prev => ({ ...prev, [selectedTaskId]: segments }))
+        }
+      } catch (error) {
+        console.error(`Failed to fetch colored route for task ${selectedTaskId}:`, error)
+      }
     }
 
-    prefetchColoredSegments()
+    fetchSelectedColoredSegments()
 
     return () => { isCancelled = true }
-  }, [routesByTaskId, tasks, useMockData])
+  }, [selectedTaskId, routesByTaskId, tasks, useMockData])
 
   const routeErrorCount = Object.keys(routeErrorsByTaskId).length
 
@@ -465,12 +451,32 @@ function App() {
     console.log('Deleted robot from backend:', robotId)
   }
 
+  // Merge animated positions from the simulation into the robots list
+  const robotsWithSimPositions = useMemo(() => {
+    const overrides = simulation.robotPositionOverrides
+    if (Object.keys(overrides).length === 0) return representedRobots
+    return representedRobots.map(robot => {
+      const pos = overrides[robot.id]
+      return pos ? { ...robot, position: pos } : robot
+    })
+  }, [representedRobots, simulation.robotPositionOverrides])
+
   return (
     <main className="dashboard">
-      <Topbar />
+      <Topbar
+        simTimeDisplay={simulation.simTimeDisplay}
+        isRunning={simulation.isRunning}
+        simulationId={simulation.simulationId}
+        speedFactor={simulation.speedFactor}
+        onStart={simulation.startSimulation}
+        onPause={simulation.pauseSimulation}
+        onResume={simulation.resumeSimulation}
+        onReset={simulation.resetSimulation}
+        onSpeedChange={simulation.setSpeedFactor}
+      />
 
       <Sidebar
-        robots={representedRobots}
+        robots={robotsWithSimPositions}
         tasks={tasks}
         selectedRobotId={selectedRobotId}
         selectedTaskId={selectedTaskId}
@@ -485,8 +491,8 @@ function App() {
       />
 
       <LiveMap
-        robots={representedRobots}
-        obstacles={mockObstacles}
+        robots={robotsWithSimPositions}
+        obstacles={simulation.simObstacles}
         routesByTaskId={routesByTaskId}
         selectedTaskId={selectedTaskId}
         selectedRobotId={selectedRobotId}
@@ -497,7 +503,7 @@ function App() {
         coloredSegmentsByTaskId={coloredSegmentsByTaskId}
       />
 
-      <AlertLog alerts={mockAlerts} />
+      <AlertLog alerts={simulation.simAlerts} />
     </main>
   )
 }
