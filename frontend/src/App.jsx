@@ -80,7 +80,8 @@ function App() {
   const [isLoadingRoutes, setIsLoadingRoutes] = useState(false)
   const routeCacheRef = useRef({})
   const [coloredSegmentsByTaskId, setColoredSegmentsByTaskId] = useState({})
-  const fetchedColoredTaskIdsRef = useRef(new Set())
+  // Tasks whose colored-route request is in flight, so we dont ask again
+  const inFlightColoredRef = useRef(new Set())
 
   const loadRobotsFromBackend = useCallback(async () => {
     if (useMockData) return
@@ -227,48 +228,42 @@ function App() {
     }
   }, [tasks, useMockData])
 
-  // Colored routes are only shown for the selected task, so we fetch the
-  // colored segments on demand when the selection changes (one request at a
-  // time) instead of prefetching every task. Prefetching every task floods the
-  // slow /route/colored-coords endpoint during simulation, where many tasks are
-  // created in quick succession, so the segments for the task you click rarely
-  // arrive in time. Results are cached in coloredSegmentsByTaskId, so
-  // re-selecting a task is instant.
   useEffect(() => {
     if (useMockData) return
     if (!selectedTaskId) return
 
-    // Already fetched (or in cache) for this task.
-    if (fetchedColoredTaskIdsRef.current.has(String(selectedTaskId))) return
+    const key = String(selectedTaskId)
 
-    // Wait until the plain route for this task has loaded.
+    // Already have the result cached so dont refetch
+    if (coloredSegmentsByTaskId[selectedTaskId]) return
+    // A request for this task is already in flight dont ask agian
+    if (inFlightColoredRef.current.has(key)) return
+
     const route = routesByTaskId[selectedTaskId]
     if (!route) return
 
     const task = tasks.find(t => String(t.id) === String(selectedTaskId))
     if (!task || !hasValidTaskRouteEndpoints(task)) return
 
-    let isCancelled = false
+    const taskId = selectedTaskId
+    inFlightColoredRef.current.add(key)
 
     async function fetchSelectedColoredSegments() {
       try {
         const { start, end } = getTaskRouteEndpoints(task)
         const segments = await getColoredRouteSegments(start, end)
 
-        fetchedColoredTaskIdsRef.current.add(String(selectedTaskId))
-
-        if (!isCancelled) {
-          setColoredSegmentsByTaskId(prev => ({ ...prev, [selectedTaskId]: segments }))
-        }
+        setColoredSegmentsByTaskId(prev => ({ ...prev, [taskId]: segments }))
       } catch (error) {
-        console.error(`Failed to fetch colored route for task ${selectedTaskId}:`, error)
+        console.error(`Failed to fetch colored route for task ${taskId}:`, error)
+      } finally {
+        // Clear the in-flight flag so a failed fetch can retry on reselect.
+        inFlightColoredRef.current.delete(key)
       }
     }
 
     fetchSelectedColoredSegments()
-
-    return () => { isCancelled = true }
-  }, [selectedTaskId, routesByTaskId, tasks, useMockData])
+  }, [selectedTaskId, routesByTaskId, tasks, useMockData, coloredSegmentsByTaskId])
 
   const routeErrorCount = Object.keys(routeErrorsByTaskId).length
 
