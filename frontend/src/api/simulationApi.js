@@ -1,0 +1,60 @@
+async function getErrorMessage(response) {
+  try {
+    const data = await response.json()
+    return data.message || data.error || JSON.stringify(data)
+  } catch {
+    return response.statusText || 'Unknown error'
+  }
+}
+
+export async function generateSimulation(seed) {
+  const params = new URLSearchParams()
+  if (seed !== null && seed !== undefined && seed !== '') {
+    params.set('seed', seed)
+  }
+
+  const url = `/simulation/generate${params.toString() ? `?${params}` : ''}`
+  const response = await fetch(url, { method: 'POST' })
+
+  if (!response.ok) {
+    const message = await getErrorMessage(response)
+    throw new Error(`Simulation generate failed (${response.status}): ${message}`)
+  }
+
+  return response.json()
+}
+
+export async function resetSimulationRun(simulationId) {
+  const response = await fetch(`/simulation/${simulationId}`, { method: 'DELETE' })
+
+  if (!response.ok) {
+    const message = await getErrorMessage(response)
+    throw new Error(`Simulation reset failed (${response.status}): ${message}`)
+  }
+}
+
+export async function getRoad(roadId) {
+  const response = await fetch(`/road/${roadId}`)
+
+  if (!response.ok) {
+    const message = await getErrorMessage(response)
+    throw new Error(`Get road failed (${response.status}): ${message}`)
+  }
+
+  return response.json()
+}
+
+export async function patchRoadStatus(roadId, status) {
+  const response = await fetch(`/road/${roadId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(status),
+  })
+
+  if (!response.ok) {
+    const message = await getErrorMessage(response)
+    throw new Error(`Patch road failed (${response.status}): ${message}`)
+  }
+
+  return response.json()
+}

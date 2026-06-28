@@ -1,4 +1,4 @@
-import { createRobot } from '../utils/robotUtils'
+import { createRobot } from '../utils/robotUtils.js'
 
 const ROBOT_ENDPOINT = '/robot'
 
@@ -11,21 +11,18 @@ async function getErrorMessage(response) {
   }
 }
 
-function normaliseRobotFromBackend(robot) {
-  const latitude = Number(robot.latitude)
-  const longitude = Number(robot.longitude)
-
+export function normaliseRobotFromBackend(robot) {
   return createRobot({
     id: robot.id,
     name: robot.name ?? `Robot ${robot.id}`,
     type: robot.type ?? robot.TYPE ?? 'UNINITIALISED',
     status: robot.status ?? 'IDLE',
     speed: robot.speed ?? robot.SPEED,
-    latitude: Number.isFinite(latitude) ? latitude : null,
-    longitude: Number.isFinite(longitude) ? longitude : null,
-    x: Number.isFinite(longitude) ? longitude : null,
-    y: Number.isFinite(latitude) ? latitude : null,
-    tasks: robot.tasks ?? [],
+    position: {
+      latitude: robot.position?.latitude ?? robot.latitude,
+      longitude: robot.position?.longitude ?? robot.longitude,
+    },
+    taskIds: robot.taskIds ?? robot.tasks ?? [],
   })
 }
 

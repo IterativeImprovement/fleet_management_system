@@ -38,18 +38,18 @@ export function decodePolyline(encoded) {
 
 export function hasValidTaskRouteEndpoints(task) {
   return (
-    Number.isFinite(Number(task?.startWayPoint?.latitude)) &&
-    Number.isFinite(Number(task?.startWayPoint?.longitude)) &&
-    Number.isFinite(Number(task?.endWayPoint?.latitude)) &&
-    Number.isFinite(Number(task?.endWayPoint?.longitude))
+    Number.isFinite(Number(task?.startLocation?.latitude)) &&
+    Number.isFinite(Number(task?.startLocation?.longitude)) &&
+    Number.isFinite(Number(task?.endLocation?.latitude)) &&
+    Number.isFinite(Number(task?.endLocation?.longitude))
   )
 }
 
 export function getTaskRouteEndpoints(task) {
-  const startLat = Number(task.startWayPoint.latitude)
-  const startLng = Number(task.startWayPoint.longitude)
-  const endLat = Number(task.endWayPoint.latitude)
-  const endLng = Number(task.endWayPoint.longitude)
+  const startLat = Number(task.startLocation.latitude)
+  const startLng = Number(task.startLocation.longitude)
+  const endLat = Number(task.endLocation.latitude)
+  const endLng = Number(task.endLocation.longitude)
 
   return {
     start: `${startLat},${startLng}`,

@@ -31,11 +31,8 @@ function AddRobotForm({ robots = [], onAddRobot, onCancel }) {
       name: trimmedName,
       type,
       status: 'IDLE',
-      route: null,
-      tasks: [],
-      x: null,
-      y: null,
-      path: [],
+      position: null,
+      taskIds: [],
     })
 
     try {

@@ -1,0 +1,59 @@
+package com.siyu.fleet_mgmt_sys.dto.task;
+
+import com.siyu.fleet_mgmt_sys.dto.location.LocationResponseDTO;
+import com.siyu.fleet_mgmt_sys.model.task.Task;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Data
+@NoArgsConstructor
+public class TaskResponseDTO {
+    private Long id;
+    private String name;
+    private String description;
+    private String type;
+    private int priority;
+    private LocalDateTime startDateTime;
+    private LocalDateTime completionDateTime;
+    private Long startLocationId;
+    private Long endLocationId;
+    private LocationResponseDTO startLocation;
+    private LocationResponseDTO endLocation;
+    private String startWayPointStr;
+    private String endWayPointStr;
+    private String status;
+    private Long robotId;
+    private List<Long> dependencyIds;
+    private String routeGeometry;
+    private Integer routeDistance;
+
+    public TaskResponseDTO(Task task) {
+        this.id = task.getId();
+        this.name = task.getName();
+        this.description = task.getDescription();
+        this.type = task.getType() != null ? task.getType().name() : "STANDARD";
+        this.priority = task.getPriority();
+        this.startDateTime = task.getStartDateTime();
+        this.completionDateTime = task.getCompletionDateTime();
+        this.startLocationId = task.getStartLocation() != null ? task.getStartLocation().getId() : null;
+        this.endLocationId = task.getEndLocation() != null ? task.getEndLocation().getId() : null;
+        this.startLocation = task.getStartLocation() != null ? new LocationResponseDTO(task.getStartLocation()) : null;
+        this.endLocation = task.getEndLocation() != null ? new LocationResponseDTO(task.getEndLocation()) : null;
+
+        this.startWayPointStr = task.getStartWayPoint() != null ?
+                task.getStartWayPoint().getLatitude() + "," + task.getStartWayPoint().getLongitude() : null;
+        this.endWayPointStr = task.getEndWayPoint() != null ?
+                task.getEndWayPoint().getLatitude() + "," + task.getEndWayPoint().getLongitude() : null;
+
+        this.status = task.getStatus() != null ? task.getStatus().name() : "PENDING_ASSIGNMENT";
+        this.robotId = task.getRobot() != null ? task.getRobot().getId() : null;
+        this.dependencyIds = task.getDependencies() != null ?
+                task.getDependencies().stream().map(Task::getId).toList() : List.of();
+        this.routeGeometry = task.getRoute() != null ? task.getRoute().getRouteGeo() : null;
+        this.routeDistance = task.getRoute() != null ? task.getRoute().getTotalDistance() : null;
+    }
+
+}

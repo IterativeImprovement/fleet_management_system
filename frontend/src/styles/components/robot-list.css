@@ -57,6 +57,10 @@
   background-color: #f97316;
 }
 
+.robot-dot.blocked {
+  background-color: #a855f7;
+}
+
 .robot-dot.error {
   background-color: #ef4444;
 }
@@ -115,6 +119,11 @@
 .robot-status-pill.maintenance {
   background-color: #ffedd5;
   color: #c2410c;
+}
+
+.robot-status-pill.blocked {
+  background-color: #f3e8ff;
+  color: #7c3aed;
 }
 
 .robot-status-pill.error {

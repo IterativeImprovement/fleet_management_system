@@ -85,6 +85,11 @@
   color: #dc2626;
 }
 
+.selected-status.blocked {
+  background-color: #f3e8ff;
+  color: #7c3aed;
+}
+
 .selected-status.unknown {
   background-color: #f3f4f6;
   color: #6b7280;

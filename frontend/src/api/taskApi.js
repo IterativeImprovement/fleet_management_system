@@ -1,4 +1,4 @@
-import { createTask } from '../utils/taskUtils'
+import { createTask } from '../utils/taskUtils.js'
 
 const TASK_ENDPOINT = '/task'
 
@@ -11,20 +11,56 @@ async function getErrorMessage(response) {
   }
 }
 
-// turns the string passed in from the backend into an object
-function parseWaypointString(wpStr) {
-  if (!wpStr || typeof wpStr !== 'string') return null;
+function parseWaypoint(wayPoint) {
+  if (!wayPoint) return null
 
-  const parts = wpStr.split(',');
-  if (parts.length !== 2) return null;
+  if (typeof wayPoint === 'object') {
+    const latitude = Number(wayPoint.latitude)
+    const longitude = Number(wayPoint.longitude)
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+
+    return {
+      latitude,
+      longitude,
+    }
+  }
+
+  const parts = wayPoint.split(',')
+  if (parts.length !== 2) return null
+
+  const latitude = Number(parts[0].trim())
+  const longitude = Number(parts[1].trim())
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
 
   return {
-    latitude: parts[0].trim(),
-    longitude: parts[1].trim()
-  };
+    latitude,
+    longitude,
+  }
 }
 
-function normaliseTaskFromBackend(task) {
+function parseLocation(location) {
+  if (!location) return null
+
+  const latitude = Number(location.latitude)
+  const longitude = Number(location.longitude)
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+
+  return {
+    id: location.id,
+    name: location.name ?? '',
+    address: location.address ?? '',
+    postalCode: location.postalCode ?? '',
+    latitude,
+    longitude,
+    source: location.source ?? '',
+    externalId: location.externalId ?? '',
+  }
+}
+
+export function normaliseTaskFromBackend(task) {
   return createTask({
     id: task.id,
     priority: Number(task.priority),
@@ -34,10 +70,16 @@ function normaliseTaskFromBackend(task) {
     status: task.status ?? 'PENDING_ASSIGNMENT',
     startDateTime: task.startDateTime ?? '',
     completionDateTime: task.completionDateTime ?? '',
-    startWayPoint: parseWaypointString(task.startWayPointStr || task.startWayPoint),
-    endWayPoint: parseWaypointString(task.endWayPointStr || task.endWayPoint),
-    robot: task.robot ?? null,
-    dependencies: task.dependencies ?? task.dependencyIds ?? task.tasks ?? [],
+    startLocationId: task.startLocationId ?? task.startLocation?.id ?? null,
+    endLocationId: task.endLocationId ?? task.endLocation?.id ?? null,
+    startLocation: parseLocation(task.startLocation),
+    endLocation: parseLocation(task.endLocation),
+    startWayPoint: parseWaypoint(task.startWayPointStr || task.startWayPoint),
+    endWayPoint: parseWaypoint(task.endWayPointStr || task.endWayPoint),
+    robotId: task.robotId ?? task.robot?.id ?? null,
+    dependencyIds: task.dependencyIds ?? task.dependencies ?? task.tasks ?? [],
+    routeGeometry: task.routeGeometry ?? task.route?.routeGeo ?? '',
+    routeDistance: task.routeDistance ?? task.route?.totalDistance ?? null,
   })
 }
 
@@ -79,9 +121,9 @@ function wayPointToString(wayPoint) {
 }
 
 function getDependencyIds(task) {
-  const dependencies = task.dependencies ?? task.tasks ?? []
+  const dependencyIds = task.dependencyIds ?? []
 
-  return dependencies
+  return dependencyIds
     .map(dependency =>
       typeof dependency === 'object' ? dependency.id : dependency
     )
@@ -100,18 +142,39 @@ function normaliseTaskTypeForBackend(type) {
   return value
 }
 
+function getLocationId(locationId, location) {
+  const id = locationId ?? location?.id
+  const numericId = Number(id)
+
+  return Number.isFinite(numericId) ? numericId : null
+}
+
 function taskToCreateRequest(task) {
-  return {
+  const request = {
     name: task.name,
     description: task.description,
     type: normaliseTaskTypeForBackend(task.type),
     priority: task.priority,
     startDateTime: task.startDateTime,
     completionDateTime: task.completionDateTime,
-    startWayPointStr: wayPointToString(task.startWayPoint),
-    endWayPointStr: wayPointToString(task.endWayPoint),
     dependencyIds: getDependencyIds(task),
   }
+  const startLocationId = getLocationId(task.startLocationId, task.startLocation)
+  const endLocationId = getLocationId(task.endLocationId, task.endLocation)
+
+  if (startLocationId !== null) {
+    request.startLocationId = startLocationId
+  } else {
+    request.startWayPointStr = wayPointToString(task.startWayPoint)
+  }
+
+  if (endLocationId !== null) {
+    request.endLocationId = endLocationId
+  } else {
+    request.endWayPointStr = wayPointToString(task.endWayPoint)
+  }
+
+  return request
 }
 
 export async function createTaskInBackend(task) {
@@ -132,4 +195,18 @@ export async function createTaskInBackend(task) {
   const data = await response.json()
 
   return normaliseTaskFromBackend(data)
+}
+
+export async function deleteTaskInBackend(taskId) {
+  const response = await fetch(`${TASK_ENDPOINT}/${taskId}`, {
+    method: 'DELETE',
+    headers: {
+      Accept: 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const message = await getErrorMessage(response)
+    throw new Error(`Delete task failed (${response.status}): ${message}`)
+  }
 }

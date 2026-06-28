@@ -286,6 +286,11 @@
   fill: #f97316;
 }
 
+.robot-marker.blocked {
+  stroke: #7c3aed;
+  fill: #a855f7;
+}
+
 .robot-marker.error {
   stroke: #b91c1c;
   fill: #ef4444;

@@ -1,8 +1,9 @@
 package com.siyu.fleet_mgmt_sys.service.task.submission;
 
-import com.siyu.fleet_mgmt_sys.exception.ClusterNotFoundException;
-import com.siyu.fleet_mgmt_sys.model.Cluster;
-import com.siyu.fleet_mgmt_sys.model.Task;
+import com.siyu.fleet_mgmt_sys.exception.notfoundexception.ClusterNotFoundException;
+import com.siyu.fleet_mgmt_sys.model.WayPoint;
+import com.siyu.fleet_mgmt_sys.model.task.Cluster;
+import com.siyu.fleet_mgmt_sys.model.task.Task;
 import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
 import com.siyu.fleet_mgmt_sys.model.enums.TaskStatus;
 import com.siyu.fleet_mgmt_sys.repository.TaskClusterRepository;
@@ -11,8 +12,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /*
@@ -37,13 +42,13 @@ public class TaskClusterService { // this service clusters tasks that are close 
 
     private void assignPointToCluster(Task task, boolean isStart) { // assigns start and end points to potentially different clusters
         List<Cluster> clusters = clusterRepository.findAll();
+        WayPoint wayPoint = isStart ? task.getStartWayPoint() : task.getEndWayPoint();
+        if (wayPoint == null) {
+            throw new IllegalArgumentException((isStart ? "Start" : "End") + " waypoint is required for clustering.");
+        }
 
-        double lat = isStart
-                ? task.getStartWayPoint().getLatitude()
-                : task.getEndWayPoint().getLatitude();
-        double lng = isStart
-                ? task.getStartWayPoint().getLongitude()
-                : task.getEndWayPoint().getLongitude();
+        double lat = wayPoint.getLatitude();
+        double lng = wayPoint.getLongitude();
 
         Cluster match = clusters.stream()
                 .filter(c -> isWithinThreshold(c, lat, lng))
@@ -52,17 +57,26 @@ public class TaskClusterService { // this service clusters tasks that are close 
                 .orElse(null);
 
         if (match != null) {
-            if (isStart) task.setStartCluster(match);
-            else task.setEndCluster(match);
+            attachTaskToCluster(task, match, isStart);
             updateCentroid(match);
+            clusterRepository.save(match);
         } else {
             Cluster newCluster = new Cluster();
             newCluster.setCentroidLat(lat);
             newCluster.setCentroidLng(lng);
+            attachTaskToCluster(task, newCluster, isStart);
             clusterRepository.save(newCluster);
             computeAdjacency(newCluster);
-            if (isStart) task.setStartCluster(newCluster);
-            else task.setEndCluster(newCluster);
+        }
+    }
+
+    private void attachTaskToCluster(Task task, Cluster cluster, boolean isStart) {
+        if (isStart) {
+            task.setStartCluster(cluster);
+            cluster.getStartTasks().add(task);
+        } else {
+            task.setEndCluster(cluster);
+            cluster.getEndTasks().add(task);
         }
     }
 
@@ -77,25 +91,34 @@ public class TaskClusterService { // this service clusters tasks that are close 
     }
 
     private void updateCentroid(Cluster cluster) {
+        updateCentroid(cluster, (Set<Long>) null);
+    }
+
+    private void updateCentroid(Cluster cluster, Set<Long> excludedTaskIds) {
         // average start tasks' startpoints
-        List<Task> startTasks = cluster.getStartTasks();
+        List<Task> startTasks = cluster.getStartTasks().stream()
+                .filter(task -> excludedTaskIds == null || !excludedTaskIds.contains(task.getId()))
+                .toList();
         // average end tasks' endpoints
-        List<Task> endTasks = cluster.getEndTasks();
+        List<Task> endTasks = cluster.getEndTasks().stream()
+                .filter(task -> excludedTaskIds == null || !excludedTaskIds.contains(task.getId()))
+                .toList();
 
         List<double[]> points = new ArrayList<>();
-        startTasks.forEach(t -> points.add(new double[]{
-                t.getStartWayPoint().getLatitude(), t.getStartWayPoint().getLongitude()
-        }));
-        endTasks.forEach(t -> points.add(new double[]{
-                t.getEndWayPoint().getLatitude(), t.getEndWayPoint().getLongitude()
-        }));
+        startTasks.forEach(t -> addPoint(points, t.getStartWayPoint()));
+        endTasks.forEach(t -> addPoint(points, t.getEndWayPoint()));
 
         double avgLat = points.stream().mapToDouble(p -> p[0]).average().orElse(cluster.getCentroidLat());
         double avgLng = points.stream().mapToDouble(p -> p[1]).average().orElse(cluster.getCentroidLng());
 
         cluster.setCentroidLat(avgLat);
         cluster.setCentroidLng(avgLng);
-        clusterRepository.save(cluster);
+    }
+
+    private void addPoint(List<double[]> points, WayPoint wayPoint) {
+        if (wayPoint != null) {
+            points.add(new double[]{wayPoint.getLatitude(), wayPoint.getLongitude()});
+        }
     }
 
     private double haversineMetres(double lat1, double lng1, double lat2, double lng2) { // calculates distance between two points on earth
@@ -136,7 +159,55 @@ public class TaskClusterService { // this service clusters tasks that are close 
         Cluster cluster = clusterRepository.findById(clusterId).orElseThrow(
                 () -> new ClusterNotFoundException(clusterId)
         );
+        updateTopTasks(cluster, null);
+        clusterRepository.save(cluster);
+    }
+
+    @Transactional
+    public void removeTaskFromClusterCaches(Task task) {
+        removeTasksFromClusterCaches(List.of(task));
+    }
+
+    /**
+     * Detaches a batch of tasks from every cluster that references them, then
+     * recomputes each affected cluster's centroid and top tasks once, excluding
+     * the whole batch. Removing tasks one-by-one is unsafe here: a cluster's new
+     * top task could be picked from another task that is also about to be
+     * deleted, leaving a dangling reference when the batch is flushed.
+     */
+    @Transactional
+    public void removeTasksFromClusterCaches(Collection<Task> tasks) {
+        if (tasks.isEmpty()) return;
+
+        Set<Long> removedTaskIds = tasks.stream()
+                .map(Task::getId)
+                .collect(Collectors.toSet());
+
+        Map<Long, Cluster> affectedClusters = new LinkedHashMap<>();
+        for (Task task : tasks) {
+            addCluster(affectedClusters, task.getStartCluster());
+            addCluster(affectedClusters, task.getEndCluster());
+            clusterRepository.findByTopStandardTaskOrTopLargeTask(task, task)
+                    .forEach(cluster -> addCluster(affectedClusters, cluster));
+        }
+
+        affectedClusters.values().forEach(cluster -> {
+            updateCentroid(cluster, removedTaskIds);
+            updateTopTasks(cluster, removedTaskIds);
+        });
+        clusterRepository.saveAll(affectedClusters.values());
+        clusterRepository.flush();
+    }
+
+    private void addCluster(Map<Long, Cluster> clusters, Cluster cluster) {
+        if (cluster != null) {
+            clusters.put(cluster.getId(), cluster);
+        }
+    }
+
+    private void updateTopTasks(Cluster cluster, Set<Long> excludedTaskIds) {
         List<Task> pending = cluster.getStartTasks().stream() // only tasks that start in this cluster will be considered
+                .filter(task -> excludedTaskIds == null || !excludedTaskIds.contains(task.getId()))
                 .filter(t -> t.getStatus() == TaskStatus.PENDING_ASSIGNMENT) // retrieves pending tasks
                 .toList();
 
@@ -150,6 +221,5 @@ public class TaskClusterService { // this service clusters tasks that are close 
 
         cluster.setTopStandardTask(topStandard);
         cluster.setTopLargeTask(topLarge);
-        clusterRepository.save(cluster);
     }
 }

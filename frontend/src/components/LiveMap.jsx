@@ -59,6 +59,7 @@ function LiveMap({
   isLoadingRoutes = false,
   routeErrorCount = 0,
   onSelectRobot,
+  coloredSegmentsByTaskId = {},
 }) {
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
@@ -139,55 +140,76 @@ function LiveMap({
     routeLayerRef.current.clearLayers()
 
     const routeLines = []
-    let selectedRouteLine = null
+    let selectedBounds = null
 
     Object.values(routesByTaskId || {}).forEach(route => {
       if (!route.coordinates || route.coordinates.length < 2) return
 
       const isSelected = String(route.taskId) === String(selectedTaskId)
+      const coloredSegments = coloredSegmentsByTaskId[route.taskId]
 
-      const routeLine = L.polyline(route.coordinates, {
-        color: isSelected ? '#0a84ff' : '#64748b',
-        weight: isSelected ? 6 : 3,
-        opacity: isSelected ? 0.95 : 0.45,
-        lineCap: 'round',
-        lineJoin: 'round',
-      })
+      if (isSelected && coloredSegments && coloredSegments.length > 0) {
+        // draw multiple colored polylines for the selected task
+        const segmentLines = []
 
-      routeLine.bindTooltip(`Task ${route.taskId}`, {
-        permanent: false,
-        direction: 'top',
-      })
+        coloredSegments.forEach(segment => {
+          if (!segment.coordinates || segment.coordinates.length < 2) return
 
-      routeLayerRef.current.addLayer(routeLine)
-      routeLines.push(routeLine)
+          const line = L.polyline(segment.coordinates, {
+            color: segment.color,
+            weight: 6,
+            opacity: 0.95,
+            lineCap: 'round',
+            lineJoin: 'round',
+          })
 
-      if (isSelected) {
-        selectedRouteLine = routeLine
+          routeLayerRef.current.addLayer(line)
+          segmentLines.push(line)
+          routeLines.push(line)
+        })
+
+        if (segmentLines.length > 0) {
+          const group = L.featureGroup(segmentLines)
+          selectedBounds = group.getBounds()
+        }
+      } else {
+        // draw a single polyline for unselected tasks or while the colored route is loafing 
+        const routeLine = L.polyline(route.coordinates, {
+          color: isSelected ? '#0a84ff' : '#64748b',
+          weight: isSelected ? 6 : 3,
+          opacity: isSelected ? 0.95 : 0.45,
+          lineCap: 'round',
+          lineJoin: 'round',
+        })
+
+        routeLine.bindTooltip(`Task ${route.taskId}`, {
+          permanent: false,
+          direction: 'top',
+        })
+
+        routeLayerRef.current.addLayer(routeLine)
+        routeLines.push(routeLine)
+
+        if (isSelected) {
+          selectedBounds = routeLine.getBounds()
+        }
       }
     })
 
-    if (selectedRouteLine) {
+    if (selectedBounds) {
       if (!mapRef.current) return
-
-      fitBoundsInsideSingapore(mapRef.current, selectedRouteLine.getBounds(), {
-        padding: [32, 32],
-      })
+      fitBoundsInsideSingapore(mapRef.current, selectedBounds, { padding: [32, 32] })
       return
     }
 
     if (!hasFittedAllRoutesRef.current && routeLines.length > 0) {
       if (!mapRef.current) return
-
       const routeGroup = L.featureGroup(routeLines)
-
-      fitBoundsInsideSingapore(mapRef.current, routeGroup.getBounds(), {
-        padding: [32, 32],
-      })
-
+      fitBoundsInsideSingapore(mapRef.current, routeGroup.getBounds(), { padding: [32, 32] })
       hasFittedAllRoutesRef.current = true
     }
-  }, [routesByTaskId, selectedTaskId])
+  }, [routesByTaskId, selectedTaskId, coloredSegmentsByTaskId])
+
 
   useEffect(() => {
     if (!markerLayerRef.current) return
@@ -196,19 +218,22 @@ function LiveMap({
 
     robots
       .filter(robot =>
-        Number.isFinite(Number(robot.latitude)) &&
-        Number.isFinite(Number(robot.longitude))
+        robot.position !== null &&
+        Number.isFinite(Number(robot.position.latitude)) &&
+        Number.isFinite(Number(robot.position.longitude))
       )
       .forEach(robot => {
         const statusType = getRobotStatusType(robot.status)
-        const isSelected = robot.id === selectedRobotId
+        const isSelected = String(robot.id) === String(selectedRobotId)
 
-        const className = `robot-marker ${statusType} ${
-          isSelected ? 'selected' : ''
-        }`.trim()
+        const className = `robot-marker ${statusType} ${isSelected ? 'selected' : ''
+          }`.trim()
 
         const marker = L.circleMarker(
-          [Number(robot.latitude), Number(robot.longitude)],
+          [
+            Number(robot.position.latitude),
+            Number(robot.position.longitude),
+          ],
           {
             radius: isSelected ? 9 : 7,
             className,

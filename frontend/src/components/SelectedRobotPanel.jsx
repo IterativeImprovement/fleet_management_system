@@ -3,11 +3,9 @@ import {
   getRobotStatusLabel,
   getRobotStatusType,
   getRobotTypeLabel,
+  canDeleteRobot,
+  ROBOT_DELETE_ASSIGNED_TASKS_MESSAGE,
 } from '../utils/robotUtils'
-
-function getTaskId(task) {
-  return typeof task === 'object' ? task.id : task
-}
 
 function formatWaypoint(wayPoint) {
   if (!wayPoint) return null
@@ -25,10 +23,10 @@ function formatTaskRoute(task) {
 }
 
 function getAssignedTasks(robot, tasks) {
-  const robotTaskIds = robot.tasks?.map(getTaskId) || []
+  const robotTaskIds = robot.taskIds || []
 
   const assignedFromTaskList = tasks.filter(task => {
-    const taskRobotId = task.robot?.id
+    const taskRobotId = task.robotId
     const taskIsInRobotList = robotTaskIds.some(
       taskId => String(taskId) === String(task.id)
     )
@@ -38,7 +36,7 @@ function getAssignedTasks(robot, tasks) {
 
   if (assignedFromTaskList.length > 0) return assignedFromTaskList
 
-  return robot.tasks || []
+  return robotTaskIds
 }
 
 function SelectedRobotPanel({
@@ -54,8 +52,16 @@ function SelectedRobotPanel({
   const statusLabel = getRobotStatusLabel(robot.status)
   const assignedTasks = getAssignedTasks(robot, tasks)
   const currentTask = assignedTasks[0]
+  const hasAssignedTasks = !canDeleteRobot(robot)
+  const deleteMessage =
+    deleteError || (hasAssignedTasks ? ROBOT_DELETE_ASSIGNED_TASKS_MESSAGE : '')
 
   async function handleDeleteRobot() {
+    if (hasAssignedTasks) {
+      setDeleteError(ROBOT_DELETE_ASSIGNED_TASKS_MESSAGE)
+      return
+    }
+
     const robotName = robot.name || `Robot ${robot.id}`
     const shouldDelete = window.confirm(
       `Delete ${robotName}? This action cannot be undone.`
@@ -144,12 +150,14 @@ function SelectedRobotPanel({
           type="button"
           className="danger-action"
           onClick={handleDeleteRobot}
-          disabled={isDeleting}
+          disabled={isDeleting || hasAssignedTasks}
         >
           {isDeleting ? 'Deleting...' : 'Delete Robot'}
         </button>
 
-        {deleteError && <p className="selected-action-error">{deleteError}</p>}
+        {deleteMessage && (
+          <p className="selected-action-error">{deleteMessage}</p>
+        )}
       </div>
     </div>
   )

@@ -1,80 +1,220 @@
 package com.siyu.fleet_mgmt_sys.service.external;
 
-import com.siyu.fleet_mgmt_sys.dto.OneMapRouteResponseDTO;
+import com.siyu.fleet_mgmt_sys.dto.external.*;
+import com.siyu.fleet_mgmt_sys.model.Location;
 import com.siyu.fleet_mgmt_sys.model.WayPoint;
+import com.siyu.fleet_mgmt_sys.model.enums.LocationSource;
+import com.siyu.fleet_mgmt_sys.repository.LocationRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.*;
+import java.util.concurrent.*;
+
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class OneMapService {
-    private final RestTemplate restTemplate = new RestTemplate();
+
+    private static final String BASE_URL = "https://www.onemap.gov.sg";
+    private static final String GET_ALL_THEMES = "/api/public/themesvc/getAllThemesInfo?moreInfo=Y";
+    private static final String RETRIEVE_THEME = "/api/public/themesvc/retrieveTheme?queryName=";
+    private static final int BATCH_SIZE = 10;
+
+    private final RestTemplate restTemplate;
+    private final LocationRepository locationRepository;
+
+    @Value("${onemap.api-key}")
+    private String apiKey;
+
+    /* Location / Theme */
+
+    public List<Location> getAllLocations() {
+        populateIfEmpty();
+        return locationRepository.findAllBySource(LocationSource.ONEMAP);
+    }
+
+    public void populateIfEmpty() {
+        if (locationRepository.countBySource(LocationSource.ONEMAP) > 0) {
+            log.info("OneMap locations already populated, skipping.");
+            return;
+        }
+
+        log.info("Fetching all OneMap themes...");
+        List<String> queryNames = fetchAllThemeQueryNames();
+        log.info("Found {} themes", queryNames.size());
+
+        List<Location> allLocations = fetchAllLocations(queryNames);
+        locationRepository.saveAll(allLocations);
+        log.info("Saved {} OneMap locations", allLocations.size());
+    }
+
+    private List<String> fetchAllThemeQueryNames() {
+        HttpEntity<Void> entity = new HttpEntity<>(buildHeaders());
+        try {
+            ResponseEntity<OneMapThemeInfoResponse> response = restTemplate.exchange(
+                    BASE_URL + GET_ALL_THEMES,
+                    HttpMethod.GET,
+                    entity,
+                    OneMapThemeInfoResponse.class);
+
+            OneMapThemeInfoResponse body = response.getBody();
+            if (body == null || body.getThemeNames() == null) return List.of();
+
+            return body.getThemeNames().stream()
+                    .map(OneMapThemeDTO::getQueryName)
+                    .filter(q -> q != null && !q.isBlank())
+                    .toList();
+        } catch (RestClientException e) {
+            log.error("Failed to fetch OneMap themes: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    private List<Location> fetchAllLocations(List<String> queryNames) {
+        ExecutorService executor = Executors.newFixedThreadPool(BATCH_SIZE);
+        List<Location> allLocations = Collections.synchronizedList(new ArrayList<>());
+        Set<String> seenNames = Collections.synchronizedSet(new HashSet<>());
+
+        List<CompletableFuture<Void>> futures = queryNames.stream()
+                .map(queryName -> CompletableFuture.runAsync(() -> {
+                    List<Location> locations = fetchLocationsForTheme(queryName);
+                    for (Location loc : locations) {
+                        if (seenNames.add(loc.getName())) {
+                            allLocations.add(loc);
+                        }
+                    }
+                }, executor))
+                .toList();
+
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        executor.shutdown();
+
+        return allLocations;
+    }
+
+    private List<Location> fetchLocationsForTheme(String queryName) {
+        HttpEntity<Void> entity = new HttpEntity<>(buildHeaders());
+        try {
+            ResponseEntity<OneMapThemeResultResponse> response = restTemplate.exchange(
+                    BASE_URL + RETRIEVE_THEME + queryName,
+                    HttpMethod.GET,
+                    entity,
+                    OneMapThemeResultResponse.class);
+
+            OneMapThemeResultResponse body = response.getBody();
+            if (body == null || body.getSrchResults() == null) return List.of();
+
+            return body.getSrchResults().stream()
+                    .filter(dto -> "Point".equals(dto.getType()))
+                    .filter(dto -> dto.getName() != null && dto.getLatLng() != null)
+                    .map(this::toLocation)
+                    .filter(Objects::nonNull)
+                    .toList();
+
+        } catch (RestClientException e) {
+            log.warn("Failed to fetch theme {}: {}", queryName, e.getMessage());
+            return List.of();
+        }
+    }
+
+    private Location toLocation(OneMapLocationDTO dto) {
+        try {
+            String[] parts = dto.getLatLng().split(",");
+            double lat = Double.parseDouble(parts[0].trim());
+            double lng = Double.parseDouble(parts[1].trim());
+
+            String address = (dto.getBlockNumber() != null ? dto.getBlockNumber() + " " : "")
+                    + (dto.getStreetName() != null ? dto.getStreetName() : "");
+
+            return Location.builder()
+                    .name(dto.getName())
+                    .address(address.trim())
+                    .postalCode(dto.getPostalCode())
+                    .latitude(lat)
+                    .longitude(lng)
+                    .source(LocationSource.ONEMAP)
+                    .externalId(dto.getName())
+                    .build();
+        } catch (Exception e) {
+            log.warn("Failed to parse location {}: {}", dto.getName(), e.getMessage());
+            return null;
+        }
+    }
+
+    /* Routing */
 
     public OneMapRouteResponseDTO getRoute(String start, String end, String... blockages) {
-
         WayPoint startWp = new WayPoint(start);
         WayPoint endWp = new WayPoint(end);
-
         return getOneMapRouteResponseDTO(startWp, endWp);
-
-//        Debug Code to print raw JSON
-//        ResponseEntity<String> response = restTemplate.exchange(
-//                url,
-//                HttpMethod.GET,
-//                entity,
-//                String.class
-//        );
-//
-//        System.out.println("Raw JSON: " + response.getBody());
-//
-//        System.out.println("Raw status: " + response.getStatusCode());
-//        System.out.println("Body: " + response.getBody());
     }
 
     public OneMapRouteResponseDTO getRoute(WayPoint startWp, WayPoint endWp, String... blockages) {
-
         return getOneMapRouteResponseDTO(startWp, endWp);
+    }
+
+    public List<OneMapSearchResponseDTO.SearchResult> searchLocations(String searchValue) {
+        String url = UriComponentsBuilder
+                .fromUriString(BASE_URL + "/api/common/elastic/search")
+                .queryParam("searchVal", searchValue)
+                .queryParam("returnGeom", "Y")
+                .queryParam("getAddrDetails", "Y")
+                .queryParam("pageNum", 1)
+                .build()
+                .encode()
+                .toUriString();
+
+        ResponseEntity<OneMapSearchResponseDTO> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                buildBearerEntity(),
+                OneMapSearchResponseDTO.class);
+
+        OneMapSearchResponseDTO body = response.getBody();
+        if (body == null || body.getResults() == null) return List.of();
+        return body.getResults();
     }
 
     @Nullable
     private OneMapRouteResponseDTO getOneMapRouteResponseDTO(WayPoint startWp, WayPoint endWp) {
-        String url = "https://www.onemap.gov.sg/api/public/routingsvc/route" +
+        String url = BASE_URL + "/api/public/routingsvc/route" +
                 "?routeType=drive" +
-                "&start=" +
-                startWp.getLatitude() +
-                "," +
-                startWp.getLongitude() +
-                "&end=" +
-                endWp.getLatitude() +
-                "," +
-                endWp.getLongitude()
-                ;
-
-        HttpEntity<String> entity = getStringHttpEntity();
+                "&start=" + startWp.getLatitude() + "," + startWp.getLongitude() +
+                "&end=" + endWp.getLatitude() + "," + endWp.getLongitude();
 
         ResponseEntity<OneMapRouteResponseDTO> response = restTemplate.exchange(
                 url,
                 HttpMethod.GET,
-                entity,
-                OneMapRouteResponseDTO.class
-        );
+                buildBearerEntity(),
+                OneMapRouteResponseDTO.class);
 
-        System.out.println("Route retrieved successfully from OneMap API");
-        System.out.println("Start WP: " + startWp.getLatitude() + "," + startWp.getLongitude());
-        System.out.println("End WP: " + endWp.getLatitude() + "," + endWp.getLongitude());
-        return response.getBody(); // raw JSON string
+        log.info("Route retrieved: {} -> {}", startWp, endWp);
+        return response.getBody();
     }
 
-    private static @NonNull HttpEntity<String> getStringHttpEntity() {
+    /* Helpers */
+
+    // Used for theme/location endpoints
+    private HttpHeaders buildHeaders() {
         HttpHeaders headers = new HttpHeaders();
-        String authToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxNDE1MSwiZm9yZXZlciI6ZmFsc2UsImlzcyI6Ik9uZU1hcCIsImlhdCI6MTc4MDA0Mzc2MywibmJmIjoxNzgwMDQzNzYzLCJleHAiOjE3ODAzMDI5NjMsImp0aSI6IjExYTQ1ODRlLTM3MWItNGU3NC04NWY3LWM5ZGVmOTU3NTMzMyJ9.jOe0l98e1B27CG1LwAb36cTYVmDjGhbsLYf97fXwqIJZzuBrrU1z9TSXXIZ8TD9xNLjXQ6rmJs7sCsrmX6VjC4fG_404JG53d1gSWUZH3WYU7v95BglzQCl7MwSXOh1hZ6O38XTKqp8l50IO-xwhKVbCyi3ozi1cjVOiKiGyxaBNLhstEkqmoBI1q3YpXyKJ-kiekDoReFVoIGwvDINymPonqaJiwwu2nyEgsN6QiOzkrHBSr2aOlFFCe-bz0iIaGrOHdyFwogPSv7vx2HpB9MO6pYH73AOdHimABQwOkIG14Nrp55IVA6UFg4nKXntXYgnonwuygFlmvlttwUh3uA";
-        headers.set("Authorization", "Bearer " + authToken);
-        HttpEntity<String> entity = new HttpEntity<>(headers);
-        return entity;
+        headers.set("Authorization", apiKey);
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        return headers;
+    }
+
+    // Used for routing/search endpoints
+    private @NonNull HttpEntity<String> buildBearerEntity() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + apiKey);
+        return new HttpEntity<>(headers);
     }
 }

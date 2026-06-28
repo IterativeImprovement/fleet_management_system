@@ -1,7 +1,7 @@
 package com.siyu.fleet_mgmt_sys.controller;
 
-import com.siyu.fleet_mgmt_sys.dto.TaskRequestDTO;
-import com.siyu.fleet_mgmt_sys.dto.TaskResponseDTO;
+import com.siyu.fleet_mgmt_sys.dto.task.TaskRequestDTO;
+import com.siyu.fleet_mgmt_sys.dto.task.TaskResponseDTO;
 import com.siyu.fleet_mgmt_sys.service.task.TaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

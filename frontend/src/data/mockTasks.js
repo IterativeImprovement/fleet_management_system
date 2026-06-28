@@ -19,8 +19,8 @@ export const mockTasks = [
       latitude: 1.2739,
       longitude: 103.8012,
     },
-    robot: null,
-    tasks: [],
+    robotId: 1,
+    dependencyIds: [],
   }),
 
   createTask({
@@ -41,8 +41,8 @@ export const mockTasks = [
       latitude: 1.2952,
       longitude: 103.8501,
     },
-    robot: null,
-    tasks: [],
+    robotId: null,
+    dependencyIds: [],
   }),
 
   createTask({
@@ -63,7 +63,7 @@ export const mockTasks = [
       latitude: 1.2857,
       longitude: 103.8342,
     },
-    robot: null,
-    tasks: [],
+    robotId: 3,
+    dependencyIds: [],
   }),
 ]

@@ -1,7 +1,7 @@
 package com.siyu.fleet_mgmt_sys.service.task.submission;
 
 import com.siyu.fleet_mgmt_sys.model.Route;
-import com.siyu.fleet_mgmt_sys.model.Task;
+import com.siyu.fleet_mgmt_sys.model.task.Task;
 import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
 import com.siyu.fleet_mgmt_sys.model.enums.TaskStatus;
 import com.siyu.fleet_mgmt_sys.repository.TaskRepository;
@@ -12,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -43,12 +45,18 @@ public class TaskSubmissionPipeline {
                 : TaskStatus.WAITING_FOR_DEPENDENCIES); // else, its status is set to waiting
 
         clusterService.assignCluster(task);
+        Task savedTask = taskRepository.saveAndFlush(task);
+
+        Set<Long> clusterIds = new LinkedHashSet<>();
         if (task.getStartCluster() != null) {
-            clusterService.refreshTopTasks(task.getStartCluster().getId());
+            clusterIds.add(task.getStartCluster().getId());
         }
         if (task.getEndCluster() != null) {
-            clusterService.refreshTopTasks(task.getEndCluster().getId());
-        }        return taskRepository.save(task);
+            clusterIds.add(task.getEndCluster().getId());
+        }
+        clusterIds.forEach(clusterService::refreshTopTasks);
+
+        return savedTask;
     }
 
 }

@@ -78,7 +78,24 @@
   cursor: pointer;
 }
 
-.delete-task-button:hover {
+.delete-task-button:hover:not(:disabled) {
   background-color: #fee2e2;
   transform: translateY(-1px);
+}
+
+.delete-task-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.task-delete-error {
+  margin: 8px 0 0;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background-color: #fef2f2;
+  color: #991b1b;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
 }

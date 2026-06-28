@@ -7,7 +7,8 @@ import {
 function TaskRow({ task, isSelected, onSelectTask }) {
   const statusType = getTaskStatusType(task.status)
   const statusLabel = getTaskStatusLabel(task.status)
-  const assignedRobotName = task.robot?.name || task.robot?.id
+  const priorityType = getPriorityType(task.priority)
+  const assignedRobotId = task.robotId
 
   return (
     <div
@@ -17,8 +18,8 @@ function TaskRow({ task, isSelected, onSelectTask }) {
       <div className="task-row-header">
         <h3>{task.name}</h3>
 
-        <span className={`task-priority ${task.priorityType}`}>
-          {getPriorityType(task.priority)}
+        <span className={`task-priority ${priorityType}`}>
+          {priorityType}
         </span>
       </div>
 
@@ -31,9 +32,9 @@ function TaskRow({ task, isSelected, onSelectTask }) {
           {statusLabel}
         </span>
 
-        {assignedRobotName && (
+        {assignedRobotId && (
           <span>
-            Assigned to {assignedRobotName}
+            Assigned to Robot {assignedRobotId}
           </span>
         )}
       </p>
