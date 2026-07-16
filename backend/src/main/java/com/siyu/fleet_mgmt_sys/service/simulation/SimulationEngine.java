@@ -11,7 +11,7 @@ import com.siyu.fleet_mgmt_sys.repository.LocationRepository;
 import com.siyu.fleet_mgmt_sys.repository.RoadRepository;
 import com.siyu.fleet_mgmt_sys.repository.SimulationRunRepository;
 import com.siyu.fleet_mgmt_sys.service.external.OneMapService;
-import com.siyu.fleet_mgmt_sys.service.external.TrafficSpeedBandService;
+import com.siyu.fleet_mgmt_sys.service.external.LTAService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,14 +33,14 @@ public class SimulationEngine {
     private final SimulationRunRepository simulationRunRepository;
     private final SimulationRobotSeeder simulationRobotSeeder;
     private final OneMapService oneMapService;
-    private final TrafficSpeedBandService trafficSpeedBandService;
+    private final LTAService LTAService;
 
     public SimulationResult generate(SimulationConfig config) {
         // Ensure locations are populated before generation
         oneMapService.populateIfEmpty();
 
         // Ensure roads are populated before generation
-        trafficSpeedBandService.populateIfEmpty(); // this method also saves the speed bands
+        LTAService.populateIfEmpty(); // this method also saves the speed bands
 
         // Step 1: Get simulation ID (sequential)
         SimulationRun run = new SimulationRun();

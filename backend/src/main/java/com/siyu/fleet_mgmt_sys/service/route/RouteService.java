@@ -10,7 +10,7 @@ import com.siyu.fleet_mgmt_sys.dto.external.OneMapRouteResponseDTO;
 import com.siyu.fleet_mgmt_sys.model.Route;
 import com.siyu.fleet_mgmt_sys.model.WayPoint;
 import com.siyu.fleet_mgmt_sys.service.external.OneMapService;
-import com.siyu.fleet_mgmt_sys.service.external.TrafficSpeedBandService;
+import com.siyu.fleet_mgmt_sys.service.external.LTAService;
 import com.siyu.fleet_mgmt_sys.util.PolylineDecoder;
 import lombok.AllArgsConstructor;
 
@@ -23,7 +23,7 @@ import org.springframework.stereotype.Service;
 @AllArgsConstructor
 public class RouteService {
     private final OneMapService oneMapService;
-    private final TrafficSpeedBandService trafficSpeedBandService;
+    private final LTAService LTAService;
 
     // this method is only used by the controller
     public OneMapRouteResponseDTO getRouteForController(String start, String end) {
@@ -45,7 +45,7 @@ public class RouteService {
         List<double[]> coords = PolylineDecoder.decode(routeResponse.getRouteGeometry());
 
         // fetch all LTA traffic speed bands
-        List<LtaTrafficSpeedBandResponseDTO> bands = trafficSpeedBandService.getAllSpeedBands();
+        List<LtaTrafficSpeedBandResponseDTO> bands = LTAService.getAllSpeedBands();
 
         // for each route coordinate, find the nearest LTA segment and get its color
         List<String> colors = new ArrayList<>();

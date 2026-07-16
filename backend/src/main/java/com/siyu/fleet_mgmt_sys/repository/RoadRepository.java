@@ -9,4 +9,7 @@ import java.util.List;
 public interface RoadRepository extends JpaRepository<Road, Long>  {
     @Query("SELECT rs.id FROM Road rs")
     List<Long> findAllIds();
+
+    @Query("SELECT r FROM Road r LEFT JOIN FETCH r.roadSpeedBand")
+    List<Road> findAllWithSpeedBands();
 }

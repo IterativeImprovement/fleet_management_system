@@ -1,9 +1,7 @@
 package com.siyu.fleet_mgmt_sys.model;
 
 import com.siyu.fleet_mgmt_sys.model.enums.RoadStatus;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -15,7 +13,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class Road {
     @Id
-    private Long id;
+    private String id;
 
     private String roadName;
     private String roadCategory;
@@ -26,6 +24,10 @@ public class Road {
     private double endLon;
 
     private RoadStatus status = RoadStatus.UNOBSTRUCTED; // default value
+
+
+    @OneToOne(mappedBy = "road", cascade = CascadeType.ALL)
+    private RoadSpeedBand roadSpeedBand;
 }
 
 /* Example Json (Speed data does not need to be stored, so omitted)

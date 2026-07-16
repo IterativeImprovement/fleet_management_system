@@ -1,7 +1,7 @@
 package com.siyu.fleet_mgmt_sys.controller;
 
 import com.siyu.fleet_mgmt_sys.dto.external.LtaTrafficSpeedBandResponseDTO;
-import com.siyu.fleet_mgmt_sys.service.external.TrafficSpeedBandService;
+import com.siyu.fleet_mgmt_sys.service.external.LTAService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +17,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TrafficController {
 
-    private final TrafficSpeedBandService trafficSpeedBandService;
+    private final LTAService LTAService;
 
     /**
      * Returns all traffic speed bands (all roads, all categories).
@@ -26,7 +26,7 @@ public class TrafficController {
 
     @GetMapping("/speedbands")
     public ResponseEntity<List<LtaTrafficSpeedBandResponseDTO>> getAllSpeedBands() {
-        List<LtaTrafficSpeedBandResponseDTO> bands = trafficSpeedBandService.getAllSpeedBands();
+        List<LtaTrafficSpeedBandResponseDTO> bands = LTAService.getAllSpeedBands();
         return ResponseEntity.ok(bands);
     }
 

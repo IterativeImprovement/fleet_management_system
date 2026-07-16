@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RoadResponseDTO {
-    private Long id;
+    private String id;
     private String roadName;
     private String roadCategory;
 
