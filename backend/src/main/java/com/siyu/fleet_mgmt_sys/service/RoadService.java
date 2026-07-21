@@ -25,10 +25,11 @@ public class RoadService {
         Road road = roadRepository.findById(id)
                 .orElseThrow(() -> new RoadNotFoundException(id));
 
-        // parse
-        if (newStatus.strip().equalsIgnoreCase("obstructed")) {
+        // parse; the body may arrive as a JSON string literal, so strip surrounding quotes
+        String parsed = newStatus.strip().replaceAll("^\"|\"$", "");
+        if (parsed.equalsIgnoreCase("obstructed")) {
             road.setStatus(RoadStatus.OBSTRUCTED);
-        } else if (newStatus.strip().equalsIgnoreCase("unobstructed")) {
+        } else if (parsed.equalsIgnoreCase("unobstructed")) {
             road.setStatus(RoadStatus.UNOBSTRUCTED);
         } else {
             throw new IllegalArgumentException();

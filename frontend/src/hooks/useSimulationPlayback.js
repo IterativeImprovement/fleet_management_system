@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
 import { Client } from '@stomp/stompjs'
-import { generateSimulation, resetSimulationRun, getRoad, patchRoadStatus } from '../api/simulationApi.js'
+import { generateSimulation, resetSimulationRun, getRoad } from '../api/simulationApi.js'
 import { normaliseTaskFromBackend } from '../api/taskApi.js'
 import { getRobots } from '../api/robotApi.js'
 import { decodePolyline } from '../utils/routeUtils.js'
@@ -136,6 +136,17 @@ export function useSimulationPlayback({
     client.publish({
       destination: `/app/robot/${robotId}/update`,
       body: JSON.stringify({ robotId, status, lat, lng }),
+    })
+  }
+
+  // tell backend a road is blocked over WS (fire-and-forget, mirrors pushRobotPosition)
+  function publishObstruction(roadId) {
+    const client = stompClientRef.current
+    if (!client || !client.connected) return
+
+    client.publish({
+      destination: '/app/obstruction',
+      body: JSON.stringify({ linkId: String(roadId) }),
     })
   }
 
@@ -280,9 +291,9 @@ export function useSimulationPlayback({
     const roadId = event.linkId
     if (!roadId) return
 
-    try {
-      await patchRoadStatus(roadId, 'obstructed') // tell backend that road is obstructed
+    publishObstruction(roadId) // tell backend the road is blocked over WS (fire-and-forget)
 
+    try {
       const road = await getRoad(roadId)
 
       // add map obstacle at the midpoint of the road segment

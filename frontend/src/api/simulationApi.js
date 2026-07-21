@@ -43,18 +43,3 @@ export async function getRoad(roadId) {
 
   return response.json()
 }
-
-export async function patchRoadStatus(roadId, status) {
-  const response = await fetch(`/road/${roadId}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(status),
-  })
-
-  if (!response.ok) {
-    const message = await getErrorMessage(response)
-    throw new Error(`Patch road failed (${response.status}): ${message}`)
-  }
-
-  return response.json()
-}
