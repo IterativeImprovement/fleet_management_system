@@ -3,16 +3,22 @@
   background-color: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  padding: 16px;
+  padding: 8px 16px;
 
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.alert-log h2 {
-  margin: 0 0 12px;
+.alert-log-header {
+  border: none;
+  background: none;
+  padding: 4px 0;
+  text-align: left;
+  cursor: pointer;
   font-size: 16px;
+  font-weight: 600;
+  color: inherit;
 }
 
 .alert-list {
@@ -20,6 +26,8 @@
   flex-direction: column;
   gap: 8px;
 
+  margin-top: 8px;
+  max-height: 200px;
   overflow-y: auto;
   min-height: 0;
 }

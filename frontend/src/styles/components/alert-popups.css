@@ -1,0 +1,39 @@
+.alert-popups {
+  position: fixed;
+  top: 88px;
+  right: 16px;
+  z-index: 2000; /* Leaflet panes go up to ~1000; popups must sit above the map */
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 320px;
+}
+
+.alert-popup {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  animation: alert-popup-in 0.2s ease-out;
+}
+
+.alert-popup-malfunction {
+  background-color: #dc2626;
+}
+
+.alert-popup-obstruction {
+  background-color: #d97706;
+}
+
+@keyframes alert-popup-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

@@ -9,6 +9,7 @@ import Topbar from './components/Topbar'
 import Sidebar from './components/Sidebar'
 import LiveMap from './components/LiveMap'
 import AlertLog from './components/AlertLog'
+import AlertPopups from './components/AlertPopups'
 
 import {
   getTasks,
@@ -499,6 +500,8 @@ function App() {
       />
 
       <AlertLog alerts={simulation.simAlerts} />
+
+      <AlertPopups alerts={simulation.simAlerts} />
     </main>
   )
 }
