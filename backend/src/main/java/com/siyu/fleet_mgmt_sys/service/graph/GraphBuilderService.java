@@ -6,12 +6,15 @@ import com.siyu.fleet_mgmt_sys.model.graph.GraphNode;
 import com.siyu.fleet_mgmt_sys.repository.GraphEdgeRepository;
 import com.siyu.fleet_mgmt_sys.repository.GraphNodeRepository;
 import com.siyu.fleet_mgmt_sys.repository.RoadRepository;
+import com.siyu.fleet_mgmt_sys.util.SpeedBandUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+
+import static com.siyu.fleet_mgmt_sys.util.SpeedBandUtils.toMetresPerSecond;
 
 @Slf4j
 @Service
@@ -26,10 +29,9 @@ import java.util.*;
  */
 public class GraphBuilderService {
 
-    // 6 decimal places perfectly matches LTA precision and handles floating-point noise
-    private static final double SNAP_THRESHOLD_DEGREES = 0.000001;
-    private static final double GRID_CELL_SIZE = 0.01;           // ~1km cells
-    private static final int DEFAULT_SPEED_BAND = 4;             // ~35 km/h fallback
+    private static final double SNAP_THRESHOLD_DEGREES = 0.000001;  // filtering out floating point noise
+    private static final double GRID_CELL_SIZE = 0.01;              // ~1km cells
+    private static final int DEFAULT_SPEED_BAND = 4;                // ~35 km/h fallback
 
     private final RoadRepository roadRepository;
     private final GraphNodeRepository graphNodeRepository;
@@ -79,7 +81,7 @@ public class GraphBuilderService {
                     road.getStartLat(), road.getStartLon(),
                     road.getEndLat(), road.getEndLon());
 
-            double speedMps = getSpeedInMetresPerSecond(speedBand);
+            double speedMps = SpeedBandUtils.toMetresPerSecond(speedBand);
             double travelTime = length / speedMps;
 
             initialEdges.add(GraphEdge.builder()
@@ -110,6 +112,7 @@ public class GraphBuilderService {
         // Collect junction points per edge index
         Map<Integer, List<double[]>> junctionPoints = new HashMap<>();
         Set<String> checked = new HashSet<>();
+
 
         for (List<Integer> cellIndices : grid.values()) {
             for (int i = 0; i < cellIndices.size(); i++) {
@@ -168,7 +171,7 @@ public class GraphBuilderService {
         return finalEdges;
     }
 
-    // ─── Spatial grid (index-based) ───────────────────────────────────────────
+    // Spatial grid (index-based)
 
     private List<RoadSegment> edgesToSegments(List<GraphEdge> edges) {
         List<RoadSegment> segments = new ArrayList<>();
@@ -179,7 +182,8 @@ public class GraphBuilderService {
                     edge.getFromNode().getLongitude(),
                     edge.getToNode().getLatitude(),
                     edge.getToNode().getLongitude(),
-                    edge.getCurrentSpeedBand()
+                    edge.getCurrentSpeedBand(),
+                    edge.getRoadName()
             ));
         }
         return segments;
@@ -252,7 +256,7 @@ public class GraphBuilderService {
         int safeSpeedBand = (edge.getCurrentSpeedBand() != null && edge.getCurrentSpeedBand() > 0)
                 ? edge.getCurrentSpeedBand()
                 : DEFAULT_SPEED_BAND;
-        double speedMps = getSpeedInMetresPerSecond(safeSpeedBand);
+        double speedMps = toMetresPerSecond(safeSpeedBand);
 
         for (double[] junction : junctions) {
             GraphNode junctionNode = nodesByKey.get(snapKey(junction[0], junction[1]));
@@ -282,8 +286,16 @@ public class GraphBuilderService {
                 end.getLatitude(), end.getLongitude());
         double travelTime = length / speedMps;
 
+
+        Map<String, Integer> splitCounters = new HashMap<>();
+
+        // when splitting:
+        int count = splitCounters.merge(edge.getLinkId(), 1, Integer::sum);
+        String splitName = edge.getRoadName() + "-" + count;
+
         // Add final FORWARD edge
         result.add(GraphEdge.builder()
+                .roadName(splitName)
                 .fromNode(prev).toNode(end)
                 .linkId(edge.getLinkId())
                 .lengthMetres(length)
@@ -292,23 +304,6 @@ public class GraphBuilderService {
                 .build());
 
         return result;
-    }
-
-    // Utility methods
-
-    private double getSpeedInMetresPerSecond(int speedBand) {
-        // Estimates based on LTA data ranges (km/h converted to m/s)
-        return switch (speedBand) {
-            case 1 -> 85.0 / 3.6; // >80 km/h
-            case 2 -> 75.0 / 3.6; // 70-80 km/h
-            case 3 -> 55.0 / 3.6; // 50-60 km/h
-            case 4 -> 35.0 / 3.6; // 30-40 km/h (derived from sample)
-            case 5 -> 25.0 / 3.6;
-            case 6 -> 15.0 / 3.6;
-            case 7 -> 10.0 / 3.6;
-            case 8 -> 5.0 / 3.6;
-            default -> 40.0 / 3.6; // Fallback
-        };
     }
 
     private GraphNode getOrCreateNode(double lat, double lon,
@@ -338,9 +333,9 @@ public class GraphBuilderService {
     }
 
     // Internal record
-
     private record RoadSegment(String linkId,
                                double x1, double y1,
                                double x2, double y2,
-                               int speedBand) {}
+                               int speedBand,
+                               String roadName) {}  // add this
 }

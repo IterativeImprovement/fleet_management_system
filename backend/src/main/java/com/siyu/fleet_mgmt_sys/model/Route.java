@@ -7,6 +7,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 @Entity
@@ -21,16 +23,24 @@ public class Route {
     private Long id;
 
     @Column(columnDefinition = "TEXT")
-    private String routeGeo;            // Google encoded polyline
+    private String routeGeo;                            // Google encoded polyline
 
     @OneToOne
     private Task task;
 
-    private Integer totalDistance;      // metres
-
-    private Double totalTime;           // seconds 
+    private Integer totalDistance;                      // metres
 
     @ElementCollection
     @MapKeyEnumerated(EnumType.STRING)
-    private Map<RobotType, Double> estimatedTimes;  // per robot type, seconds
+    private Map<RobotType, Double> estimatedTimes;      // per robot type, seconds
+
+    @ElementCollection
+    @CollectionTable(name = "route_link_ids", joinColumns = @JoinColumn(name = "route_id"))
+    @Column(name = "link_id")
+    private List<String> linkIds = new ArrayList<>();   // used for obstruction events
+
+    public double getEstimatedTimeFor(RobotType robotType) {
+        return estimatedTimes.get(robotType);
+    }
+
 }

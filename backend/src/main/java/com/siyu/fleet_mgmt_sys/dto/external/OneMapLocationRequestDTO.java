@@ -1,4 +1,4 @@
-package com.siyu.fleet_mgmt_sys.dto;
+package com.siyu.fleet_mgmt_sys.dto.external;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

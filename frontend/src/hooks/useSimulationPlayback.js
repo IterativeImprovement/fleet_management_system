@@ -122,7 +122,7 @@ export function useSimulationPlayback({
     }
   }
 
-  // send location to backned 
+  // send location to backend
   function pushRobotPosition(robotId, status, lat, lng) {
     const client = stompClientRef.current
     if (!client || !client.connected) return

@@ -2,7 +2,7 @@ package com.siyu.fleet_mgmt_sys.controller;
 
 import com.siyu.fleet_mgmt_sys.dto.location.LocationRequestDTO;
 import com.siyu.fleet_mgmt_sys.dto.location.LocationResponseDTO;
-import com.siyu.fleet_mgmt_sys.dto.OneMapLocationRequestDTO;
+import com.siyu.fleet_mgmt_sys.dto.external.OneMapLocationRequestDTO;
 import com.siyu.fleet_mgmt_sys.service.location.LocationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
