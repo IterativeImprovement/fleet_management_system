@@ -7,14 +7,12 @@ async function getErrorMessage(response) {
   }
 }
 
-export async function generateSimulation(seed) {
-  const params = new URLSearchParams()
-  if (seed !== null && seed !== undefined && seed !== '') {
-    params.set('seed', seed)
-  }
-
-  const url = `/simulation/generate${params.toString() ? `?${params}` : ''}`
-  const response = await fetch(url, { method: 'POST' })
+export async function generateSimulation(config) {
+  const response = await fetch('/simulation/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config ?? {}),
+  })
 
   if (!response.ok) {
     const message = await getErrorMessage(response)

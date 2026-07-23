@@ -11,7 +11,7 @@ import java.util.Random;
 @NoArgsConstructor
 public class SimulationConfig {
 
-    private long seed;
+    private Long seed;  // nullable: null means "pick a random seed" (see setRandomSeed)
 
     // Simulation duration
     private double durationSeconds = 259200.0;  // 3 days

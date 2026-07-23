@@ -421,9 +421,9 @@ export function useSimulationPlayback({
 
   // ── Public API ───────────────────────────────────────────────────────────────
 
-  const startSimulation = useCallback(async (seed) => {
+  const startSimulation = useCallback(async (config) => {
     try {
-      const result = await generateSimulation(seed)
+      const result = await generateSimulation(config)
       console.log(`[Sim] Generated simulation id=${result.simulationId ?? 'unknown'}, events=${result.events.length}`)
 
       // load simulation script into memory

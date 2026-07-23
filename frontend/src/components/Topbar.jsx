@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
+import SimulationConfigForm from './SimulationConfigForm.jsx'
 
 const SPEED_OPTIONS = [
   { label: '0.5×', factor: 1080 },
@@ -18,17 +19,25 @@ function Topbar({
   onReset,
   onSpeedChange,
 }) {
-  const [seed, setSeed] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [showConfig, setShowConfig] = useState(false)
+  const [config, setConfig] = useState(null)
+  const [configError, setConfigError] = useState('')
 
   const hasSimulation = simulationId != null
+
+  // stable so SimulationConfigForm's lift-up effect doesn't refire every render
+  const handleConfigChange = useCallback((cfg, err) => {
+    setConfig(cfg)
+    setConfigError(err)
+  }, [])
 
   async function handleStart() {
     setError(null)
     setIsLoading(true)
     try {
-      await onStart(seed.trim() === '' ? null : seed.trim())
+      await onStart(config)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -73,21 +82,24 @@ function Topbar({
 
         {!hasSimulation ? (
           <>
-            <input
-              className='sim-seed-input'
-              type='text'
-              placeholder='Seed (optional)'
-              value={seed}
-              onChange={e => setSeed(e.target.value)}
+            <button
+              className='sim-btn sim-btn-config'
+              onClick={() => setShowConfig(v => !v)}
               disabled={isLoading}
-            />
+            >
+              ⚙ Configure
+            </button>
             <button
               className='sim-btn sim-btn-start'
               onClick={handleStart}
-              disabled={isLoading}
+              disabled={isLoading || !!configError}
             >
               {isLoading ? 'Generating…' : '▶ Start Simulation'}
             </button>
+            {/* kept mounted (toggled via CSS) so edits persist when the panel closes */}
+            <div className={`sim-config-panel${showConfig ? '' : ' sim-config-panel--hidden'}`}>
+              <SimulationConfigForm onConfigChange={handleConfigChange} disabled={isLoading} />
+            </div>
           </>
         ) : (
           <>

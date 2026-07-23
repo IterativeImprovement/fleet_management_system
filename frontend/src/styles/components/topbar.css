@@ -5,6 +5,7 @@
   border-radius: 12px;
   padding: 16px;
 
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -53,16 +54,6 @@
   color: #4b5563;
 }
 
-.sim-seed-input {
-  flex: 0 0 auto;
-  width: 160px;
-  min-width: 0;
-  padding: 8px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 13px;
-}
-
 .sim-time {
   font-size: 16px;
   font-weight: 600;
@@ -99,9 +90,84 @@
 .sim-btn-pause  { background: #ff9500; color: #fff; }
 .sim-btn-resume { background: #007aff; color: #fff; }
 .sim-btn-reset  { background: #ff3b30; color: #fff; }
+.sim-btn-config { background: #e5e7eb; color: #1d1d1f; }
 
 .sim-error {
   font-size: 12px;
   color: #ff3b30;
   max-width: 200px;
+}
+
+/* Floating configuration panel (dropdown anchored under the topbar) */
+.sim-config-panel {
+  position: absolute;
+  top: 100%;
+  right: 16px;
+  z-index: 1500;
+  margin-top: 8px;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  max-height: 75vh;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 16px;
+}
+
+.sim-config-panel--hidden {
+  display: none;
+}
+
+.sim-config-form h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.sim-config-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.sim-config-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.sim-config-form input,
+.sim-config-form textarea {
+  padding: 7px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.sim-config-seed,
+.sim-config-string {
+  margin-top: 12px;
+}
+
+.sim-config-seed-row {
+  display: flex;
+  gap: 6px;
+}
+
+.sim-config-seed-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sim-config-seed-row button {
+  flex: 0 0 auto;
+  padding: 0 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f2f2f7;
+  cursor: pointer;
 }

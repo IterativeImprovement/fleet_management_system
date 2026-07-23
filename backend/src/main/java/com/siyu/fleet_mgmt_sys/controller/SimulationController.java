@@ -11,8 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -34,16 +34,16 @@ public class SimulationController {
     private final SimulationResetService simulationResetService;
 
     @PostMapping("/generate")
-    public ResponseEntity<SimulationResultDTO> generate(@RequestParam(required = false) Long seed) {
+    public ResponseEntity<SimulationResultDTO> generate(@RequestBody(required = false) SimulationConfig config) {
         // clear any leftover simulation robots/tasks from previous runs so they
         // do not accumulate in the database on each new Start
         simulationResetService.resetAll();
 
-        SimulationConfig config = new SimulationConfig();
-
-        if (seed != null) {
-            config.setSeed(seed);
-        } else {
+        // No body → run the preset defaults. No seed in the body → pick a random one.
+        if (config == null) {
+            config = new SimulationConfig();
+        }
+        if (config.getSeed() == null) {
             config.setRandomSeed();
         }
 
