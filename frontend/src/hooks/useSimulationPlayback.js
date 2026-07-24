@@ -146,8 +146,18 @@ export function useSimulationPlayback({
 
     client.publish({
       destination: '/app/obstruction',
-      body: JSON.stringify({ linkId: String(roadId) }),
+      // field name must stay `id` — matches ObstructionEventDTO on the backend
+      body: JSON.stringify({ id: String(roadId) }),
     })
+  }
+
+  // tell backend a robot broke down over WS (fire-and-forget, mirrors publishObstruction)
+  // the id travels in the destination (@DestinationVariable), so no body is needed
+  function publishRobotBreakdown(robotId) {
+    const client = stompClientRef.current
+    if (!client || !client.connected) return
+
+    client.publish({ destination: `/app/robot/${robotId}/breakdown` })
   }
 
   // ── Alert helper ────────────────────────────────────────────────────────────
@@ -261,9 +271,16 @@ export function useSimulationPlayback({
         : 0
       const pos = interpolateAlongRoute(movement.coords, progress)
       if (pos) {
+        // clear the throttle so this terminal ERROR status is never dropped —
+        // the backend's reroute filter keys off robot status
+        lastWsPushRef.current.delete(robotId)
         pushRobotPosition(robotId, 'ERROR', pos.latitude, pos.longitude)
       }
     }
+
+    // Tell the backend the robot broke down, before the task is unlinked below —
+    // RobotBreakdownService needs the robot still holding its task to reassign it.
+    publishRobotBreakdown(robotId)
 
     // stop animation
     robotMovementsRef.current.delete(robotId)

@@ -81,7 +81,8 @@ public abstract class Robot {
     }
 
     public Task getCurrentTask() {
-        return this.tasks.get(0) == null ? null : this.tasks.get(0);
+        // via getTasks() so a null list is handled too; get(0) on an empty list throws
+        return getTasks().isEmpty() ? null : getTasks().get(0);
     }
 
     public void setPosition(double latitude, double longitude) {

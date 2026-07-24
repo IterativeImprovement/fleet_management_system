@@ -1,4 +1,6 @@
-const ROUTE_ENDPOINT = '/route/coords'
+// /route/coords is now the graph A* router (needs robotType, returns routeGeo).
+// This fallback stays on OneMap: it always answers, even when A* has no graph or no path.
+const ROUTE_ENDPOINT = '/route/onemap/coords'
 
 async function getErrorMessage(response) {
   try {

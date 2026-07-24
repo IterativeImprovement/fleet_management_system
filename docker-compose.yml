@@ -12,7 +12,9 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      # routing branch added a ./db/init.sql mount, but that file was never committed —
+      # Docker would create a directory there and break Postgres init. Restore when the file lands.
+      # - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d fleet_mgmt_db"]
       interval: 10s

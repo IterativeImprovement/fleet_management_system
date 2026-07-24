@@ -1,18 +1,16 @@
 package com.siyu.fleet_mgmt_sys.controller;
 
-import com.siyu.fleet_mgmt_sys.dto.robot.RobotResponseDTO;
 import com.siyu.fleet_mgmt_sys.dto.simulation.SimulationConfig;
 import com.siyu.fleet_mgmt_sys.dto.websocket.ObstructionEventDTO;
 import com.siyu.fleet_mgmt_sys.dto.websocket.RobotLocationNStatusDTO;
-import com.siyu.fleet_mgmt_sys.exception.notfoundexception.RobotNotFoundException;
-import com.siyu.fleet_mgmt_sys.model.robot.Robot;
-import com.siyu.fleet_mgmt_sys.repository.RobotRepository;
+import com.siyu.fleet_mgmt_sys.model.enums.RobotStatus;
+import com.siyu.fleet_mgmt_sys.service.RoadService;
 import com.siyu.fleet_mgmt_sys.service.RobotBreakdownService;
-import com.siyu.fleet_mgmt_sys.service.graph.RouteGraphService;
+import com.siyu.fleet_mgmt_sys.service.robot.RobotService;
 import com.siyu.fleet_mgmt_sys.service.route.RouteObstructionService;
 import com.siyu.fleet_mgmt_sys.service.simulation.SimulationEngine;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.stereotype.Controller;
 
@@ -20,10 +18,10 @@ import org.springframework.stereotype.Controller;
 @RequiredArgsConstructor
 public class WebsocketController {
 
-    private RobotRepository robotRepository;
-    private RouteGraphService routeGraphService;
-    private RouteObstructionService routeObstructionService;
-    private RobotBreakdownService robotBreakdownService;
+    private final RobotService robotService;
+    private final RoadService roadService;
+    private final RouteObstructionService routeObstructionService;
+    private final RobotBreakdownService robotBreakdownService;
 
     private final SimulationEngine simulationEngine;
 
@@ -36,8 +34,8 @@ public class WebsocketController {
     // Frontend sends obstruction events to /app/obstruction
     @MessageMapping("/obstruction")
     public void handleObstruction(ObstructionEventDTO event) {
-        routeGraphService.obstructLink(event.getId());
-        routeObstructionService.handleObstruction(event.getId()); // trigger rerouting for affected robots
+        routeObstructionService.handleObstruction(event.getId()); // obstructs the link, then reroutes affected robots
+        roadService.updateRoadStatus(event.getId(), "obstructed"); // last: throws if the road isn't in the DB, must not block rerouting
     }
 
     @MessageMapping("/obstruction/cleared")
@@ -47,17 +45,14 @@ public class WebsocketController {
     }
 
     @MessageMapping("/robot/{robotId}/breakdown")
-    public void handleRobotBreakdown(Long robotId) {
+    public void handleRobotBreakdown(@DestinationVariable Long robotId) {
         robotBreakdownService.handleRobotBreakdown(robotId);
     }
 
     @MessageMapping("/robot/{robotId}/update")
-    public void updateRobotPosition(RobotLocationNStatusDTO dto) {
-        Robot robot = robotRepository.findById(Long.parseLong(dto.getRobotId()))
-                .orElseThrow(() -> new RobotNotFoundException(Long.parseLong(dto.getRobotId())));
-        robot.setPosition(dto.getLat(), dto.getLng());
-        robotRepository.save(robot);
+    public void updateRobotPosition(@DestinationVariable Long robotId, RobotLocationNStatusDTO dto) {
+        robotService.updateStatusAndPosition(
+                robotId, RobotStatus.valueOf(dto.getStatus()), dto.getLat(), dto.getLng());
     }
-
 
 }

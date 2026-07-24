@@ -2,14 +2,11 @@ package com.siyu.fleet_mgmt_sys.controller;
 
 import com.siyu.fleet_mgmt_sys.dto.robot.RobotRequestDTO;
 import com.siyu.fleet_mgmt_sys.dto.robot.RobotResponseDTO;
-import com.siyu.fleet_mgmt_sys.dto.robot.RobotSimulationDTO;
 import com.siyu.fleet_mgmt_sys.model.robot.Robot;
 import com.siyu.fleet_mgmt_sys.service.robot.RobotMapper;
 import com.siyu.fleet_mgmt_sys.service.robot.RobotService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.handler.annotation.DestinationVariable;
-import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -91,9 +88,5 @@ public class RobotController {
          return ResponseEntity.ok().build();
          }
 
-    // simulation logic, this connects to the websocket and it takes information about the robot's position from the frontend and updates it in the backend
-    @MessageMapping("/robot/{id}/update") //
-    public void updateStatusAndPosition(@DestinationVariable Long id, RobotSimulationDTO dto) {
-        robotService.updateStatusAndPosition(id, dto.getStatus(), dto.getLat(), dto.getLng());
-    }
+    // Robot position/status over WebSocket now lives in WebsocketController (routing branch owns /app/robot/{id}/update).
 }
