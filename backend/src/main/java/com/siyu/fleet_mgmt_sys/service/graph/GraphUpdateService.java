@@ -5,6 +5,7 @@ import com.siyu.fleet_mgmt_sys.repository.GraphEdgeRepository;
 import com.siyu.fleet_mgmt_sys.service.external.LTAService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,16 +31,31 @@ public class GraphUpdateService {
      */
     @Scheduled(initialDelay = 60_000, fixedDelay = 300_000) // updates a minute after initial load, then updates every 5 min
     @Transactional
+    @ConditionalOnProperty(name = "lta.sync.enabled", havingValue = "true", matchIfMissing = true)
     public void update() {
         log.info("Updating graph speed bands from LTA...");
 
-        List<LtaTrafficSpeedBandResponseDTO> speedBands = trafficSpeedBandService.getAllSpeedBands();
+        List<LtaTrafficSpeedBandResponseDTO> speedBands;
+
+        try {
+            speedBands = trafficSpeedBandService.getAllSpeedBands();
+
+            // Failsafe: Prevent wiping/ignoring data if the API returns an empty payload
+            if (speedBands == null || speedBands.isEmpty()) {
+                log.warn("LTA API returned empty dataset. Aborting graph update to protect current state.");
+                return;
+            }
+        } catch (Exception e) {
+            // Catch the 500 error / quota violation and abort cleanly
+            log.error("Failed to fetch traffic speed bands from LTA: {}. Aborting current sync cycle.", e.getMessage());
+            return;
+        }
 
         int updated = 0;
         for (LtaTrafficSpeedBandResponseDTO dto : speedBands) {
             if (dto.getLinkId() == null || dto.getSpeedBand() <= 0) continue;
 
-            // 1. Get the current speed from memory (assuming you have a getter like this)
+            // 1. Get the current speed from memory
             Integer currentSpeed = routeGraphService.getSpeedBand(dto.getLinkId());
 
             // 2. The Diff Check: Only proceed if it is a new link OR the speed has actually changed

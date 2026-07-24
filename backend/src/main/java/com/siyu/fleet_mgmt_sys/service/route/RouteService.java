@@ -12,6 +12,7 @@ import com.siyu.fleet_mgmt_sys.model.Route;
 import com.siyu.fleet_mgmt_sys.model.WayPoint;
 import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
 import com.siyu.fleet_mgmt_sys.model.task.Task;
+import com.siyu.fleet_mgmt_sys.repository.RouteRepository;
 import com.siyu.fleet_mgmt_sys.service.external.OneMapService;
 import com.siyu.fleet_mgmt_sys.service.external.LTAService;
 import com.siyu.fleet_mgmt_sys.util.PolylineDecoder;
@@ -31,6 +32,8 @@ public class RouteService {
     private final LTAService LTAService;
 
     private final RouteBuilderService routeBuilderService;
+
+    private final RouteRepository routeRepository;
 
     // ─── Primary routing (graph-based) ───────────────────────────────────────
 
@@ -57,12 +60,13 @@ public class RouteService {
 
     public RouteResponseDTO getRouteDTO(WayPoint start, WayPoint end, RobotType robotType) {
         Route route = getRoute(start, end);
+        Route savedRoute = routeRepository.save(route);
         return RouteResponseDTO.builder()
-                .estimatedTime(route.getEstimatedTimeFor(robotType))
-                .id(route.getId())
-                .routeGeo(route.getRouteGeo())
-                .taskId(route.getTask().getId())
-                .totalDistance(route.getTotalDistance()).build();
+                .estimatedTime(savedRoute.getEstimatedTimeFor(robotType))
+                .id(savedRoute.getId())
+                .routeGeo(savedRoute.getRouteGeo())
+                .taskId(savedRoute.getSafeTaskId())
+                .totalDistance(savedRoute.getTotalDistance()).build();
 
     }
 

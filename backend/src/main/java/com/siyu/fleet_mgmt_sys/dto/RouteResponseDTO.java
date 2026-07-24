@@ -10,13 +10,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RouteResponseDTO {
-    public long id;
+    public Long id;
 
     private String routeGeo;            // Google encoded polyline
 
-    private long taskId;
+    private Long taskId;
 
     private Integer totalDistance;      // metres
 
-    private double estimatedTime;
+    private Double estimatedTime;
 }

@@ -33,15 +33,20 @@ public class RouteController {
     }
 
     // sample req: GET
-    // localhost:8080/route/coords?start=1.3081,103.8551&end=1.2739,103.8012?type=standard
+    // localhost:8080/route/coords?start=1.3081,103.8551&end=1.2739,103.8012&robotType=standard
+    // sample req: GET
+    // localhost:8080/route/coords?start=1.3081,103.8551&end=1.2739,103.8012&robotType=standard
     @GetMapping("/coords")
     public ResponseEntity<RouteResponseDTO> getRoute(
             @RequestParam String start,
             @RequestParam String end,
-            @RequestParam RobotType robotType ) {
+            @RequestParam String robotType ) {
+        RobotType typeEnum = RobotType.valueOf(robotType.toUpperCase());
+
         WayPoint startWp = new WayPoint(start);
         WayPoint endWp = new WayPoint(end);
-        return ResponseEntity.ok(routeService.getRouteDTO(startWp, endWp, robotType));
+
+        return ResponseEntity.ok(routeService.getRouteDTO(startWp, endWp, typeEnum));
     }
 
 

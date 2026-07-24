@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 
+import static java.rmi.server.LogStream.log;
+
 /**
  * Orchestrates the full routing pipeline:
  * 1. Project start/end coordinates onto nearest edge
@@ -50,7 +52,7 @@ public class RouteBuilderService {
     public Route  buildRoute(double startLat, double startLon,
                             double endLat, double endLon) {
 
-        log.info("Building route from ({},{}) to ({},{})",
+        RouteBuilderService.log.info("Building route from ({},{}) to ({},{})",
                 startLat, startLon, endLat, endLon);
 
         // Step 1: Create a fresh query-local graph view
@@ -61,10 +63,10 @@ public class RouteBuilderService {
         ProjectionResult startProjection = projectOntoNearestEdge(startLat, startLon);
         ProjectionResult endProjection   = projectOntoNearestEdge(endLat, endLon);
 
-        log.info("Start projected onto: {} ({}m away)",
+        RouteBuilderService.log.info("Start projected onto: {} ({}m away)",
                 startProjection.edge().getRoadName(),
                 String.format("%.1f", startProjection.distanceMetres()));
-        log.info("End projected onto: {} ({}m away)",
+        RouteBuilderService.log.info("End projected onto: {} ({}m away)",
                 endProjection.edge().getRoadName(),
                 String.format("%.1f", endProjection.distanceMetres()));
 
@@ -85,7 +87,7 @@ public class RouteBuilderService {
         List<GraphEdge> path = routeOptimisationService.findFastestRoute(
                 startNode, endNode, graphView);
 
-        log.info("A* complete: {} edges in path", path.size());
+        RouteBuilderService.log.info("A* complete: {} edges in path", path.size());
 
         // Step 6: Encode polyline (also logs road names)
         String polyline = polylineEncoder.encode(path);
@@ -119,7 +121,7 @@ public class RouteBuilderService {
                         time))
         );
 
-        log.info(logMessage.toString());
+        RouteBuilderService.log.info(logMessage.toString());
 
         return route;
     }
@@ -268,10 +270,9 @@ public class RouteBuilderService {
             double totalTime = path.stream().mapToDouble(edge -> {
                 double roadSpeedMs = SpeedBandUtils.toMetresPerSecond(edge.getCurrentSpeedBand());
 
-                // Reverted to your original math logic
-                return (robotSpeedMs >= roadSpeedMs)
-                        ? edge.getTravelTimeSeconds()
-                        : edge.getLengthMetres() / robotSpeedMs;
+                double effectiveSpeedMs = Math.min(robotSpeedMs, roadSpeedMs);
+                log.info("Robot has speed {} on road {}", effectiveSpeedMs, edge.getRoadName());
+                return edge.getLengthMetres() / effectiveSpeedMs;
             }).sum();
 
             times.put(type, totalTime);

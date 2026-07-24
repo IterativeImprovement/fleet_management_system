@@ -76,7 +76,7 @@ public class RouteOptimisationService {
                             goal.getLatitude(), goal.getLongitude());
 
                     double maxPossibleSpeedMs = Math.min(
-                            SpeedBandUtils.toMetresPerSecond(1), robotMaxSpeedMs);
+                            SpeedBandUtils.toMetresPerSecond(8), robotMaxSpeedMs);
                     double heuristic = straightLine / maxPossibleSpeedMs;
 
                     openSet.add(new RouteState(neighbor, tentativeG + heuristic));

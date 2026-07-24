@@ -19,7 +19,7 @@ import java.util.Map;
 public class Route {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(columnDefinition = "TEXT")
@@ -39,7 +39,12 @@ public class Route {
     @Column(name = "link_id")
     private List<String> linkIds = new ArrayList<>();   // used for obstruction events
 
-    public double getEstimatedTimeFor(RobotType robotType) {
+    public Long getSafeTaskId() {
+        return this.task != null ? this.task.getId() : null;
+    }
+
+    public Double getEstimatedTimeFor(RobotType robotType) {
+        if (estimatedTimes == null) return null;
         return estimatedTimes.get(robotType);
     }
 

@@ -1,11 +1,13 @@
 package com.siyu.fleet_mgmt_sys.controller;
 
+import com.siyu.fleet_mgmt_sys.dto.robot.RobotResponseDTO;
 import com.siyu.fleet_mgmt_sys.dto.simulation.SimulationConfig;
 import com.siyu.fleet_mgmt_sys.dto.websocket.ObstructionEventDTO;
 import com.siyu.fleet_mgmt_sys.dto.websocket.RobotLocationNStatusDTO;
 import com.siyu.fleet_mgmt_sys.exception.notfoundexception.RobotNotFoundException;
 import com.siyu.fleet_mgmt_sys.model.robot.Robot;
 import com.siyu.fleet_mgmt_sys.repository.RobotRepository;
+import com.siyu.fleet_mgmt_sys.service.RobotBreakdownService;
 import com.siyu.fleet_mgmt_sys.service.graph.RouteGraphService;
 import com.siyu.fleet_mgmt_sys.service.route.RouteObstructionService;
 import com.siyu.fleet_mgmt_sys.service.simulation.SimulationEngine;
@@ -21,6 +23,7 @@ public class WebsocketController {
     private RobotRepository robotRepository;
     private RouteGraphService routeGraphService;
     private RouteObstructionService routeObstructionService;
+    private RobotBreakdownService robotBreakdownService;
 
     private final SimulationEngine simulationEngine;
 
@@ -41,6 +44,11 @@ public class WebsocketController {
     public void handleObstructionCleared(ObstructionEventDTO event) {
         routeObstructionService.handleObstructionCleared(
                 event.getId(), event.getRestoredSpeedBand());
+    }
+
+    @MessageMapping("/robot/{robotId}/breakdown")
+    public void handleRobotBreakdown(Long robotId) {
+        robotBreakdownService.handleRobotBreakdown(robotId);
     }
 
     @MessageMapping("/robot/{robotId}/update")

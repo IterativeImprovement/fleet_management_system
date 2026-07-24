@@ -88,6 +88,7 @@ public class GraphBuilderService {
                     .fromNode(from)
                     .toNode(to)
                     .linkId(road.getId())
+                    .roadName(road.getRoadName())   // ← fixed: was missing
                     .lengthMetres(length)
                     .currentSpeedBand(speedBand)
                     .travelTimeSeconds(travelTime)
@@ -101,7 +102,7 @@ public class GraphBuilderService {
         log.info("Saved {} final directional edges", finalEdges.size());
     }
 
-    // Intersection resolution
+    // ─── Intersection resolution ──────────────────────────────────────────────
 
     private List<GraphEdge> resolveIntersections(List<GraphEdge> edges,
                                                  Map<String, GraphNode> nodesByKey) {
@@ -112,7 +113,6 @@ public class GraphBuilderService {
         // Collect junction points per edge index
         Map<Integer, List<double[]>> junctionPoints = new HashMap<>();
         Set<String> checked = new HashSet<>();
-
 
         for (List<Integer> cellIndices : grid.values()) {
             for (int i = 0; i < cellIndices.size(); i++) {
@@ -171,7 +171,7 @@ public class GraphBuilderService {
         return finalEdges;
     }
 
-    // Spatial grid (index-based)
+    // ─── Spatial grid (index-based) ───────────────────────────────────────────
 
     private List<RoadSegment> edgesToSegments(List<GraphEdge> edges) {
         List<RoadSegment> segments = new ArrayList<>();
@@ -220,7 +220,7 @@ public class GraphBuilderService {
         return keys;
     }
 
-    // Intersection math
+    // ─── Intersection math ────────────────────────────────────────────────────
 
     private double[] intersect(double x1, double y1, double x2, double y2,
                                double x3, double y3, double x4, double y4) {
@@ -239,7 +239,7 @@ public class GraphBuilderService {
         return null;
     }
 
-    // Edge splitting
+    // ─── Edge splitting ───────────────────────────────────────────────────────
 
     private List<GraphEdge> splitEdge(GraphEdge edge, List<double[]> junctions,
                                       Map<String, GraphNode> nodesByKey) {
@@ -252,6 +252,7 @@ public class GraphBuilderService {
 
         List<GraphEdge> result = new ArrayList<>();
         GraphNode prev = edge.getFromNode();
+        int subIndex = 1;  // ← counter for sub-edge naming, scoped to this split call
 
         int safeSpeedBand = (edge.getCurrentSpeedBand() != null && edge.getCurrentSpeedBand() > 0)
                 ? edge.getCurrentSpeedBand()
@@ -265,18 +266,18 @@ public class GraphBuilderService {
             double length = haversineMetres(
                     prev.getLatitude(), prev.getLongitude(),
                     junctionNode.getLatitude(), junctionNode.getLongitude());
-            double travelTime = length / speedMps;
 
-            // Add one edge only, in the direction given by linkid
             result.add(GraphEdge.builder()
-                    .fromNode(prev).toNode(junctionNode)
+                    .fromNode(prev)
+                    .toNode(junctionNode)
                     .linkId(edge.getLinkId())
+                    .roadName(edge.getRoadName() + "-" + subIndex++)  // ← named sequentially
                     .lengthMetres(length)
-                    .currentSpeedBand(edge.getCurrentSpeedBand())
-                    .travelTimeSeconds(travelTime)
+                    .currentSpeedBand(safeSpeedBand)
+                    .travelTimeSeconds(length / speedMps)
                     .build());
 
-            prev = junctionNode; // Move forward
+            prev = junctionNode;
         }
 
         // Final sub-edge to original end node
@@ -284,27 +285,21 @@ public class GraphBuilderService {
         double length = haversineMetres(
                 prev.getLatitude(), prev.getLongitude(),
                 end.getLatitude(), end.getLongitude());
-        double travelTime = length / speedMps;
 
-
-        Map<String, Integer> splitCounters = new HashMap<>();
-
-        // when splitting:
-        int count = splitCounters.merge(edge.getLinkId(), 1, Integer::sum);
-        String splitName = edge.getRoadName() + "-" + count;
-
-        // Add final FORWARD edge
         result.add(GraphEdge.builder()
-                .roadName(splitName)
-                .fromNode(prev).toNode(end)
+                .fromNode(prev)
+                .toNode(end)
                 .linkId(edge.getLinkId())
+                .roadName(edge.getRoadName() + "-" + subIndex)  // ← final segment named too
                 .lengthMetres(length)
-                .currentSpeedBand(edge.getCurrentSpeedBand())
-                .travelTimeSeconds(travelTime)
+                .currentSpeedBand(safeSpeedBand)
+                .travelTimeSeconds(length / speedMps)
                 .build());
 
         return result;
     }
+
+    // ─── Node helpers ─────────────────────────────────────────────────────────
 
     private GraphNode getOrCreateNode(double lat, double lon,
                                       Map<String, GraphNode> nodesByKey) {
@@ -319,7 +314,7 @@ public class GraphBuilderService {
         return latKey + ":" + lonKey;
     }
 
-    // Haversine
+    // ─── Haversine ────────────────────────────────────────────────────────────
 
     public static double haversineMetres(double lat1, double lon1,
                                          double lat2, double lon2) {
@@ -332,10 +327,11 @@ public class GraphBuilderService {
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
-    // Internal record
+    // ─── Internal record ──────────────────────────────────────────────────────
+
     private record RoadSegment(String linkId,
                                double x1, double y1,
                                double x2, double y2,
                                int speedBand,
-                               String roadName) {}  // add this
+                               String roadName) {}
 }

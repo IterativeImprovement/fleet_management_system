@@ -8,13 +8,13 @@ public class RobotAttributes {
 
     public static class Standard {
         public static final RobotType TYPE = RobotType.STANDARD;
-        public static final double SPEED = 80; // max speed, in kmph
+        public static final double SPEED = 80 / 3.6; // max speed, in m/s
         public static final String DISCRIMINATOR = "Standard";
     }
 
     public static class Large {
         public static final RobotType TYPE = RobotType.LARGE;
-        public static final double SPEED = 50; // max speed, in kmph
+        public static final double SPEED = 50 / 3.6; // max speed, in m/s
         public static final String DISCRIMINATOR = "Large";
     }
 }
