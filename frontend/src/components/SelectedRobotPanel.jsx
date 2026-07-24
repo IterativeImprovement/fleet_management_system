@@ -6,6 +6,7 @@ import {
   canDeleteRobot,
   ROBOT_DELETE_ASSIGNED_TASKS_MESSAGE,
 } from '../utils/robotUtils'
+import { formatDuration } from '../utils/taskUtils'
 
 function formatWaypoint(wayPoint) {
   if (!wayPoint) return null
@@ -112,7 +113,7 @@ function SelectedRobotPanel({
 
         <div className="robot-detail-row">
           <span>Speed:</span>
-          <strong>{robot.speed} m/s</strong>
+          <strong>{robot.speed} km/h</strong>
         </div>
 
         <div className="robot-detail-row">
@@ -139,6 +140,13 @@ function SelectedRobotPanel({
         <div className="robot-detail-row">
           <span>Current Route:</span>
           <strong>{formatTaskRoute(currentTask)}</strong>
+        </div>
+
+        <div className="robot-detail-row">
+          <span>ETA:</span>
+          <strong>
+            {currentTask ? formatDuration(currentTask.estimatedTimeSeconds) : '—'}
+          </strong>
         </div>
       </div>
 

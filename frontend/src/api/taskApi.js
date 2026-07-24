@@ -80,6 +80,7 @@ export function normaliseTaskFromBackend(task) {
     dependencyIds: task.dependencyIds ?? task.dependencies ?? task.tasks ?? [],
     routeGeometry: task.routeGeometry ?? task.route?.routeGeo ?? '',
     routeDistance: task.routeDistance ?? task.route?.totalDistance ?? null,
+    estimatedTimeSeconds: task.estimatedTimeSeconds ?? null,
   })
 }
 

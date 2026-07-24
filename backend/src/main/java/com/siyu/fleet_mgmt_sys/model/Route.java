@@ -15,19 +15,22 @@ import java.util.Map;
 @Setter
 @NoArgsConstructor
 public class Route {
+
     @Id
     @GeneratedValue
     private Long id;
 
-    @Column(columnDefinition = "TEXT") // for long strings
-    private String routeGeo;
+    @Column(columnDefinition = "TEXT")
+    private String routeGeo;            // Google encoded polyline
 
     @OneToOne
     private Task task;
 
-    private Integer totalDistance; // in metres
+    private Integer totalDistance;      // metres
+
+    private Double totalTime;           // seconds 
 
     @ElementCollection
     @MapKeyEnumerated(EnumType.STRING)
-    private Map<RobotType, Double> estimatedTimes; // estimated time of in seconds, array of different robots' estimated times
+    private Map<RobotType, Double> estimatedTimes;  // per robot type, seconds
 }

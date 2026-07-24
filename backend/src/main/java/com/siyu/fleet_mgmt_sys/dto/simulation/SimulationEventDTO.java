@@ -29,5 +29,5 @@ public class SimulationEventDTO {
     private Long robotId;
 
     // ROUTE_OBSTRUCTION
-    private Long linkId;
+    private String linkId;
 }

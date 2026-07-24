@@ -37,7 +37,7 @@ public class SimulationEvent {
     private Long robotId;
 
     // ROUTE_OBSTRUCTION only
-    private Long roadSegmentId; // this is based on LTA's definition and id of a road
+    private String roadSegmentId; // this is based on LTA's definition and id of a road
 
     private List<Long> dependencyEventIds = new ArrayList<>();
     private double completionDeadline;

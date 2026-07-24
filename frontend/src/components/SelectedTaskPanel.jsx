@@ -4,6 +4,7 @@ import {
   getPriorityType,
   getTaskStatusLabel,
   getTaskStatusType,
+  formatDuration,
 } from '../utils/taskUtils'
 
 function formatWaypoint(wayPoint) {
@@ -126,6 +127,11 @@ function SelectedTaskPanel({
         <div className="task-detail-row">
           <span>Completion Time:</span>
           <strong>{formatDateTime(task.completionDateTime)}</strong>
+        </div>
+
+        <div className="task-detail-row">
+          <span>Est. time:</span>
+          <strong>{formatDuration(task.estimatedTimeSeconds)}</strong>
         </div>
 
         <div className="task-detail-row">

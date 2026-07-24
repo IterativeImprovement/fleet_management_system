@@ -6,7 +6,10 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
-public interface RoadRepository extends JpaRepository<Road, Long>  {
+public interface RoadRepository extends JpaRepository<Road, String>  {
     @Query("SELECT rs.id FROM Road rs")
-    List<Long> findAllIds();
+    List<String> findAllIds();
+
+    @Query("SELECT r FROM Road r LEFT JOIN FETCH r.roadSpeedBand")
+    List<Road> findAllWithSpeedBands();
 }

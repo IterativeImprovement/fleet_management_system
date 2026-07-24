@@ -16,21 +16,21 @@ public class RoadController {
     private final RoadService roadService;
 
     @GetMapping("/{id}")
-    public ResponseEntity<RoadResponseDTO> getRoad(@PathVariable Long id) {
+    public ResponseEntity<RoadResponseDTO> getRoad(@PathVariable String id) {
         return ResponseEntity.ok(roadService.getRoad(id));
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<RoadResponseDTO> updateRoadStatus(@PathVariable Long id, @RequestBody String newStatus) {
+    public ResponseEntity<RoadResponseDTO> updateRoadStatus(@PathVariable String id, @RequestBody String newStatus) {
         return ResponseEntity.ok(roadService.updateRoadStatus(id, newStatus));
     }
 
     // Obstruction reported from the frontend over WebSocket during simulation.
     // ponytail: fire-and-forget, no validation — matches the robot WS handler. A bad/unknown
-    // linkId throws (NumberFormatException / RoadNotFoundException) into Spring's STOMP error
-    // log without crashing. Add a guard only if sim scripts start emitting junk link ids.
+    // linkId throws RoadNotFoundException into Spring's STOMP error log without crashing.
+    // Add a guard only if sim scripts start emitting junk link ids.
     @MessageMapping("/obstruction")   // = /app/obstruction
     public void obstructRoad(ObstructionDTO dto) {
-        roadService.updateRoadStatus(Long.parseLong(dto.getLinkId()), "obstructed");
+        roadService.updateRoadStatus(dto.getLinkId(), "obstructed");
     }
 }

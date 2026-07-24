@@ -1,12 +1,14 @@
 package com.siyu.fleet_mgmt_sys.dto.task;
 
 import com.siyu.fleet_mgmt_sys.dto.location.LocationResponseDTO;
+import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
 import com.siyu.fleet_mgmt_sys.model.task.Task;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Data
 @NoArgsConstructor
@@ -29,6 +31,7 @@ public class TaskResponseDTO {
     private List<Long> dependencyIds;
     private String routeGeometry;
     private Integer routeDistance;
+    private Double estimatedTimeSeconds;   // ETA for the assigned robot type (seconds)
 
     public TaskResponseDTO(Task task) {
         this.id = task.getId();
@@ -54,6 +57,12 @@ public class TaskResponseDTO {
                 task.getDependencies().stream().map(Task::getId).toList() : List.of();
         this.routeGeometry = task.getRoute() != null ? task.getRoute().getRouteGeo() : null;
         this.routeDistance = task.getRoute() != null ? task.getRoute().getTotalDistance() : null;
+
+        if (task.getRoute() != null && task.getRoute().getEstimatedTimes() != null) {
+            Map<RobotType, Double> times = task.getRoute().getEstimatedTimes();
+            RobotType type = task.getRobot() != null ? task.getRobot().getType() : RobotType.STANDARD;
+            this.estimatedTimeSeconds = times.get(type);
+        }
     }
 
 }

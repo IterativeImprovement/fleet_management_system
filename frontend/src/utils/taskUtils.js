@@ -1,3 +1,13 @@
+export function formatDuration(seconds) {
+  if (seconds == null || !Number.isFinite(Number(seconds))) return '—'
+  const s = Number(seconds)
+  if (s < 60) return '<1 min'
+  const mins = Math.round(s / 60)
+  if (mins < 60) return `~${mins} min`
+  const h = Math.floor(mins / 60)
+  return `~${h} h ${mins % 60} min`
+}
+
 export function getPriorityType(priority) {
   if (priority === 1) return 'high'
   if (priority === 2) return 'medium'
@@ -139,6 +149,7 @@ export function createTask({
   dependencyIds = [],
   routeGeometry = '',
   routeDistance = null,
+  estimatedTimeSeconds = null,
 }) {
   const numericPriority = Number(priority)
   const numericRouteDistance = routeDistance === null || routeDistance === undefined
@@ -169,5 +180,9 @@ export function createTask({
     dependencyIds: normaliseDependencyIds(dependencyIds),
     routeGeometry: String(routeGeometry || ''),
     routeDistance: Number.isFinite(numericRouteDistance) ? numericRouteDistance : null,
+    estimatedTimeSeconds:
+      estimatedTimeSeconds === null || estimatedTimeSeconds === undefined
+        ? null
+        : Number(estimatedTimeSeconds),
   }
 }
