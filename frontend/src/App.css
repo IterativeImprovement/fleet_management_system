@@ -2,6 +2,7 @@
 @import './styles/components/topbar.css';
 @import './styles/components/sidebar.css';
 @import './styles/components/robot-list.css';
+@import './styles/components/selected-panel-buttons.css';
 @import './styles/components/selected-robot-panel.css';
 @import './styles/components/task-list.css';
 @import './styles/components/selected-task-panel.css';

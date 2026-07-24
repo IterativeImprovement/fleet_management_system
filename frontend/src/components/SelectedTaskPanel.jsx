@@ -174,7 +174,7 @@ function SelectedTaskPanel({
 
         <button
           type="button"
-          className="delete-task-button"
+          className="danger-action"
           onClick={handleDeleteTask}
           disabled={isDeleting || Boolean(deleteBlockReason)}
         >
