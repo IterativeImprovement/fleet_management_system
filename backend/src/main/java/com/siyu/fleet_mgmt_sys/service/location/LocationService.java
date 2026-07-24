@@ -2,7 +2,7 @@ package com.siyu.fleet_mgmt_sys.service.location;
 
 import com.siyu.fleet_mgmt_sys.dto.location.LocationRequestDTO;
 import com.siyu.fleet_mgmt_sys.dto.location.LocationResponseDTO;
-import com.siyu.fleet_mgmt_sys.dto.OneMapLocationRequestDTO;
+import com.siyu.fleet_mgmt_sys.dto.external.OneMapLocationRequestDTO;
 import com.siyu.fleet_mgmt_sys.dto.external.OneMapSearchResponseDTO;
 import com.siyu.fleet_mgmt_sys.exception.CustomLocationRenameRequiredException;
 import com.siyu.fleet_mgmt_sys.exception.notfoundexception.LocationNotFoundException;

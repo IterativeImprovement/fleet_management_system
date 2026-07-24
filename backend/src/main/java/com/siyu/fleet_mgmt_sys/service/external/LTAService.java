@@ -70,7 +70,14 @@ public class LTAService {
         HttpEntity<Void> entity = new HttpEntity<>(buildHeaders());
 
         List<LtaTrafficSpeedBandResponseDTO> firstPage = fetchPage(0, entity);
-        if (firstPage.isEmpty() || firstPage.size() < PAGE_SIZE) {
+
+        // --- EARLY ERROR HANDLER: Check for silent failures ---
+        if (firstPage == null || firstPage.isEmpty()) {
+            log.error("First page from LTA API returned 0 results. This suggests an upstream API error.");
+            throw new IllegalStateException("LTA API returned an empty payload on the first page.");
+        }
+
+        if (firstPage.size() < PAGE_SIZE) {
             return firstPage;
         }
 
@@ -148,8 +155,10 @@ public class LTAService {
                     url, HttpMethod.GET, entity, LtaApiResponseDTO.class);
 
             LtaApiResponseDTO body = response.getBody();
-            if (body == null || body.getValue() == null)
+            if (body == null || body.getValue() == null) {
+                log.warn("API response body or value array is null at skip={}", skip);
                 return List.of();
+            }
 
             return body.getValue();
         } catch (RestClientException e) {

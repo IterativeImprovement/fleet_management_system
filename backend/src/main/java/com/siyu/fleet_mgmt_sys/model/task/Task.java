@@ -8,6 +8,7 @@ import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
 import com.siyu.fleet_mgmt_sys.model.enums.TaskStatus;
 import com.siyu.fleet_mgmt_sys.model.enums.TaskType;
 import com.siyu.fleet_mgmt_sys.model.robot.Robot;
+import com.siyu.fleet_mgmt_sys.service.route.RouteService;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -55,28 +56,28 @@ public class Task {
 
     /* other entities */
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Route route;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "start_waypoint_id")
     @NonNull
     private WayPoint startWayPoint;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "end_waypoint_id")
     @NonNull
     private WayPoint endWayPoint;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "start_location_id")
     private Location startLocation;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "end_location_id")
     private Location endLocation;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "robot_id")
     private Robot robot;
 
@@ -96,7 +97,7 @@ public class Task {
 
     private boolean simulated = false;
 
-    private Long simulationId = null; 
+    private Long simulationId = null;
 
     /* methods */
 
@@ -107,6 +108,7 @@ public class Task {
     public double getPriorityFor(RobotType robotType) {
         return this.calculatedPriorities.get(robotType);
     }
+
 
     @Override
     public String toString() {

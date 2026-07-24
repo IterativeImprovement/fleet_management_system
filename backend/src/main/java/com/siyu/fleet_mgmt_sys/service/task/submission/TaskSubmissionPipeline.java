@@ -5,7 +5,6 @@ import com.siyu.fleet_mgmt_sys.model.task.Task;
 import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
 import com.siyu.fleet_mgmt_sys.model.enums.TaskStatus;
 import com.siyu.fleet_mgmt_sys.repository.TaskRepository;
-import com.siyu.fleet_mgmt_sys.service.route.RouteEstimationService;
 import com.siyu.fleet_mgmt_sys.service.route.RouteService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -22,18 +21,13 @@ public class TaskSubmissionPipeline {
     private final TaskRepository taskRepository;
 
     private final RouteService routeService;
-    private final RouteEstimationService estimationService;
     private final TaskPriorityService priorityService;
     private final TaskClusterService clusterService;
 
     @Transactional
     public Task submitTask(Task task) {
-        // retrieves route geometry and total distance info
-        Route route = routeService.getRoute(task.getStartWayPoint(), task.getEndWayPoint());
-
-        // calculates estimated time to complete routes for different robots
-        // 0 is standard, 1 is large
-        estimationService.updateRouteEstimatedTimes(route);
+        // retrieves route info
+        Route route = routeService.getRouteForTask(task);
         task.setRoute(route);
 
         // calculates priority of tasks and whether robots can complete said tasks

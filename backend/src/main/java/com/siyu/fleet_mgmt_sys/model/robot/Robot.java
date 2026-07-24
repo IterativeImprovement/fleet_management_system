@@ -80,6 +80,10 @@ public abstract class Robot {
         return this.tasks;
     }
 
+    public Task getCurrentTask() {
+        return this.tasks.get(0) == null ? null : this.tasks.get(0);
+    }
+
     public void setPosition(double latitude, double longitude) {
         this.latitude = latitude;
         this.longitude = longitude;
@@ -92,8 +96,6 @@ public abstract class Robot {
                 "\n  name: " + name +
                 "}";
     }
-
-
 
     public String toStringDetailed() {
         String taskInfo = Hibernate.isInitialized(tasks)
@@ -108,6 +110,17 @@ public abstract class Robot {
                 "\n latlong: {" + latitude + ", " + longitude + "}" +
                 "\n  tasks: " + taskInfo +
                 "\n}";
+    }
+
+    public static double[] getAllRobotSpeeds() {
+        return new double[] {
+                RobotAttributes.Standard.SPEED,
+                RobotAttributes.Large.SPEED
+        };
+    }
+
+    public static double getFastestSpeed() { // used for route calculation
+        return RobotAttributes.Standard.SPEED;
     }
 
 }

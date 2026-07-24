@@ -13,14 +13,15 @@ import lombok.*;
 /**
  * This represents a section of uninterrupted road (i.e. no junctions)
  * Used in routing algorithm.
- * All roads are assumed to be two-way in nature.
+ * All roads are assumed to be one way in the direction specified.
  */
 public class GraphEdge {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "edge_seq")
-    @SequenceGenerator(name = "edge_seq", sequenceName = "graph_edge_seq", allocationSize = 50)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    private String roadName;  // e.g. "NARAYANAN CHETTY ROAD" or "NARAYANAN CHETTY ROAD-1"
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "from_node_id")
@@ -33,5 +34,7 @@ public class GraphEdge {
     private String linkId;
     private Double lengthMetres;
     private Integer currentSpeedBand;
-    private Double travelTimeSeconds;
+
+    @Transient  // computed in memory, not stored in DB
+    private double travelTimeSeconds;
 }
