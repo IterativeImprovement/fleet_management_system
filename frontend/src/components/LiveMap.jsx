@@ -59,6 +59,7 @@ function LiveMap({
   isLoadingRoutes = false,
   routeErrorCount = 0,
   onSelectRobot,
+  onSelectTask,
   coloredSegmentsByTaskId = {},
 }) {
   const mapContainerRef = useRef(null)
@@ -67,6 +68,8 @@ function LiveMap({
   const markerLayerRef = useRef(null)
   const obstacleLayerRef = useRef(null)
   const hasFittedAllRoutesRef = useRef(false)
+  const markersByIdRef = useRef(new Map())
+  const onSelectRobotRef = useRef(onSelectRobot)
 
   useEffect(() => {
     if (mapRef.current || !mapContainerRef.current) return
@@ -163,6 +166,7 @@ function LiveMap({
             lineJoin: 'round',
           })
 
+          line.on('click', () => onSelectTask?.(route.taskId))
           routeLayerRef.current.addLayer(line)
           segmentLines.push(line)
           routeLines.push(line)
@@ -187,6 +191,7 @@ function LiveMap({
           direction: 'top',
         })
 
+        routeLine.on('click', () => onSelectTask?.(route.taskId))
         routeLayerRef.current.addLayer(routeLine)
         routeLines.push(routeLine)
 
@@ -208,13 +213,23 @@ function LiveMap({
       fitBoundsInsideSingapore(mapRef.current, routeGroup.getBounds(), { padding: [32, 32] })
       hasFittedAllRoutesRef.current = true
     }
-  }, [routesByTaskId, selectedTaskId, coloredSegmentsByTaskId])
+  }, [routesByTaskId, selectedTaskId, coloredSegmentsByTaskId, onSelectTask])
 
 
+  // Keep the click handler current without re-binding markers each render.
+  useEffect(() => {
+    onSelectRobotRef.current = onSelectRobot
+  }, [onSelectRobot])
+
+  // Reconcile markers in place (move/update/add/remove) instead of clearing and
+  // rebuilding every frame — so a marker survives from mouse-down to mouse-up and
+  // its click actually fires while the simulation moves the dots.
   useEffect(() => {
     if (!markerLayerRef.current) return
 
-    markerLayerRef.current.clearLayers()
+    const layer = markerLayerRef.current
+    const markers = markersByIdRef.current
+    const seen = new Set()
 
     robots
       .filter(robot =>
@@ -223,35 +238,54 @@ function LiveMap({
         Number.isFinite(Number(robot.position.longitude))
       )
       .forEach(robot => {
+        const id = String(robot.id)
+        seen.add(id)
+
+        const lat = Number(robot.position.latitude)
+        const lng = Number(robot.position.longitude)
         const statusType = getRobotStatusType(robot.status)
-        const isSelected = String(robot.id) === String(selectedRobotId)
+        const isSelected = id === String(selectedRobotId)
+        const radius = isSelected ? 9 : 7
 
-        const className = `robot-marker ${statusType} ${isSelected ? 'selected' : ''
-          }`.trim()
+        let marker = markers.get(id)
 
-        const marker = L.circleMarker(
-          [
-            Number(robot.position.latitude),
-            Number(robot.position.longitude),
-          ],
-          {
-            radius: isSelected ? 9 : 7,
-            className,
+        if (!marker) {
+          marker = L.circleMarker([lat, lng], {
+            radius,
+            className: `robot-marker ${statusType} ${isSelected ? 'selected' : ''}`.trim(),
             fillOpacity: 0.85,
             opacity: 1,
-          }
-        )
+          })
+          marker.bindTooltip(robot.name || `R-${robot.id}`, {
+            permanent: false,
+            direction: 'top',
+          })
+          marker.on('click', () => onSelectRobotRef.current?.(robot.id))
+          layer.addLayer(marker)
+          markers.set(id, marker)
+        } else {
+          marker.setLatLng([lat, lng])
+          marker.setRadius(radius)
+        }
 
-        marker.bindTooltip(robot.name || `R-${robot.id}`, {
-          permanent: false,
-          direction: 'top',
-        })
-
-        marker.on('click', () => onSelectRobot?.(robot.id))
-
-        markerLayerRef.current.addLayer(marker)
+        // keep status + selection classes in sync on the rendered element
+        const el = marker.getElement()
+        if (el) {
+          el.setAttribute(
+            'class',
+            `leaflet-interactive robot-marker ${statusType}${isSelected ? ' selected' : ''}`
+          )
+        }
       })
-  }, [robots, selectedRobotId, onSelectRobot])
+
+    // remove markers whose robot is no longer present
+    markers.forEach((marker, id) => {
+      if (!seen.has(id)) {
+        layer.removeLayer(marker)
+        markers.delete(id)
+      }
+    })
+  }, [robots, selectedRobotId])
 
   useEffect(() => {
     if (!obstacleLayerRef.current) return

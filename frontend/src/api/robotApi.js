@@ -12,6 +12,13 @@ async function getErrorMessage(response) {
 }
 
 export function normaliseRobotFromBackend(robot) {
+  const rawLat = robot.position?.latitude ?? robot.latitude
+  const rawLon = robot.position?.longitude ?? robot.longitude
+  // An unpositioned robot comes back at (0,0); fall back to its home base so it
+  // still renders (and is clickable) on the map when idle.
+  const hasRealPos =
+    rawLat && rawLon && !(Number(rawLat) === 0 && Number(rawLon) === 0)
+
   return createRobot({
     id: robot.id,
     name: robot.name ?? `Robot ${robot.id}`,
@@ -19,8 +26,8 @@ export function normaliseRobotFromBackend(robot) {
     status: robot.status ?? 'IDLE',
     speed: robot.speed ?? robot.SPEED,
     position: {
-      latitude: robot.position?.latitude ?? robot.latitude,
-      longitude: robot.position?.longitude ?? robot.longitude,
+      latitude: hasRealPos ? rawLat : robot.baseLatitude,
+      longitude: hasRealPos ? rawLon : robot.baseLongitude,
     },
     taskIds: robot.taskIds ?? robot.tasks ?? [],
   })
