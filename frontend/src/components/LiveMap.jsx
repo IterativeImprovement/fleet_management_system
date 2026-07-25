@@ -12,6 +12,53 @@ const ONEMAP_MIN_ZOOM = 11
 const ONEMAP_MAX_ZOOM = 19
 const SINGAPORE_START_ZOOM = 13
 
+const BASE_ICON = L.divIcon({
+  className: 'map-base-div-icon',
+  html: `
+    <div class="map-base-marker" aria-hidden="true">
+      <span class="map-base-marker-badge">
+        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+          <path d="M4 10.5 12 4l8 6.5v8.25A1.25 1.25 0 0 1 18.75 20H5.25A1.25 1.25 0 0 1 4 18.75V10.5Z" />
+          <path d="M9 20v-6h6v6" />
+        </svg>
+      </span>
+    </div>
+  `,
+  iconSize: [34, 42],
+  iconAnchor: [17, 42],
+  tooltipAnchor: [0, -36],
+})
+
+function getValidMapPosition(position) {
+  if (
+    !position ||
+    position.latitude === null ||
+    position.latitude === undefined ||
+    position.latitude === '' ||
+    position.longitude === null ||
+    position.longitude === undefined ||
+    position.longitude === ''
+  ) {
+    return null
+  }
+
+  const latitude = Number(position.latitude)
+  const longitude = Number(position.longitude)
+
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    return null
+  }
+
+  return [latitude, longitude]
+}
+
 function getSingaporeMinZoom(map) {
   const size = map.getSize()
 
@@ -53,6 +100,7 @@ function fitBoundsInsideSingapore(map, bounds, options) {
 function LiveMap({
   robots = [],
   obstacles = [],
+  activeBasePosition = null,
   routesByTaskId = {},
   selectedTaskId,
   selectedRobotId,
@@ -66,6 +114,8 @@ function LiveMap({
   const mapRef = useRef(null)
   const routeLayerRef = useRef(null)
   const markerLayerRef = useRef(null)
+  const baseLayerRef = useRef(null)
+  const baseMarkerRef = useRef(null)
   const obstacleLayerRef = useRef(null)
   const hasFittedAllRoutesRef = useRef(false)
   const markersByIdRef = useRef(new Map())
@@ -95,6 +145,7 @@ function LiveMap({
 
     routeLayerRef.current = L.layerGroup().addTo(mapRef.current)
     markerLayerRef.current = L.layerGroup().addTo(mapRef.current)
+    baseLayerRef.current = L.layerGroup().addTo(mapRef.current)
     obstacleLayerRef.current = L.layerGroup().addTo(mapRef.current)
 
     requestAnimationFrame(() => {
@@ -214,6 +265,52 @@ function LiveMap({
       hasFittedAllRoutesRef.current = true
     }
   }, [routesByTaskId, selectedTaskId, coloredSegmentsByTaskId, onSelectTask])
+
+  useEffect(() => {
+    const layer = baseLayerRef.current
+    if (!layer) return
+
+    const position = getValidMapPosition(activeBasePosition)
+
+    if (!position) {
+      if (baseMarkerRef.current) {
+        layer.removeLayer(baseMarkerRef.current)
+        baseMarkerRef.current = null
+      }
+      return
+    }
+
+    if (baseMarkerRef.current) {
+      baseMarkerRef.current.setLatLng(position)
+      return
+    }
+
+    const marker = L.marker(position, {
+      icon: BASE_ICON,
+      keyboard: true,
+      title: 'Base',
+      alt: 'Base',
+      riseOnHover: true,
+      zIndexOffset: 500,
+    })
+
+    marker.bindTooltip('Base', {
+      permanent: false,
+      direction: 'top',
+      className: 'map-base-tooltip',
+      opacity: 1,
+    })
+
+    layer.addLayer(marker)
+
+    const element = marker.getElement()
+    if (element) {
+      element.setAttribute('aria-label', 'Base')
+      element.setAttribute('role', 'img')
+    }
+
+    baseMarkerRef.current = marker
+  }, [activeBasePosition])
 
 
   // Keep the click handler current without re-binding markers each render.

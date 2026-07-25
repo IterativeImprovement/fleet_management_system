@@ -452,8 +452,10 @@ function App() {
     const overrides = simulation.robotPositionOverrides
     if (Object.keys(overrides).length === 0) return representedRobots
     return representedRobots.map(robot => {
-      const pos = overrides[robot.id]
-      return pos ? { ...robot, position: pos } : robot
+      const o = overrides[robot.id]
+      return o
+        ? { ...robot, position: { latitude: o.latitude, longitude: o.longitude }, status: o.status ?? robot.status }
+        : robot
     })
   }, [representedRobots, simulation.robotPositionOverrides])
 
@@ -489,6 +491,7 @@ function App() {
       <LiveMap
         robots={robotsWithSimPositions}
         obstacles={simulation.simObstacles}
+        activeBasePosition={simulation.activeBasePosition}
         routesByTaskId={routesByTaskId}
         selectedTaskId={selectedTaskId}
         selectedRobotId={selectedRobotId}

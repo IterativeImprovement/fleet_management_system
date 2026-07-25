@@ -22,4 +22,8 @@ public interface RobotRepository extends JpaRepository<Robot, Long>, JpaSpecific
 
     @Query("SELECT r.id FROM Robot r WHERE r.simulated = true AND r.simulationId = :simulationId")
     List<Long> findAllSimulationIds(@Param("simulationId") Long simulationId);
+
+    // Entity lookups for backend-authoritative allocation
+    List<Robot> findBySimulatedTrueAndSimulationId(Long simulationId);
+    List<Robot> findBySimulatedFalse();
 }

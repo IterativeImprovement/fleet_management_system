@@ -7,6 +7,7 @@ import com.siyu.fleet_mgmt_sys.repository.RobotRepository;
 import com.siyu.fleet_mgmt_sys.repository.SimulationRunRepository;
 import com.siyu.fleet_mgmt_sys.repository.TaskRepository;
 import com.siyu.fleet_mgmt_sys.repository.WayPointRepository;
+import com.siyu.fleet_mgmt_sys.service.dispatch.DispatchService;
 import com.siyu.fleet_mgmt_sys.service.task.submission.TaskClusterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,11 +27,13 @@ public class SimulationResetService {
     private final WayPointRepository wayPointRepository;
     private final TaskClusterService clusterService;
     private final SimulationRunRepository simulationRunRepository;
+    private final DispatchService dispatchService;
 
     @Transactional
     public void reset(Long simulationId) {
         log.info("Resetting simulation id={}", simulationId);
 
+        dispatchService.clear(simulationId);
         List<Long> simRobotIds = robotRepository.findAllSimulationIds(simulationId);
         List<Robot> simRobots = robotRepository.findAllById(simRobotIds);
         List<Task> simTasks = taskRepository.findBySimulationId(simulationId);
@@ -53,6 +56,7 @@ public class SimulationResetService {
     public void resetAll() {
         log.info("Resetting all simulation data");
 
+        dispatchService.clearAll();
         List<Long> simRobotIds = robotRepository.findAllSimulationIds();
         List<Robot> simRobots = robotRepository.findAllById(simRobotIds);
         List<Task> simTasks = taskRepository.findBySimulationIdNotNull();

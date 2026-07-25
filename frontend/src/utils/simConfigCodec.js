@@ -48,6 +48,27 @@ export function decodeConfig(str) {
   return config
 }
 
+export function resolveSimulationBasePosition(config) {
+  const resolvedConfig = config == null
+    ? DEFAULT_CONFIG
+    : { ...DEFAULT_CONFIG, ...config }
+  const latitude = resolvedConfig.baseLatitude
+  const longitude = resolvedConfig.baseLongitude
+
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    return null
+  }
+
+  return { latitude, longitude }
+}
+
 // Under 2^53 so it round-trips through JSON as a number without precision loss
 // (Java accepts it as a long). Used when the user leaves the seed box blank.
 export function randomSeed() {

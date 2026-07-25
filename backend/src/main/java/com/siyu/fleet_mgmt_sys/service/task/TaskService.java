@@ -13,7 +13,6 @@ import com.siyu.fleet_mgmt_sys.model.robot.Robot;
 import com.siyu.fleet_mgmt_sys.repository.RobotRepository;
 import com.siyu.fleet_mgmt_sys.repository.TaskRepository;
 import com.siyu.fleet_mgmt_sys.repository.WayPointRepository;
-import com.siyu.fleet_mgmt_sys.service.task.allocation.TaskAllocationService;
 import com.siyu.fleet_mgmt_sys.service.location.LocationService;
 import com.siyu.fleet_mgmt_sys.service.task.submission.TaskClusterService;
 import com.siyu.fleet_mgmt_sys.service.task.submission.TaskSubmissionPipeline;
@@ -23,7 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -36,7 +34,6 @@ public class TaskService {
     private final TaskSubmissionPipeline taskSubmissionPipeline;
     private final TaskDependencyService dependencyService;
     private final TaskClusterService clusterService;
-    private final TaskAllocationService allocationService;
     private final LocationService locationService;
 
     @Transactional
@@ -191,19 +188,13 @@ public class TaskService {
             return;
         }
 
+        // Pure completion: unlink and free the robot. Re-allocation/next-leg is driven by
+        // DispatchService (backend-authoritative dispatch), not here.
         robot.getTasks().remove(task);
-
         if (robot.getTasks().isEmpty()) {
             robot.setStatus(RobotStatus.IDLE);
-            robotRepository.save(robot);
-            allocationService.assignNextTask(robot);
-        } else {
-            // assign highest priority remaining task
-            robot.getTasks().stream()
-                    .max(Comparator.comparingDouble(t -> t.getPriorityFor(robot.getType())))
-                    .ifPresent(next -> allocationService.assign(robot, next, true));
-            robotRepository.save(robot);
         }
+        robotRepository.save(robot);
     }
 
     public boolean isWithinSingapore(double lat, double lon) {

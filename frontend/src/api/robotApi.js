@@ -19,18 +19,21 @@ export function normaliseRobotFromBackend(robot) {
   const hasRealPos =
     rawLat && rawLon && !(Number(rawLat) === 0 && Number(rawLon) === 0)
 
-  return createRobot({
-    id: robot.id,
-    name: robot.name ?? `Robot ${robot.id}`,
-    type: robot.type ?? robot.TYPE ?? 'UNINITIALISED',
-    status: robot.status ?? 'IDLE',
-    speed: robot.speed ?? robot.SPEED,
-    position: {
-      latitude: hasRealPos ? rawLat : robot.baseLatitude,
-      longitude: hasRealPos ? rawLon : robot.baseLongitude,
-    },
-    taskIds: robot.taskIds ?? robot.tasks ?? [],
-  })
+  return {
+    ...createRobot({
+      id: robot.id,
+      name: robot.name ?? `Robot ${robot.id}`,
+      type: robot.type ?? robot.TYPE ?? 'UNINITIALISED',
+      status: robot.status ?? 'IDLE',
+      speed: robot.speed ?? robot.SPEED,
+      position: {
+        latitude: hasRealPos ? rawLat : robot.baseLatitude,
+        longitude: hasRealPos ? rawLon : robot.baseLongitude,
+      },
+      taskIds: robot.taskIds ?? robot.tasks ?? [],
+    }),
+    simulationId: robot.simulationId ?? null,
+  }
 }
 
 function normaliseRobotTypeForBackend(type) {

@@ -131,20 +131,17 @@ public class RobotService {
         robot.setLongitude(robot.getBaseLongitude());
         robot.setStatus(RobotStatus.IDLE);
         robotRepository.save(robot);
-
-        // robot is idle at base - trigger allocation
-        allocationService.assignNextTask(robot);
+        // re-allocation is driven by DispatchService (backend-authoritative dispatch)
     }
 
 
-    // websocket
-    public void updateStatusAndPosition(Long robotId, RobotStatus status, double lat, double lng) {
+    // websocket telemetry — position only; the backend owns status via dispatch
+    @Transactional
+    public void updatePosition(Long robotId, double lat, double lng) {
         Robot robot = robotRepository.findById(robotId)
                 .orElseThrow(() -> new RobotNotFoundException(robotId));
 
         robot.setPosition(lat, lng);
-        robot.setStatus(status);
-
         robotRepository.save(robot);
     }
 }

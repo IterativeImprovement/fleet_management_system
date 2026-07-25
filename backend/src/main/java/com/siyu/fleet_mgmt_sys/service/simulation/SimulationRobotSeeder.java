@@ -56,6 +56,11 @@ public class SimulationRobotSeeder {
             robot.setSimulated(true);
             robot.setSimulationId(simulationId);
 
+            // Base = the sim's configured base, so "return to base" goes back to where
+            // robots spawn (setPosition below only touches lat/lng, not the base fields).
+            robot.setBaseLatitude(config.getBaseLatitude());
+            robot.setBaseLongitude(config.getBaseLongitude());
+
             // Set position
             if (config.isStartAtBase() || locationIds.isEmpty()) {
                 robot.setPosition(config.getBaseLatitude(), config.getBaseLongitude());

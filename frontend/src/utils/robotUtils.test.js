@@ -1,6 +1,24 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { canDeleteRobot, reconcileRobotTaskIds } from './robotUtils.js'
+import {
+  canDeleteRobot,
+  getRobotStatusLabel,
+  getRobotStatusType,
+  reconcileRobotTaskIds,
+} from './robotUtils.js'
+
+test('robot travel statuses: use distinct presentation types', () => {
+  assert.equal(getRobotStatusType('MOVING'), 'to-task-start')
+  assert.equal(getRobotStatusType('MOVING_TO_BASE'), 'returning-to-base')
+  assert.equal(getRobotStatusType('IDLE'), 'idle')
+  assert.equal(getRobotStatusType('ASSIGNED'), 'assigned')
+  assert.equal(getRobotStatusType('ERROR'), 'error')
+})
+
+test('robot travel statuses: retain their existing labels', () => {
+  assert.equal(getRobotStatusLabel('MOVING'), 'Moving')
+  assert.equal(getRobotStatusLabel('MOVING_TO_BASE'), 'Moving to Base')
+})
 
 test('canDeleteRobot: true when no tasks', () => {
   assert.equal(canDeleteRobot({ taskIds: [] }), true)

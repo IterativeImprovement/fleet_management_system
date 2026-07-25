@@ -1,5 +1,6 @@
 package com.siyu.fleet_mgmt_sys.service;
 
+import com.siyu.fleet_mgmt_sys.dto.dispatch.DispatchDTO;
 import com.siyu.fleet_mgmt_sys.model.Route;
 import com.siyu.fleet_mgmt_sys.model.simulation.SimulationEvent;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,11 @@ public class WebsocketPublisherService {
     // Push simulation events to frontend
     public void publishSimulationEvent(SimulationEvent event) {
         template.convertAndSend("/topic/simulation", event);
+    }
+
+    // Push a robot's current dispatch (leg) to the run's subscribers
+    public void publishDispatch(Long simulationId, DispatchDTO dispatch) {
+        template.convertAndSend("/topic/simulation/" + simulationId + "/dispatch", dispatch);
     }
 
     // Push reroute notification to frontend

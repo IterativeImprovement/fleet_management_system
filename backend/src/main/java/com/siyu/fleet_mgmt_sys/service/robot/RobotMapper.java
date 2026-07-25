@@ -28,6 +28,7 @@ public class RobotMapper {
         dto.setBaseLongitude(robot.getBaseLongitude());
         dto.setLatitude(robot.getLatitude());
         dto.setLongitude(robot.getLongitude());
+        dto.setSimulationId(robot.getSimulationId());
 
         if (robot.getCurrentCluster() != null) {
             dto.setCurrentClusterId(robot.getCurrentCluster().getId());

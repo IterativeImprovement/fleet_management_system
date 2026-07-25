@@ -22,6 +22,10 @@ public interface TaskRepository extends JpaRepository<Task, Long>, JpaSpecificat
 
     List<Task> findBySimulationIdNotNull();
 
+    // Pending pool for backend-authoritative allocation (sim vs live)
+    List<Task> findByStatusAndSimulationId(TaskStatus status, Long simulationId);
+    List<Task> findByStatusAndSimulationIdIsNull(TaskStatus status);
+
     @Modifying
     @Query(value = "DELETE FROM task_dependencies WHERE dependency_id IN :taskIds", nativeQuery = true)
     void deleteInverseTaskDependencies(@Param("taskIds") List<Long> taskIds);

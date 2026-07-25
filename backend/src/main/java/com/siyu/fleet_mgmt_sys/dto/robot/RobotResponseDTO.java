@@ -26,4 +26,5 @@ public class RobotResponseDTO {
     private double longitude;
     private List<Long> taskIds;
     private Long currentClusterId;
+    private Long simulationId;
 }
