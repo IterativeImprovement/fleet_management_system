@@ -240,6 +240,8 @@ export function useSimulationPlayback({
 
   async function handleRobotMalfunction(event) {
     const robotId = event.robotId
+    const targetRobot = simRobotsRef.current.find(r => r.id === robotId)
+    const robotName = event.robotName || (targetRobot ? targetRobot.name : `ID-${robotId}`)
     const movement = robotMovementsRef.current.get(robotId)
 
     // Compute current position from the movement trajectory before stopping it
@@ -270,7 +272,7 @@ export function useSimulationPlayback({
       }
     }
 
-    addAlert('Malfunction', `Robot ${robotId} malfunctioned and dropped its task`)
+    addAlert('Malfunction', `Robot ${robotName} malfunctioned and dropped its task`)
 
     // Refetch to sync UI state
     onRefetchAll()
@@ -286,16 +288,15 @@ export function useSimulationPlayback({
       const road = await getRoad(roadId)
 
       // add map obstacle at the midpoint of the road segment
+      const roadName = road.name || `Road ${roadId}`
       const midLat = (road.startLat + road.endLat) / 2
       const midLon = (road.startLon + road.endLon) / 2
-      const label = road.roadName || `Road ${roadId}`
-
       setSimObstacles(prev => [
         ...prev,
         { id: `obs-${roadId}-${simTimeRef.current}`, latitude: midLat, longitude: midLon, label },
       ])
 
-      addAlert('Obstruction', `Road blocked: ${label}`)
+      addAlert('Obstruction', `Road blocked: ${roadName}`)
     } catch (err) {
       console.error('[Sim] Obstruction handling error:', err)
       addAlert('Obstruction', `Road ${roadId} blocked`)
@@ -438,7 +439,7 @@ export function useSimulationPlayback({
       // Fetch the seeded robots so we know which ones we can assign tasks to
       try {
         const robots = await getRobots()
-        simRobotsRef.current = robots.map(r => ({ id: r.id, type: r.type }))
+        simRobotsRef.current = robots.map(r => ({ id: r.id, type: r.type, name: r.name }))
         console.log(`[Sim] ${simRobotsRef.current.length} robots available for assignment`)
       } catch (err) {
         console.error('[Sim] Failed to load robots for assignment:', err)

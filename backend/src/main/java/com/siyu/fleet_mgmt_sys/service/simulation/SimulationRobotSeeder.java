@@ -11,10 +11,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -80,5 +78,10 @@ public class SimulationRobotSeeder {
             case LARGE -> new LargeRobot(name);
             default -> throw new IllegalArgumentException("Unsupported robot type: " + type);
         };
+    }
+
+    public Map<Long, String> getRobotNames(List<Long> robotIds) {
+        return robotRepository.findAllById(robotIds).stream()
+                .collect(Collectors.toMap(Robot::getId, Robot::getName));
     }
 }

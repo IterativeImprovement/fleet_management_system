@@ -36,6 +36,8 @@ public class SimulationMapper {
                 .dependencyEventIds(event.getDependencyEventIds())
                 .robotId(event.getRobotId())
                 .linkId(event.getRoadSegmentId())
+                .robotName(event.getRobotName())
+                .linkName(event.getRoadSegmentName())
                 .build();
     }
 }

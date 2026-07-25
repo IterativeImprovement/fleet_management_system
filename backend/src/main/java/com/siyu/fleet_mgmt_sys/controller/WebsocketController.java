@@ -1,6 +1,5 @@
 package com.siyu.fleet_mgmt_sys.controller;
 
-import com.siyu.fleet_mgmt_sys.dto.robot.RobotResponseDTO;
 import com.siyu.fleet_mgmt_sys.dto.simulation.SimulationConfig;
 import com.siyu.fleet_mgmt_sys.dto.websocket.ObstructionEventDTO;
 import com.siyu.fleet_mgmt_sys.dto.websocket.RobotLocationNStatusDTO;
@@ -11,7 +10,6 @@ import com.siyu.fleet_mgmt_sys.service.RobotBreakdownService;
 import com.siyu.fleet_mgmt_sys.service.graph.RouteGraphService;
 import com.siyu.fleet_mgmt_sys.service.route.RouteObstructionService;
 import com.siyu.fleet_mgmt_sys.service.simulation.SimulationEngine;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.stereotype.Controller;
@@ -49,14 +47,6 @@ public class WebsocketController {
     @MessageMapping("/robot/{robotId}/breakdown")
     public void handleRobotBreakdown(Long robotId) {
         robotBreakdownService.handleRobotBreakdown(robotId);
-    }
-
-    @MessageMapping("/robot/{robotId}/update")
-    public void updateRobotPosition(RobotLocationNStatusDTO dto) {
-        Robot robot = robotRepository.findById(Long.parseLong(dto.getRobotId()))
-                .orElseThrow(() -> new RobotNotFoundException(Long.parseLong(dto.getRobotId())));
-        robot.setPosition(dto.getLat(), dto.getLng());
-        robotRepository.save(robot);
     }
 
 

@@ -47,6 +47,8 @@ public class Task {
     private LocalDateTime startDateTime;
     private LocalDateTime completionDateTime;
 
+    private Double taskDuration;
+
     @ElementCollection
     @MapKeyEnumerated(EnumType.STRING)
     @JsonIgnore

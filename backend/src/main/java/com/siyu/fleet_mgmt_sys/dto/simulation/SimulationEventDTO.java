@@ -22,12 +22,16 @@ public class SimulationEventDTO {
     private String taskType;
     private Long startWaypointId;
     private Long endWaypointId;
+    private String startLocationName;
+    private String endLocationName;
     private double completionDeadline;
     private List<Long> dependencyEventIds;
 
     // ROBOT_MALFUNCTION
     private Long robotId;
+    private String robotName;
 
     // ROUTE_OBSTRUCTION
     private Long linkId;
+    private String linkName;
 }

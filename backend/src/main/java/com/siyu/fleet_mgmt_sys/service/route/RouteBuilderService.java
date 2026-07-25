@@ -63,12 +63,12 @@ public class RouteBuilderService {
         ProjectionResult startProjection = projectOntoNearestEdge(startLat, startLon);
         ProjectionResult endProjection   = projectOntoNearestEdge(endLat, endLon);
 
-        RouteBuilderService.log.info("Start projected onto: {} ({}m away)",
-                startProjection.edge().getRoadName(),
-                String.format("%.1f", startProjection.distanceMetres()));
-        RouteBuilderService.log.info("End projected onto: {} ({}m away)",
-                endProjection.edge().getRoadName(),
-                String.format("%.1f", endProjection.distanceMetres()));
+//        RouteBuilderService.log.info("Start projected onto: {} ({}m away)",
+//                startProjection.edge().getRoadName(),
+//                String.format("%.1f", startProjection.distanceMetres()));
+//        RouteBuilderService.log.info("End projected onto: {} ({}m away)",
+//                endProjection.edge().getRoadName(),
+//                String.format("%.1f", endProjection.distanceMetres()));
 
         // Step 3: Create temporary nodes at projection points. These nodes are unique for this query.
         /* Example: You want to travel from NUS to Harbourfront MRT station.
@@ -271,7 +271,6 @@ public class RouteBuilderService {
                 double roadSpeedMs = SpeedBandUtils.toMetresPerSecond(edge.getCurrentSpeedBand());
 
                 double effectiveSpeedMs = Math.min(robotSpeedMs, roadSpeedMs);
-                log.info("Robot has speed {} on road {}", effectiveSpeedMs, edge.getRoadName());
                 return edge.getLengthMetres() / effectiveSpeedMs;
             }).sum();
 

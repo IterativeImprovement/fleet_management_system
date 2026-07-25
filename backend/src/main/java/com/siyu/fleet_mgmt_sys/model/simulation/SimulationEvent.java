@@ -32,14 +32,20 @@ public class SimulationEvent {
     private TaskType taskType;
     private Long startWaypointId;
     private Long endWaypointId;
+    private String startWaypointName;
+    private String endWaypointName;
 
     // ROBOT_MALFUNCTION only
     private Long robotId;
+    private String robotName;
 
     // ROUTE_OBSTRUCTION only
     private Long roadSegmentId; // this is based on LTA's definition and id of a road
+    private String roadSegmentName;
 
     private List<Long> dependencyEventIds = new ArrayList<>();
     private double completionDeadline;
 
+    public void setRoadS(String unknownRoad) {
+    }
 }
