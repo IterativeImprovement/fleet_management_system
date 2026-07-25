@@ -29,7 +29,7 @@ public class GraphUpdateService {
      * Runs every 5 minutes.
      * Fetches latest speed bands, updates DB and in-memory graph.
      */
-    @Scheduled(initialDelay = 60_000, fixedDelay = 300_000) // updates a minute after initial load, then updates every 5 min
+    @Scheduled(initialDelay = 60_000, fixedDelay = 6_000_000) // updates every hour
     @Transactional
     @ConditionalOnProperty(name = "lta.sync.enabled", havingValue = "true", matchIfMissing = true)
     public void update() {

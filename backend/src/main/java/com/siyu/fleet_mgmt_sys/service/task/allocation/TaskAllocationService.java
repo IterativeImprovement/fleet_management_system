@@ -73,4 +73,5 @@ public class TaskAllocationService {
         taskRepository.save(task);
         robotRepository.save(robot);
     }
+
 }

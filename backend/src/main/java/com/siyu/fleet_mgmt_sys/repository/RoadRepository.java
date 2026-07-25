@@ -12,4 +12,7 @@ public interface RoadRepository extends JpaRepository<Road, String>  {
 
     @Query("SELECT r FROM Road r LEFT JOIN FETCH r.roadSpeedBand")
     List<Road> findAllWithSpeedBands();
+
+    @Query("SELECT r.id, r.roadName FROM Road r")
+    List<Object[]> findAllIdAndName();
 }

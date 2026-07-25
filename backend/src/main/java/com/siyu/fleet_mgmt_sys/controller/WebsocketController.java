@@ -45,7 +45,7 @@ public class WebsocketController {
     }
 
     @MessageMapping("/robot/{robotId}/breakdown")
-    public void handleRobotBreakdown(@DestinationVariable Long robotId) {
+    public void handleRobotBreakdown(Long robotId) {
         robotBreakdownService.handleRobotBreakdown(robotId);
     }
 

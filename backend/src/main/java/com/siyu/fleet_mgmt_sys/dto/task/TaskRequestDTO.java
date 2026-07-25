@@ -1,5 +1,6 @@
 package com.siyu.fleet_mgmt_sys.dto.task;
 
+import jakarta.persistence.MappedSuperclass;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -7,6 +8,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+@MappedSuperclass
 @Data
 @NoArgsConstructor
 public class TaskRequestDTO {
@@ -22,6 +24,7 @@ public class TaskRequestDTO {
     private String startWayPointStr;  // "1.3081,103.8551"
     private String endWayPointStr;    // "1.2739,103.8012"
     private List<Long> dependencyIds = new ArrayList<>();
+    private Double taskDuration;
 
     private Long simulationId;
 }

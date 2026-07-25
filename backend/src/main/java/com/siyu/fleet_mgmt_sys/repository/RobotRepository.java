@@ -8,12 +8,14 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface RobotRepository extends JpaRepository<Robot, Long>, JpaSpecificationExecutor<Robot> {
     @Query("SELECT r.id FROM Robot r")
     List<Long> findAllIds();
 
+    Optional<Robot> findByName(String name);
     @Query("SELECT r.id FROM Robot r WHERE r.simulated = true")
     List<Long> findAllSimulationIds();
 

@@ -80,23 +80,34 @@ public class OneMapService {
     }
 
     private List<Location> fetchAllLocations(List<String> queryNames) {
-        ExecutorService executor = Executors.newFixedThreadPool(BATCH_SIZE);
-        List<Location> allLocations = Collections.synchronizedList(new ArrayList<>());
-        Set<String> seenNames = Collections.synchronizedSet(new HashSet<>());
+        List<Location> allLocations = new ArrayList<>();
+        Set<String> seenNames = new HashSet<>();
 
-        List<CompletableFuture<Void>> futures = queryNames.stream()
-                .map(queryName -> CompletableFuture.runAsync(() -> {
-                    List<Location> locations = fetchLocationsForTheme(queryName);
-                    for (Location loc : locations) {
-                        if (seenNames.add(loc.getName())) {
-                            allLocations.add(loc);
-                        }
-                    }
-                }, executor))
-                .toList();
+        log.info("Fetching locations sequentially to respect OneMap API rate limits...");
 
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        executor.shutdown();
+        for (int i = 0; i < queryNames.size(); i++) {
+            String queryName = queryNames.get(i);
+            List<Location> locations = fetchLocationsForTheme(queryName);
+
+            for (Location loc : locations) {
+                if (seenNames.add(loc.getName())) {
+                    allLocations.add(loc);
+                }
+            }
+
+            if ((i + 1) % 20 == 0) {
+                log.info("Fetched {} / {} themes...", i + 1, queryNames.size());
+            }
+
+            // Throttle to ~5 requests per second to prevent 429 Too Many Requests
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.error("Thread interrupted during OneMap location fetch", e);
+                break; // Exit loop early if the thread is killed
+            }
+        }
 
         return allLocations;
     }

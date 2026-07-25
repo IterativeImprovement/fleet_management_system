@@ -7,5 +7,6 @@ public enum RobotStatus {
     MOVING_TO_MAINTENANCE,
     CHARGING,
     NEED_MAINTENANCE,
+    UNDER_MAINTENANCE,
     ERROR
 }

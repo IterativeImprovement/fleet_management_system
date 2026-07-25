@@ -1,6 +1,7 @@
 package com.siyu.fleet_mgmt_sys.service;
 
 import com.siyu.fleet_mgmt_sys.model.Route;
+import com.siyu.fleet_mgmt_sys.model.enums.RobotStatus;
 import com.siyu.fleet_mgmt_sys.model.simulation.SimulationEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -33,5 +34,13 @@ public class WebsocketPublisherService {
 
     public void publishRerouteFailed(Long robotId, String linkId) {
         template.convertAndSend("/topic/robot/" + robotId + "/reroute/failed", linkId);
+    }
+
+    public void publishRobotStatus(Long robotId, RobotStatus status) {
+        template.convertAndSend("/topic/robot/" + robotId + "/status", status);
+    }
+
+    public void publishRepairComplete(Long robotId) {
+        template.convertAndSend("/topic/robot/" + robotId + "/repair/complete", robotId);
     }
 }

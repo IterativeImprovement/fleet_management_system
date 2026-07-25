@@ -35,4 +35,7 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
     List<Location> findAllBySource(LocationSource source);
 
     long countBySource(LocationSource source);
+
+    @Query("SELECT l.id, l.name FROM Location l WHERE l.source = :source")
+    List<Object[]> findIdAndNameBySource(@Param("source") LocationSource source);
 }

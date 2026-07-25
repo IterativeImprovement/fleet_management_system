@@ -55,10 +55,30 @@ public class SimulationEngine {
 
         // Step 3: Fetch location and roads from DB
         List<Long> locationIds = locationRepository.findAllIdsBySource(LocationSource.ONEMAP);
-        List<String> roadIds = roadRepository.findAllIds();
+        List<Long> roadIds = roadRepository.findAllIds();
 
         log.info("Simulation reference data: locations={}, robots={}, roadSegments={}",
                 locationIds.size(), robotIds.size(), roadIds.size());
+
+        // Fetch names
+
+        Map<Long, String> locationNames = new HashMap<>();
+        locationRepository.findIdAndNameBySource(LocationSource.ONEMAP)
+                .forEach(row -> locationNames.put(
+                        Long.parseLong(String.valueOf(row[0])),
+                        String.valueOf(row[1])
+                ));
+
+        Map<String, String> roadNames = new HashMap<>();
+        roadRepository.findAllIdAndName()
+                .forEach(row -> roadNames.put(
+                        String.valueOf(row[0]),
+                        String.valueOf(row[1])
+                ));
+
+        Map<Long, String> robotNames = new HashMap<>();
+        simulationRobotSeeder.getRobotNames(robotIds)
+                .forEach((id, name) -> robotNames.put(id, name));
 
         // Error logs
         if (locationIds.isEmpty()) {
@@ -78,19 +98,19 @@ public class SimulationEngine {
         Random obstructionRng = new Random(config.getSeed() ^ 0xCCCC_CCCCL);
 
         // Step 5: Generate events
-        List<SimulationEvent> taskEvents = generateTaskEvents(config, taskRng, locationIds);
+        List<SimulationEvent> taskEvents = generateTaskEvents(config, taskRng, locationIds, locationNames);
         log.info("Generated {} task events", taskEvents.size());
 
         List<SimulationEvent> allEvents = new ArrayList<>(taskEvents);
 
         if (!robotIds.isEmpty()) {
-            List<SimulationEvent> malfunctionEvents = generateMalfunctionEvents(config, malfunctionRng, robotIds);
+            List<SimulationEvent> malfunctionEvents = generateMalfunctionEvents(config, malfunctionRng, robotIds, robotNames);
             log.info("Generated {} malfunction events", malfunctionEvents.size());
             allEvents.addAll(malfunctionEvents);
         }
 
         if (!roadIds.isEmpty()) {
-            List<SimulationEvent> obstructionEvents = generateObstructionEvents(config, obstructionRng, roadIds);
+            List<SimulationEvent> obstructionEvents = generateObstructionEvents(config, obstructionRng, roadIds, roadNames);
             log.info("Generated {} obstruction events", obstructionEvents.size());
             allEvents.addAll(obstructionEvents);
         }
@@ -113,7 +133,7 @@ public class SimulationEngine {
                 .build();
     }
 
-    private List<SimulationEvent> generateTaskEvents(SimulationConfig config, Random rng, List<Long> waypointIds) {
+    private List<SimulationEvent> generateTaskEvents(SimulationConfig config, Random rng, List<Long> waypointIds, Map<Long, String> locationNames) {
         List<SimulationEvent> events = new ArrayList<>();
         Map<Integer, List<Integer>> dependencyIndices = new HashMap<>();
 
@@ -173,6 +193,8 @@ public class SimulationEngine {
             event.setEndWaypointId(end);
             event.setCompletionDeadline(completionDeadline);
             event.setDependencyEventIds(new ArrayList<>());
+            event.setStartWaypointName(locationNames.getOrDefault(start, "Unknown Location"));
+            event.setEndWaypointName(locationNames.getOrDefault(end, "Unknown Location"));
 
             events.add(event);
             counter++;
@@ -190,7 +212,7 @@ public class SimulationEngine {
         return events;
     }
 
-    private List<SimulationEvent> generateMalfunctionEvents(SimulationConfig config, Random rng, List<Long> robotIds) {
+    private List<SimulationEvent> generateMalfunctionEvents(SimulationConfig config, Random rng, List<Long> robotIds, Map<Long, String> robotNames) {
         List<SimulationEvent> events = new ArrayList<>();
 
         for (Long robotId : robotIds) {
@@ -204,6 +226,7 @@ public class SimulationEngine {
                 event.setEventType(SimulationEventType.ROBOT_MALFUNCTION);
                 event.setSimTime(t);
                 event.setRobotId(robotId);
+                event.setRobotName(robotNames.getOrDefault(robotId, "Unknown Robot"));
 
                 events.add(event);
             }
@@ -212,7 +235,7 @@ public class SimulationEngine {
         return events;
     }
 
-    private List<SimulationEvent> generateObstructionEvents(SimulationConfig config, Random rng, List<String> roadSegmentIds) {
+    private List<SimulationEvent> generateObstructionEvents(SimulationConfig config, Random rng, List<Long> roadSegmentIds, Map<String, String> roadNames) {
         List<SimulationEvent> events = new ArrayList<>();
         double t = 0;
 
@@ -224,6 +247,9 @@ public class SimulationEngine {
             event.setEventType(SimulationEventType.ROUTE_OBSTRUCTION);
             event.setSimTime(t);
             event.setRoadSegmentId(pickOne(roadSegmentIds, rng));
+            Long roadId = pickOne(roadSegmentIds, rng);
+            event.setRoadSegmentId(roadId);
+            event.setRoadSegmentName(roadNames.getOrDefault(roadId, "Unknown Road"));
 
             events.add(event);
         }
