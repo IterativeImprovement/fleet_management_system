@@ -220,8 +220,6 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
       trimmedQuery.length < MIN_LOCATION_QUERY_LENGTH ||
       selectedStartLocation?.name === trimmedQuery
     ) {
-      setStartLocationResults([])
-      setIsSearchingStart(false)
       return
     }
 
@@ -260,8 +258,6 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
       trimmedQuery.length < MIN_LOCATION_QUERY_LENGTH ||
       selectedEndLocation?.name === trimmedQuery
     ) {
-      setEndLocationResults([])
-      setIsSearchingEnd(false)
       return
     }
 
@@ -346,7 +342,10 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
       )
 
       if (!shouldRename) {
-        throw new Error(`${label} custom location already exists as "${existingName}"`)
+        throw new Error(
+          `${label} custom location already exists as "${existingName}"`,
+          { cause: locationError }
+        )
       }
 
       return createCustomLocation(location, { confirmRename: true })
@@ -360,6 +359,7 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
       setSelectedStartLocation(savedLocation)
       setStartLocationQuery(savedLocation.name)
       setStartLocationResults([])
+      setIsSearchingStart(false)
     } catch (selectError) {
       setError(selectError.message || 'Failed to save selected start location')
     }
@@ -372,6 +372,7 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
       setSelectedEndLocation(savedLocation)
       setEndLocationQuery(savedLocation.name)
       setEndLocationResults([])
+      setIsSearchingEnd(false)
     } catch (selectError) {
       setError(selectError.message || 'Failed to save selected end location')
     }
@@ -432,6 +433,8 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
     setEndLocationQuery('')
     setStartLocationResults([])
     setEndLocationResults([])
+    setIsSearchingStart(false)
+    setIsSearchingEnd(false)
     setSelectedStartLocation(null)
     setSelectedEndLocation(null)
     setIsCustomStartLocation(false)
@@ -624,6 +627,8 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
         onQueryChange={value => {
           setStartLocationQuery(value)
           setSelectedStartLocation(null)
+          setStartLocationResults([])
+          setIsSearchingStart(false)
           setError('')
         }}
         selectedLocation={selectedStartLocation}
@@ -634,6 +639,7 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
         isCustom={isCustomStartLocation}
         onCustomChange={checked => {
           setIsCustomStartLocation(checked)
+          setIsSearchingStart(false)
           if (checked) {
             setSelectedStartLocation(null)
             setStartLocationResults([])
@@ -663,6 +669,8 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
         onQueryChange={value => {
           setEndLocationQuery(value)
           setSelectedEndLocation(null)
+          setEndLocationResults([])
+          setIsSearchingEnd(false)
           setError('')
         }}
         selectedLocation={selectedEndLocation}
@@ -673,6 +681,7 @@ function AddTaskForm({ tasks = [], onAddTask, onCancel }) {
         isCustom={isCustomEndLocation}
         onCustomChange={checked => {
           setIsCustomEndLocation(checked)
+          setIsSearchingEnd(false)
           if (checked) {
             setSelectedEndLocation(null)
             setEndLocationResults([])
