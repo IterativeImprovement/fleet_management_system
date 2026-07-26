@@ -86,10 +86,6 @@ public class RouteService {
     }
 
     public List<ColoredSegmentDTO> getColoredRoute(String start, String end) {
-        // FIX: this used to call OneMap with no fallback at all — an expired/invalid OneMap API
-        // key (401, as seen in practice) took down the entire "colored route" UI feature with a raw
-        // 500, even though we already have our own graph with per-edge speed bands (refreshed from
-        // LTA every 5 minutes) that can answer the same question without OneMap at all.
         try {
             return getColoredRouteViaOneMap(start, end);
         } catch (Exception e) {

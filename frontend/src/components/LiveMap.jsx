@@ -51,10 +51,6 @@ const REPAIR_ICON = L.divIcon({
   tooltipAnchor: [0, -36],
 })
 
-// Small, fixed-size badge for a blocked road — centered on the point rather than pin-anchored
-// like BASE_ICON/REPAIR_ICON, since it marks a spot along a line rather than a location robots
-// travel to. Deliberately compact: the road name goes in a hover-only tooltip (bound where this
-// is used), not baked into the icon itself — see the obstacle-drawing effect below.
 const OBSTRUCTION_ICON = L.divIcon({
   className: 'map-obstacle-div-icon',
   html: `
@@ -311,12 +307,6 @@ function LiveMap({
         selectedBounds = routeLine.getBounds()
       }
     }
-
-    // FIX: this used to draw every task ever fetched — including long-completed ones — as a grey
-    // background line along its static start→end route, regardless of whether any robot was
-    // actually on it (a robot still approaching a task's start isn't on that route at all yet).
-    // Draw each robot's actual current dispatch leg instead: it's inherently ephemeral, so a
-    // segment disappears the moment that robot finishes it rather than lingering forever.
     Object.values(currentRoutesByRobotId || {}).forEach(route => {
       if (!route.coordinates || route.coordinates.length < 2) return
       if (route.taskId != null && String(route.taskId) === String(selectedTaskId)) return // already highlighted above
@@ -352,11 +342,6 @@ function LiveMap({
     }
   }, [routesByTaskId, currentRoutesByRobotId, selectedTaskId, coloredSegmentsByTaskId, onSelectTask])
 
-  // FIX: a selected robot with no route to draw (idle, moving to base, awaiting maintenance, or a
-  // route that hasn't loaded yet) never got any camera attention at all — the effect above only
-  // acts when routesByTaskId has an entry for selectedTaskId. This keeps panning the map to the
-  // robot's own live position for as long as it stays selected and has no route framing the view,
-  // so it visibly follows the robot instead of leaving the camera stuck wherever it last was.
   useEffect(() => {
     if (!mapRef.current || !selectedRobotId) return
 

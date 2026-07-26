@@ -180,11 +180,6 @@ public class DispatchService {
         DispatchDTO leg = legFromRoute(robot, task, DispatchPhase.EXECUTE_TASK, task.getRoute(), task.getEndWayPoint());
         publish(leg);
 
-        // FIX: this is the actual "towing" segment of a breakdown task (robot B carrying robot A
-        // from A's breakdown position to the repair site). Nothing previously moved A during this —
-        // it sat frozen at its breakdown position for the whole leg and only teleported to the
-        // repair location once the task completed. DispatchPhase.BEING_TOWED already existed for
-        // exactly this but had no caller anywhere. Mirror B's leg onto A so both animate together.
         if (task.getTargetRobotId() != null && !leg.isBlocked()) {
             publishTowShadow(robot, task, leg);
         }

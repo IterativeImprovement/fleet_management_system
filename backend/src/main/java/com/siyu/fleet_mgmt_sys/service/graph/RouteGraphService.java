@@ -40,7 +40,7 @@ public class RouteGraphService {
     @Getter
     private volatile Map<Long, CopyOnWriteArrayList<GraphEdge>> adjacency = new ConcurrentHashMap<>();
 
-    private volatile Map<String, CopyOnWriteArrayList<GraphEdge>> edgesByLinkId = new ConcurrentHashMap<>();
+    private volatile Map<String, List<Long>> fromNodeIdsByLinkId = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void load() {
@@ -64,7 +64,7 @@ public class RouteGraphService {
         }
 
         Map<Long, CopyOnWriteArrayList<GraphEdge>> newAdjacency = new ConcurrentHashMap<>();
-        Map<String, CopyOnWriteArrayList<GraphEdge>> newEdgesByLinkId = new ConcurrentHashMap<>();
+        Map<String, List<Long>> newFromNodeIdsByLinkId = new ConcurrentHashMap<>();
 
         for (GraphEdge edge : allEdges) {
             newAdjacency
@@ -72,52 +72,61 @@ public class RouteGraphService {
                     .add(edge);
 
             if (edge.getLinkId() != null) {
-                newEdgesByLinkId
-                        .computeIfAbsent(edge.getLinkId(), k -> new CopyOnWriteArrayList<>())
-                        .add(edge);
+                List<Long> fromNodeIds = newFromNodeIdsByLinkId
+                        .computeIfAbsent(edge.getLinkId(), k -> new ArrayList<>());
+                if (!fromNodeIds.contains(edge.getFromNode().getId())) {
+                    fromNodeIds.add(edge.getFromNode().getId());
+                }
             }
         }
 
         // Atomic hot swap — readers always see a fully built graph
         this.nodes = newNodes;
         this.adjacency = newAdjacency;
-        this.edgesByLinkId = newEdgesByLinkId;
+        this.fromNodeIdsByLinkId = newFromNodeIdsByLinkId;
 
         log.info("Graph loaded: {} nodes, {} edges", nodes.size(), allEdges.size());
     }
 
     /**
-     * Updates speed band for all edges with the given linkId.
-     * Replaces each edge reference with a new immutable instance —
-     * no routing thread can observe a partially updated edge.
+     * Updates speed band for all edges with the given linkId, by rewriting them in place inside
+     * whichever `adjacency` lists actually hold them — see the FIX comment on fromNodeIdsByLinkId
+     * for why this must mutate the SAME lists A* reads rather than a separate copy.
      */
     public void updateSpeedBand(String linkId, int newSpeedBand) {
-        CopyOnWriteArrayList<GraphEdge> edges = edgesByLinkId.get(linkId);
-        if (edges == null) return;
+        List<Long> fromNodeIds = fromNodeIdsByLinkId.get(linkId);
+        if (fromNodeIds == null) return;
 
         double speedMs = SpeedBandUtils.toMetresPerSecond(newSpeedBand);
 
-        // Replace each edge with a fresh instance — atomic from reader's perspective
-        // (roadName must be carried over — dropping it here reverts road names to "Unknown Road"
-        // on every 5-minute traffic refresh, since GraphUpdateService calls this on a schedule)
-        edges.replaceAll(edge -> GraphEdge.builder()
-                .id(edge.getId())
-                .fromNode(edge.getFromNode())
-                .toNode(edge.getToNode())
-                .linkId(edge.getLinkId())
-                .roadName(edge.getRoadName())
-                .lengthMetres(edge.getLengthMetres())
-                .currentSpeedBand(newSpeedBand)
-                .travelTimeSeconds(edge.getLengthMetres() / speedMs)
-                .build());
+        for (Long fromNodeId : fromNodeIds) {
+            CopyOnWriteArrayList<GraphEdge> edges = adjacency.get(fromNodeId);
+            if (edges == null) continue;
+
+            // Replace each edge with a fresh instance — atomic from reader's perspective
+            // (roadName must be carried over — dropping it here reverts road names to "Unknown Road"
+            // on every 5-minute traffic refresh, since GraphUpdateService calls this on a schedule).
+            // This adjacency list may hold edges for OTHER roads too (several roads can share a
+            // junction node), so only rewrite the ones matching this linkId.
+            edges.replaceAll(edge -> {
+                if (!linkId.equals(edge.getLinkId())) return edge;
+                return GraphEdge.builder()
+                        .id(edge.getId())
+                        .fromNode(edge.getFromNode())
+                        .toNode(edge.getToNode())
+                        .linkId(edge.getLinkId())
+                        .roadName(edge.getRoadName())
+                        .lengthMetres(edge.getLengthMetres())
+                        .currentSpeedBand(newSpeedBand)
+                        .travelTimeSeconds(edge.getLengthMetres() / speedMs)
+                        .build();
+            });
+        }
     }
 
     public Integer getSpeedBand(String linkId) {
-        CopyOnWriteArrayList<GraphEdge> edges = edgesByLinkId.get(linkId);
-        if (edges != null && !edges.isEmpty()) {
-            return edges.get(0).getCurrentSpeedBand();
-        }
-        return null;
+        GraphEdge edge = firstEdgeForLinkId(linkId);
+        return edge != null ? edge.getCurrentSpeedBand() : null;
     }
 
     public List<GraphEdge> getEdgesFrom(Long nodeId) {
@@ -147,8 +156,31 @@ public class RouteGraphService {
      * on the frontend instead of just a straight line between its two original endpoints.
      */
     public List<GraphEdge> getEdgesByLinkId(String linkId) {
-        CopyOnWriteArrayList<GraphEdge> edges = edgesByLinkId.get(linkId);
-        return edges != null ? new ArrayList<>(edges) : List.of();
+        List<Long> fromNodeIds = fromNodeIdsByLinkId.get(linkId);
+        if (fromNodeIds == null) return List.of();
+
+        List<GraphEdge> result = new ArrayList<>();
+        for (Long fromNodeId : fromNodeIds) {
+            CopyOnWriteArrayList<GraphEdge> edges = adjacency.get(fromNodeId);
+            if (edges == null) continue;
+            for (GraphEdge edge : edges) {
+                if (linkId.equals(edge.getLinkId())) result.add(edge);
+            }
+        }
+        return result;
+    }
+
+    private GraphEdge firstEdgeForLinkId(String linkId) {
+        List<Long> fromNodeIds = fromNodeIdsByLinkId.get(linkId);
+        if (fromNodeIds == null) return null;
+        for (Long fromNodeId : fromNodeIds) {
+            CopyOnWriteArrayList<GraphEdge> edges = adjacency.get(fromNodeId);
+            if (edges == null) continue;
+            for (GraphEdge edge : edges) {
+                if (linkId.equals(edge.getLinkId())) return edge;
+            }
+        }
+        return null;
     }
 
     /**
@@ -157,25 +189,33 @@ public class RouteGraphService {
      * Logs the obstruction for route audit trail.
      */
     public void obstructLink(String linkId) {
-        CopyOnWriteArrayList<GraphEdge> edges = edgesByLinkId.get(linkId);
-        if (edges == null) {
+        List<Long> fromNodeIds = fromNodeIdsByLinkId.get(linkId);
+        if (fromNodeIds == null) {
             log.warn("Obstruction event for unknown linkId: {}", linkId);
             return;
         }
 
-        edges.replaceAll(edge -> GraphEdge.builder()
-                .id(edge.getId())
-                .fromNode(edge.getFromNode())
-                .toNode(edge.getToNode())
-                .linkId(edge.getLinkId())
-                .roadName(edge.getRoadName())
-                .lengthMetres(edge.getLengthMetres())
-                .currentSpeedBand(0)       // 0 = obstructed — A* skips (effectiveSpeed <= 0)
-                .travelTimeSeconds(Double.MAX_VALUE)
-                .build());
+        for (Long fromNodeId : fromNodeIds) {
+            CopyOnWriteArrayList<GraphEdge> edges = adjacency.get(fromNodeId);
+            if (edges == null) continue;
+            edges.replaceAll(edge -> {
+                if (!linkId.equals(edge.getLinkId())) return edge;
+                return GraphEdge.builder()
+                        .id(edge.getId())
+                        .fromNode(edge.getFromNode())
+                        .toNode(edge.getToNode())
+                        .linkId(edge.getLinkId())
+                        .roadName(edge.getRoadName())
+                        .lengthMetres(edge.getLengthMetres())
+                        .currentSpeedBand(0)       // 0 = obstructed — A* skips (effectiveSpeed <= 0)
+                        .travelTimeSeconds(Double.MAX_VALUE)
+                        .build();
+            });
+        }
 
+        GraphEdge sample = firstEdgeForLinkId(linkId);
         log.warn("OBSTRUCTION: road {} ({}) marked as blocked",
-                edges.get(0).getRoadName(), linkId);
+                sample != null ? sample.getRoadName() : "unknown", linkId);
     }
 
     /**
@@ -183,10 +223,9 @@ public class RouteGraphService {
      */
     public void clearObstruction(String linkId, int restoredSpeedBand) {
         updateSpeedBand(linkId, restoredSpeedBand);
+        GraphEdge sample = firstEdgeForLinkId(linkId);
         log.info("OBSTRUCTION CLEARED: road {} ({}) restored to band {}",
-                edgesByLinkId.get(linkId) != null
-                        ? edgesByLinkId.get(linkId).get(0).getRoadName()
-                        : "unknown",
+                sample != null ? sample.getRoadName() : "unknown",
                 linkId, restoredSpeedBand);
     }
 }

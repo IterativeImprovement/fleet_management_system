@@ -178,20 +178,6 @@ public class RouteBuilderService {
         double[] nearestPoint    = null;
         double minDist           = Double.MAX_VALUE;
 
-        // FIX: track the nearest edge that can actually carry traffic (speedBand > 0)
-        // separately from the nearest edge overall. Snapping start/end onto an obstructed
-        // edge gives the temp node injected there (see injectTempNode) sub-edges that
-        // inherit that edge's speedBand of 0, which A* treats as impassable (effectiveSpeed
-        // <= 0 check). That leaves the temp node with no usable way in or out at all, so
-        // routing fails outright with "No route found between nodes -1 and -2" — this is
-        // not a graph-connectivity problem, it's this exact snap. It shows up most reliably
-        // via RouteObstructionService.rerouteRobot(), which builds a new route FROM THE
-        // ROBOT'S CURRENT POSITION right after obstructing the very road that robot is on,
-        // so the current position almost always snaps straight onto the just-blocked edge.
-        // It can equally hit a brand-new task if its start/end happens to land near a
-        // currently-obstructed road. Preferring a usable edge means routing instead finds a
-        // real path from a nearby passable road, which is what "reroute around the
-        // obstruction" is actually supposed to do.
         GraphEdge nearestUsableEdge = null;
         double[] nearestUsablePoint = null;
         double minUsableDist        = Double.MAX_VALUE;

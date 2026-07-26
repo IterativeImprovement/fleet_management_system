@@ -265,12 +265,6 @@ function App() {
 
     fetchSelectedColoredSegments()
   }, [selectedTaskId, routesByTaskId, tasks, useMockData, coloredSegmentsByTaskId])
-
-  // FIX: handleSelectRobot() only snapshotted the robot's task once, at click time. If that robot
-  // later finished the task and moved to a different one (or went idle), selectedTaskId kept
-  // pointing at the old, no-longer-relevant task forever — so the map kept showing a stale route
-  // instead of following the robot to wherever it actually is now. Keep selectedTaskId derived
-  // from the selected robot's current task for as long as a robot stays selected.
   useEffect(() => {
     if (!selectedRobotId) return
 

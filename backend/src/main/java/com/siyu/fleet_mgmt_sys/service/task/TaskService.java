@@ -55,10 +55,6 @@ public class TaskService {
         WayPoint start = resolvedStart.wayPoint();
         WayPoint end = resolvedEnd.wayPoint();
 
-        // FIX: used to hard-reject the whole task ("Waypoints not within Singapore bounds") — a
-        // point landing just outside the box (e.g. the simulation's random location generator
-        // overshooting slightly near the edge) killed task creation outright. Clamp into bounds
-        // instead so a marginal overshoot degrades gracefully rather than dropping the task.
         clampToSingapore(start);
         clampToSingapore(end);
 

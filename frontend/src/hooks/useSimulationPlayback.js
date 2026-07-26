@@ -56,11 +56,6 @@ export function useSimulationPlayback({
   const [simAlerts, setSimAlerts] = useState([])
   const [simObstacles, setSimObstacles] = useState([])
   const [robotPositionOverrides, setRobotPositionOverrides] = useState({})
-  // FIX: the map used to draw a grey line for every task's static start→end route regardless of
-  // whether a robot was actually on it, and never removed it once the task finished. This tracks
-  // each robot's actual CURRENT dispatch leg (TO_TASK_START / EXECUTE_TASK / TO_BASE /
-  // BEING_TOWED) instead — it's naturally ephemeral, updated on every new leg and cleared the
-  // moment that leg completes, so the map only ever shows what robots are doing right now.
   const [robotRoutesById, setRobotRoutesById] = useState({})
   const [simulationId, setSimulationId] = useState(null)
   const [activeBasePosition, setActiveBasePosition] = useState(null)
@@ -255,9 +250,6 @@ export function useSimulationPlayback({
       return // hold position
     }
 
-    // FIX: allocation never surfaced anywhere in the UI — TO_TASK_START is only ever pushed right
-    // after TaskAllocationService assigns a robot to a task (reroutes/diversions use a different,
-    // currently-unused topic), so it's a reliable "just got allocated" signal.
     if (dispatch.phase === 'TO_TASK_START' && dispatch.taskId != null) {
       addAlert('Assignment', `Robot ${robotId} assigned to task #${dispatch.taskId}`)
     }
@@ -388,17 +380,6 @@ export function useSimulationPlayback({
 
     // Stop the robot's current movement.
     robotMovementsRef.current.delete(robotId)
-    // FIX: this used to latch the revision to Number.MAX_SAFE_INTEGER to block any further
-    // dispatch for this robot — but that's wrong now that towing exists. RobotBreakdownService
-    // calls dispatchService.cancelDispatch(robotId) on the backend, which removes this robot's
-    // dispatch map entry entirely, so the NEXT dispatch published for it (the BEING_TOWED shadow
-    // leg mirrored from its tow robot, see DispatchService.publishTowShadow) restarts revision
-    // numbering at 1. Since 1 <= MAX_SAFE_INTEGER, that shadow leg was being silently rejected as
-    // "stale" — the broken robot never animated alongside its tow robot, sat frozen at the
-    // breakdown spot, and only jumped (teleported, with no interpolation) once a much later
-    // post-repair dispatch finally cleared a revision check. Deleting the entry instead mirrors
-    // the backend's own reset and the existing post-repair IDLE unlatch below, so the fresh
-    // revision-1 sequence is accepted and the tow actually animates.
     robotRevisionRef.current.delete(robotId)
     publishRobotBreakdown(robotId)
     addAlert('Malfunction', `Robot ${robotId} malfunctioned`)
@@ -416,11 +397,6 @@ export function useSimulationPlayback({
       const midLat = (road.startLat + road.endLat) / 2
       const midLon = (road.startLon + road.endLon) / 2
       const label = road.roadName || `Road ${roadId}`
-      // FIX: a road that crosses others is split into several sub-edges at those junctions, so its
-      // raw start/end line (still used below as the icon's placement + a fallback) doesn't cover
-      // the whole physical road. The backend now also returns every graph sub-edge sharing this
-      // linkId — draw all of them in red so the entire obstructed stretch is marked, not just a
-      // straight line between the road's two original endpoints.
       const segments = Array.isArray(road.segments) && road.segments.length > 0
         ? road.segments
         : [[[road.startLat, road.startLon], [road.endLat, road.endLon]]]

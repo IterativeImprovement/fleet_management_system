@@ -43,11 +43,6 @@ public class RobotBreakdownService {
                 .orElseThrow(() -> new RobotNotFoundException(robotId));
         Long simulationId = robot.getSimulationId();
 
-        // FIX: the simulated event schedule can fire more than one malfunction for the same robot
-        // (roughly 1 per robot per 14 sim-hours over a 3-day run means a robot can plausibly break
-        // down again before it's even repaired). Re-running the full breakdown flow on a robot
-        // that's already NEED_MAINTENANCE/UNDER_MAINTENANCE would cancel its in-progress tow/repair,
-        // reset its status, and spin up a second, redundant breakdown+tow task for no reason.
         if (robot.getStatus() == RobotStatus.NEED_MAINTENANCE
                 || robot.getStatus() == RobotStatus.UNDER_MAINTENANCE
                 || robot.getStatus() == RobotStatus.ERROR) {
