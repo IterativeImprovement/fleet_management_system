@@ -2,6 +2,7 @@ package com.siyu.fleet_mgmt_sys.controller;
 
 import com.siyu.fleet_mgmt_sys.dto.task.TaskRequestDTO;
 import com.siyu.fleet_mgmt_sys.dto.task.TaskResponseDTO;
+import com.siyu.fleet_mgmt_sys.service.dispatch.DispatchService;
 import com.siyu.fleet_mgmt_sys.service.task.TaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,10 +16,16 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TaskController {
     private final TaskService taskService;
+    private final DispatchService dispatchService;
 
     @PostMapping
     public ResponseEntity<TaskResponseDTO> createTask(@RequestBody TaskRequestDTO req) {
         TaskResponseDTO result = taskService.createTask(req);
+        // task committed → let the backend allocate it and push the dispatch (simulation only;
+        // live allocation/telemetry is a separate, out-of-scope concern)
+        if (req.getSimulationId() != null) {
+            dispatchService.allocateAndDispatch(req.getSimulationId());
+        }
         return ResponseEntity.created(URI.create("/task/" + result.getId()))
                 .body(result);
     }

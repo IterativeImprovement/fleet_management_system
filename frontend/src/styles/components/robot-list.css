@@ -45,6 +45,14 @@
   background-color: #22c55e;
 }
 
+.robot-dot.to-task-start {
+  background-color: #ec4899;
+}
+
+.robot-dot.returning-to-base {
+  background-color: #22c55e;
+}
+
 .robot-dot.assigned {
   background-color: #3b82f6;
 }
@@ -107,6 +115,16 @@
 }
 
 .robot-status-pill.moving {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.robot-status-pill.to-task-start {
+  background-color: #fce7f3;
+  color: #9d174d;
+}
+
+.robot-status-pill.returning-to-base {
   background-color: #dcfce7;
   color: #15803d;
 }

@@ -1,52 +1,34 @@
 import { useState, useRef, useCallback } from 'react'
 import { Client } from '@stomp/stompjs'
-import { generateSimulation, resetSimulationRun, getRoad } from '../api/simulationApi.js'
+import {
+  generateSimulation,
+  resetSimulationRun,
+  getRoad,
+  getDispatchSnapshot,
+  postDispatchArrival,
+} from '../api/simulationApi.js'
 import { normaliseTaskFromBackend } from '../api/taskApi.js'
 import { getRobots } from '../api/robotApi.js'
-import { decodePolyline } from '../utils/routeUtils.js'
+import { decodePolyline, interpolateAlongRoute } from '../utils/routeUtils.js'
+import { resolveSimulationBasePosition } from '../utils/simConfigCodec.js'
 
-// 3 simulated days sped up to be 2 mins 
+// 3 simulated days sped up to be 2 mins
 const SIM_DURATION_SECONDS = 259200
 const DEFAULT_REAL_DURATION_SECONDS = 120
 const DEFAULT_SPEED_FACTOR = SIM_DURATION_SECONDS / DEFAULT_REAL_DURATION_SECONDS
 
 const TICK_INTERVAL_MS = 100 // 10 ticks per real second
 const WS_PUSH_INTERVAL_MS = 500 // push robot position to backend twice per second
+const SETTLE_TICKS = 20 // ~2s of "nothing happening" before declaring the run complete
 
-// go through a list of [lat, lng] waypoints and returns the position at `progress` (0–1)
-function interpolateAlongRoute(coords, progress) {
-  if (!coords || coords.length === 0) return null
-  if (coords.length === 1) return { latitude: coords[0][0], longitude: coords[0][1] }
-  if (progress <= 0) return { latitude: coords[0][0], longitude: coords[0][1] }
-  if (progress >= 1) return { latitude: coords[coords.length - 1][0], longitude: coords[coords.length - 1][1] }
-
-  const segLengths = [] // lengths of segments between positions
-  let totalLength = 0 // total length of robot's journey
-  for (let i = 0; i < coords.length - 1; i++) {
-    const dLat = coords[i + 1][0] - coords[i][0]
-    const dLng = coords[i + 1][1] - coords[i][1]
-    const len = Math.sqrt(dLat * dLat + dLng * dLng)
-    segLengths.push(len)
-    totalLength += len
+// Backend dispatch phase → the status our UI colours by.
+function phaseToStatus(phase) {
+  switch (phase) {
+    case 'TO_TASK_START': return 'MOVING'          // magenta
+    case 'EXECUTE_TASK': return 'ASSIGNED'         // blue
+    case 'TO_BASE': return 'MOVING_TO_BASE'        // green
+    default: return 'IDLE'                         // grey
   }
-
-  const target = progress * totalLength
-  let accumulated = 0
-
-  // find the [lat, lng] after the robot has travelled target
-  for (let i = 0; i < segLengths.length; i++) {
-    if (accumulated + segLengths[i] >= target) {
-      const t = segLengths[i] === 0 ? 0 : (target - accumulated) / segLengths[i]
-      return {
-        latitude: coords[i][0] + t * (coords[i + 1][0] - coords[i][0]),
-        longitude: coords[i][1] + t * (coords[i + 1][1] - coords[i][1]),
-      }
-    }
-    accumulated += segLengths[i]
-  }
-
-  const last = coords[coords.length - 1]
-  return { latitude: last[0], longitude: last[1] }
 }
 
 // convert second to clock display
@@ -73,32 +55,36 @@ export function useSimulationPlayback({
   const [simObstacles, setSimObstacles] = useState([])
   const [robotPositionOverrides, setRobotPositionOverrides] = useState({})
   const [simulationId, setSimulationId] = useState(null)
+  const [activeBasePosition, setActiveBasePosition] = useState(null)
 
   // refs: values that change every tick but don't need to re-render
-  const eventsRef = useRef([]) // stores the script
-  const nextEventIndexRef = useRef(0) // stores the index of next event
-  const simTimeRef = useRef(0) // the sim clock time in second
+  const eventsRef = useRef([])
+  const nextEventIndexRef = useRef(0)
+  const simTimeRef = useRef(0)
   const speedFactorRef = useRef(DEFAULT_SPEED_FACTOR)
-  const simEpochRef = useRef(null) // real Date.now() when sim started, for converting sim-s to real datetimes
+  const simEpochRef = useRef(null)
   const intervalRef = useRef(null)
   const alertCounterRef = useRef(0)
-  const eventIdToTaskIdRef = useRef(new Map()) // eventId (position) → real backend task ID
-  const simRobotsRef = useRef([]) // [{ id, type }] of seeded simulation robots
-  const robotMovementsRef = useRef(new Map()) // robotId → { coords, startSim, endSim, taskId }
-  const lastWsPushRef = useRef(new Map()) // robotId → last push timestamp (ms)
+  const eventIdToTaskIdRef = useRef(new Map()) // eventId → real backend task id
+
+  // Backend-authoritative movement: the backend pushes each robot's current leg; we just animate.
+  const robotMovementsRef = useRef(new Map()) // robotId → { coords, etaSeconds, startSim, phase, revision }
+  const robotRevisionRef = useRef(new Map())  // robotId → highest dispatch revision seen (reject stale)
+  const lastWsPushRef = useRef(new Map())     // robotId → last telemetry push (ms)
+  const inFlightArrivalsRef = useRef(0)       // arrival POSTs awaiting a response
+  const settleTicksRef = useRef(0)
+
   const stompClientRef = useRef(null)
+  const subscriptionRef = useRef(null)
   const simulationIdRef = useRef(null)
   const isRunningRef = useRef(false)
 
-  // keep speed ref in sync so the tick closure always sees the latest value
-  // so users can change the speed factor
   const updateSpeedFactor = useCallback((factor) => {
     speedFactorRef.current = factor
     setSpeedFactor(factor)
   }, [])
 
   // ── WebSocket ───────────────────────────────────────────────────────────────
-  // this is to send locations of robots to the backend continuously
 
   function connectWebSocket() {
     const wsUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`
@@ -106,7 +92,35 @@ export function useSimulationPlayback({
     const client = new Client({
       brokerURL: wsUrl,
       reconnectDelay: 0,
-      onConnect: () => console.log('[Sim] WebSocket connected'),
+      onConnect: async () => {
+        const simId = simulationIdRef.current
+        subscriptionRef.current = client.subscribe(
+          `/topic/simulation/${simId}/dispatch`,
+          (msg) => {
+            try {
+              handleDispatch(JSON.parse(msg.body))
+            } catch (err) {
+              console.error('[Sim] Bad dispatch message:', err)
+            }
+          },
+        )
+        console.log(`[Sim] WebSocket connected + subscribed to sim ${simId} dispatches`)
+
+        // Reconcile any dispatches that already exist, THEN start the clock — so no dispatch
+        // pushed by an early task event is missed before we're subscribed.
+        try {
+          const snapshot = await getDispatchSnapshot(simId)
+          snapshot.forEach(handleDispatch)
+        } catch (err) {
+          console.error('[Sim] Dispatch snapshot failed:', err)
+        }
+
+        if (!isRunningRef.current) {
+          isRunningRef.current = true
+          setIsRunning(true)
+          intervalRef.current = setInterval(tick, TICK_INTERVAL_MS)
+        }
+      },
       onDisconnect: () => console.log('[Sim] WebSocket disconnected'),
       onStompError: (frame) => console.warn('[Sim] STOMP error', frame),
     })
@@ -116,51 +130,49 @@ export function useSimulationPlayback({
   }
 
   function disconnectWebSocket() {
+    if (subscriptionRef.current) {
+      subscriptionRef.current.unsubscribe()
+      subscriptionRef.current = null
+    }
     if (stompClientRef.current) {
       stompClientRef.current.deactivate()
       stompClientRef.current = null
     }
   }
 
-  // send location to backend
-  function pushRobotPosition(robotId, status, lat, lng) {
+  // Stream the robot's live position to the backend (position only — backend owns status).
+  // The backend needs a recent position to route a mid-return diversion from.
+  function pushRobotPosition(robotId, lat, lng) {
     const client = stompClientRef.current
     if (!client || !client.connected) return
 
     const now = Date.now()
     const lastPush = lastWsPushRef.current.get(robotId) ?? 0
     if (now - lastPush < WS_PUSH_INTERVAL_MS) return
-
     lastWsPushRef.current.set(robotId, now)
 
     client.publish({
       destination: `/app/robot/${robotId}/update`,
-      body: JSON.stringify({ robotId, status, lat, lng }),
+      body: JSON.stringify({ robotId, status: 'MOVING', lat, lng }),
     })
   }
 
-  // tell backend a road is blocked over WS (fire-and-forget, mirrors pushRobotPosition)
   function publishObstruction(roadId) {
     const client = stompClientRef.current
     if (!client || !client.connected) return
-
     client.publish({
       destination: '/app/obstruction',
-      // field name must stay `id` — matches ObstructionEventDTO on the backend
       body: JSON.stringify({ id: String(roadId) }),
     })
   }
 
-  // tell backend a robot broke down over WS (fire-and-forget, mirrors publishObstruction)
-  // the id travels in the destination (@DestinationVariable), so no body is needed
   function publishRobotBreakdown(robotId) {
     const client = stompClientRef.current
     if (!client || !client.connected) return
-
     client.publish({ destination: `/app/robot/${robotId}/breakdown` })
   }
 
-  // ── Alert helper ────────────────────────────────────────────────────────────
+  // ── Alerts ────────────────────────────────────────────────────────────────
 
   function addAlert(type, message) {
     alertCounterRef.current += 1
@@ -171,17 +183,57 @@ export function useSimulationPlayback({
     ])
   }
 
-  // ── Event handlers ──────────────────────────────────────────────────────────
+  // ── Dispatch handling (backend-pushed legs) ─────────────────────────────────
 
-  // Find an idle simulation robot (not currently moving), preferring a matching type
-  function findAvailableRobot(taskType) {
-    const busy = robotMovementsRef.current
-    const free = simRobotsRef.current.filter(r => !busy.has(r.id))
-    if (free.length === 0) return null
-    const wanted = String(taskType).toUpperCase()
-    return free.find(r => String(r.type).toUpperCase() === wanted) ?? free[0]
+  function handleDispatch(dispatch) {
+    const robotId = dispatch.robotId
+    const lastRev = robotRevisionRef.current.get(robotId) ?? 0
+    if (dispatch.revision <= lastRev) return // stale / out-of-order
+    robotRevisionRef.current.set(robotId, dispatch.revision)
+
+    if (dispatch.blocked) {
+      robotMovementsRef.current.delete(robotId)
+      addAlert('System', `Robot ${robotId} could not be routed`)
+      return // hold position
+    }
+
+    // IDLE (parked at base) or a legless dispatch → snap to destination, stop animating
+    if (dispatch.phase === 'IDLE' || !dispatch.routeGeo) {
+      robotMovementsRef.current.delete(robotId)
+      setRobotPositionOverrides(prev => ({
+        ...prev,
+        [robotId]: { latitude: dispatch.destLat, longitude: dispatch.destLng, status: 'IDLE' },
+      }))
+      return
+    }
+
+    const coords = decodePolyline(dispatch.routeGeo)
+    if (coords.length < 2) {
+      robotMovementsRef.current.delete(robotId)
+      setRobotPositionOverrides(prev => ({
+        ...prev,
+        [robotId]: { latitude: dispatch.destLat, longitude: dispatch.destLng, status: phaseToStatus(dispatch.phase) },
+      }))
+      return
+    }
+
+    robotMovementsRef.current.set(robotId, {
+      coords,
+      etaSeconds: dispatch.etaSeconds > 0 ? dispatch.etaSeconds : 1,
+      startSim: simTimeRef.current,
+      phase: dispatch.phase,
+      revision: dispatch.revision,
+    })
+    // colour immediately at the leg's start (higher revision replaces any in-progress leg → diversion)
+    setRobotPositionOverrides(prev => ({
+      ...prev,
+      [robotId]: { latitude: coords[0][0], longitude: coords[0][1], status: phaseToStatus(dispatch.phase) },
+    }))
   }
 
+  // ── Event handlers ──────────────────────────────────────────────────────────
+
+  // Create the task on the backend; the backend allocates it and pushes the dispatch over WS.
   async function handleTaskCreated(event) {
     const simId = simulationIdRef.current
     const epoch = simEpochRef.current
@@ -189,7 +241,6 @@ export function useSimulationPlayback({
     const startDateTime = new Date(epoch + event.simTime * 1000).toISOString().slice(0, 19)
     const completionDateTime = new Date(epoch + event.completionDeadline * 1000).toISOString().slice(0, 19)
 
-    // Translate dependency event id to real backend task id
     const dependencyIds = (event.dependencyEventIds ?? [])
       .map(eid => eventIdToTaskIdRef.current.get(eid))
       .filter(id => id != null)
@@ -198,7 +249,7 @@ export function useSimulationPlayback({
       name: event.taskName,
       description: event.taskDescription,
       type: event.taskType,
-      priority: Math.min(event.taskPriority, 3), // backend accepts 1–3 only
+      priority: Math.min(event.taskPriority, 3),
       startDateTime,
       completionDateTime,
       startLocationId: event.startWaypointId,
@@ -215,94 +266,39 @@ export function useSimulationPlayback({
       })
 
       if (!response.ok) {
-        const text = await response.text()
-        console.warn(`[Sim] Task creation failed for event ${event.eventId}:`, text)
+        console.warn(`[Sim] Task creation failed for event ${event.eventId}:`, await response.text())
         return
       }
 
       const rawTask = await response.json()
-
-      //  map from event position id to  real task id
       eventIdToTaskIdRef.current.set(event.eventId, rawTask.id)
-
-      const task = normaliseTaskFromBackend(rawTask)
-      onTaskCreated(task)
-
-      // Assign an idle robot to this task and animate it along the route.
-      const robot = findAvailableRobot(event.taskType) // get idle robot
-      const coords = rawTask.routeGeometry ? decodePolyline(rawTask.routeGeometry) : []
-
-      if (robot && coords.length >= 2) {
-        try {
-          await fetch(`/robot/${robot.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ taskIdsToAdd: [rawTask.id], tasksIdsToRemove: [] }),
-          })
-        } catch (err) {
-          console.error('[Sim] Robot assignment error:', err)
-        }
-
-        // Pace the robot to arrive by its completion deadline 
-        robotMovementsRef.current.set(robot.id, {
-          coords,
-          startSim: event.simTime,
-          endSim: event.completionDeadline,
-          taskId: rawTask.id,
-        })
-
-        addAlert('Task', `Robot ${robot.id} assigned to ${event.taskName}`)
-        onRefetchAll()
-      }
+      onTaskCreated(normaliseTaskFromBackend(rawTask))
+      addAlert('Task', `Task created: ${event.taskName}`)
+      onRefetchAll()
+      // Backend allocates + pushes a dispatch over WS — no client-side assignment.
     } catch (err) {
       console.error('[Sim] Task creation error:', err)
     }
   }
 
-  async function handleRobotMalfunction(event) {
+  function handleRobotMalfunction(event) {
     const robotId = event.robotId
-    const targetRobot = simRobotsRef.current.find(r => r.id === robotId)
-    const robotName = event.robotName || (targetRobot ? targetRobot.name : `ID-${robotId}`)
     const movement = robotMovementsRef.current.get(robotId)
-
-    // Compute current position from the movement trajectory before stopping it
     if (movement) {
-      const duration = movement.endSim - movement.startSim
-      const progress = duration > 0
-        ? Math.min((simTimeRef.current - movement.startSim) / duration, 1)
-        : 0
+      const progress = movement.etaSeconds > 0
+        ? Math.min((simTimeRef.current - movement.startSim) / movement.etaSeconds, 1)
+        : 1
       const pos = interpolateAlongRoute(movement.coords, progress)
       if (pos) {
-        // clear the throttle so this terminal ERROR status is never dropped —
-        // the backend's reroute filter keys off robot status
-        lastWsPushRef.current.delete(robotId)
-        pushRobotPosition(robotId, 'ERROR', pos.latitude, pos.longitude)
+        setRobotPositionOverrides(prev => ({ ...prev, [robotId]: { ...pos, status: 'ERROR' } }))
       }
     }
-
-    // Tell the backend the robot broke down, before the task is unlinked below —
-    // RobotBreakdownService needs the robot still holding its task to reassign it.
-    publishRobotBreakdown(robotId)
-
-    // stop animation
+    // Stop the robot and ignore any further dispatches for it this run.
+    // ponytail: Phase 1 leaves the broken robot red in place; backend reassignment is Phase 2.
     robotMovementsRef.current.delete(robotId)
-
-    // Unlink any assigned task via PATCH /robot/{id}
-    if (movement?.taskId) {
-      try {
-        await fetch(`/robot/${robotId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tasksIdsToRemove: [movement.taskId], taskIdsToAdd: [] }),
-        })
-      } catch (err) {
-        console.error('[Sim] Robot task removal error:', err)
-      }
-    }
-
-    addAlert('Malfunction', `Robot ${robotName} malfunctioned and dropped its task`)
-
-    // Refetch to sync UI state
+    robotRevisionRef.current.set(robotId, Number.MAX_SAFE_INTEGER)
+    publishRobotBreakdown(robotId)
+    addAlert('Malfunction', `Robot ${robotId} malfunctioned`)
     onRefetchAll()
   }
 
@@ -310,21 +306,18 @@ export function useSimulationPlayback({
     const roadId = event.linkId
     if (!roadId) return
 
-    publishObstruction(roadId) // tell backend the road is blocked over WS (fire-and-forget)
+    publishObstruction(roadId)
 
     try {
       const road = await getRoad(roadId)
-
-      // add map obstacle at the midpoint of the road segment
-      const roadName = road.name || `Road ${roadId}`
       const midLat = (road.startLat + road.endLat) / 2
       const midLon = (road.startLon + road.endLon) / 2
+      const label = road.roadName || `Road ${roadId}`
       setSimObstacles(prev => [
         ...prev,
         { id: `obs-${roadId}-${simTimeRef.current}`, latitude: midLat, longitude: midLon, label },
       ])
-
-      addAlert('Obstruction', `Road blocked: ${roadName}`)
+      addAlert('Obstruction', `Road blocked: ${label}`)
     } catch (err) {
       console.error('[Sim] Obstruction handling error:', err)
       addAlert('Obstruction', `Road ${roadId} blocked`)
@@ -334,50 +327,34 @@ export function useSimulationPlayback({
   // ── Animation tick ──────────────────────────────────────────────────────────
 
   function tickMovements(currentSimTime) {
-    const completedRobotIds = []
+    const completed = []
 
-    // loop thru every moving robot
     robotMovementsRef.current.forEach((movement, robotId) => {
-      const { coords, startSim, endSim, taskId } = movement
-      const duration = endSim - startSim
-      if (duration <= 0) return
-
-      const progress = Math.min((currentSimTime - startSim) / duration, 1)
+      const { coords, etaSeconds, startSim, phase, revision } = movement
+      const progress = etaSeconds > 0 ? Math.min((currentSimTime - startSim) / etaSeconds, 1) : 1
       const pos = interpolateAlongRoute(coords, progress)
       if (!pos) return
 
-      // Update position on map
-      setRobotPositionOverrides(prev => ({
-        ...prev,
-        [robotId]: pos,
-      }))
+      setRobotPositionOverrides(prev => ({ ...prev, [robotId]: { ...pos, status: phaseToStatus(phase) } }))
+      pushRobotPosition(robotId, pos.latitude, pos.longitude)
 
-      // Push to backend via WebSocket
-      pushRobotPosition(robotId, 'ASSIGNED', pos.latitude, pos.longitude)
-
-      if (progress >= 1) {
-        completedRobotIds.push({ robotId, taskId, pos })
-      }
+      if (progress >= 1) completed.push({ robotId, revision })
     })
 
-    completedRobotIds.forEach(({ robotId, taskId }) => {
+    completed.forEach(({ robotId, revision }) => {
       robotMovementsRef.current.delete(robotId)
-      completeTaskAndReturnToBase(robotId, taskId)
+      postArrival(robotId, revision) // backend advances the state machine and pushes the next leg
     })
   }
 
-  async function completeTaskAndReturnToBase(robotId, taskId) {
+  async function postArrival(robotId, revision) {
+    inFlightArrivalsRef.current += 1
     try {
-      // Mark task complete
-      await fetch(`/task/${taskId}/complete`, { method: 'PATCH' })
-
-      // Tell backend robot is returning to base (sets IDLE at base coordinates)
-      await fetch(`/robot/${robotId}/base`, { method: 'PATCH' })
-
-      addAlert('Complete', `Robot ${robotId} completed task and returned to base`)
-      onRefetchAll()
+      await postDispatchArrival(robotId, revision)
     } catch (err) {
-      console.error('[Sim] Task completion error:', err)
+      console.error('[Sim] Arrival post failed:', err)
+    } finally {
+      inFlightArrivalsRef.current -= 1
     }
   }
 
@@ -390,7 +367,6 @@ export function useSimulationPlayback({
     const newSimTime = simTimeRef.current + advanceBy
     simTimeRef.current = newSimTime
 
-    // Fire all events whose time has come
     const events = eventsRef.current
     while (
       nextEventIndexRef.current < events.length &&
@@ -400,31 +376,29 @@ export function useSimulationPlayback({
       nextEventIndexRef.current += 1
 
       switch (event.eventType) {
-        case 'TASK_CREATED':
-          handleTaskCreated(event)
-          break
-        case 'ROBOT_MALFUNCTION':
-          handleRobotMalfunction(event)
-          break
-        case 'ROUTE_OBSTRUCTION':
-          handleRouteObstruction(event)
-          break
+        case 'TASK_CREATED': handleTaskCreated(event); break
+        case 'ROBOT_MALFUNCTION': handleRobotMalfunction(event); break
+        case 'ROUTE_OBSTRUCTION': handleRouteObstruction(event); break
       }
     }
 
-    // Animate robot movements
     tickMovements(newSimTime)
-
-    // Update displayed clock
     setSimTime(newSimTime)
 
-    // Stop when all events are done and all animations complete
-    if (
+    // Complete once all events fired, no legs are animating, and no arrival round-trip is pending
+    // (debounced so the brief gap between an arrival POST and the next dispatch doesn't stop us early).
+    const settled =
       nextEventIndexRef.current >= events.length &&
-      robotMovementsRef.current.size === 0
-    ) {
-      stopClock()
-      addAlert('System', 'Simulation complete')
+      robotMovementsRef.current.size === 0 &&
+      inFlightArrivalsRef.current === 0
+    if (settled) {
+      settleTicksRef.current += 1
+      if (settleTicksRef.current >= SETTLE_TICKS) {
+        stopClock()
+        addAlert('System', 'Simulation complete')
+      }
+    } else {
+      settleTicksRef.current = 0
     }
   }
 
@@ -444,14 +418,16 @@ export function useSimulationPlayback({
       const result = await generateSimulation(config)
       console.log(`[Sim] Generated simulation id=${result.simulationId ?? 'unknown'}, events=${result.events.length}`)
 
-      // load simulation script into memory
       eventsRef.current = result.events
       nextEventIndexRef.current = 0
       simTimeRef.current = 0
       simEpochRef.current = Date.now()
       eventIdToTaskIdRef.current = new Map()
       robotMovementsRef.current = new Map()
+      robotRevisionRef.current = new Map()
       lastWsPushRef.current = new Map()
+      inFlightArrivalsRef.current = 0
+      settleTicksRef.current = 0
       alertCounterRef.current = 0
 
       setSimTime(0)
@@ -459,28 +435,30 @@ export function useSimulationPlayback({
       setSimObstacles([])
       setRobotPositionOverrides({})
       setSimulationId(result.simulationId)
+      setActiveBasePosition(resolveSimulationBasePosition(config))
       simulationIdRef.current = result.simulationId
 
-      // load robot and task  from backend so the 10 seeded robots appear on the map
       onRefetchAll()
 
-      // Fetch the seeded robots so we know which ones we can assign tasks to
+      // Seed this run's robots at base so their dots are visible (grey) from t=0.
       try {
         const robots = await getRobots()
-        simRobotsRef.current = robots.map(r => ({ id: r.id, type: r.type, name: r.name }))
-        console.log(`[Sim] ${simRobotsRef.current.length} robots available for assignment`)
+        const seeded = {}
+        robots
+          .filter(r => r.simulationId === result.simulationId)
+          .forEach(r => {
+            const p = r.position
+            if (p && Number.isFinite(p.latitude) && Number.isFinite(p.longitude)) {
+              seeded[r.id] = { ...p, status: 'IDLE' }
+            }
+          })
+        setRobotPositionOverrides(seeded)
       } catch (err) {
-        console.error('[Sim] Failed to load robots for assignment:', err)
-        simRobotsRef.current = []
+        console.error('[Sim] Failed to seed robots:', err)
       }
 
-      // Start WebSocket
+      // Subscribe first; the clock starts inside onConnect once we're receiving dispatches.
       connectWebSocket()
-
-      // Start clock
-      isRunningRef.current = true
-      setIsRunning(true)
-      intervalRef.current = setInterval(tick, TICK_INTERVAL_MS)
     } catch (err) {
       console.error('[Sim] Failed to start simulation:', err)
       throw err
@@ -506,7 +484,6 @@ export function useSimulationPlayback({
   }, [])
 
   const resetSimulation = useCallback(async () => {
-    // Stop the clock
     stopClock()
     disconnectWebSocket()
 
@@ -519,15 +496,16 @@ export function useSimulationPlayback({
       }
     }
 
-    // Clear all state
     eventsRef.current = []
     nextEventIndexRef.current = 0
     simTimeRef.current = 0
     simEpochRef.current = null
     eventIdToTaskIdRef.current = new Map()
-    simRobotsRef.current = []
     robotMovementsRef.current = new Map()
+    robotRevisionRef.current = new Map()
     lastWsPushRef.current = new Map()
+    inFlightArrivalsRef.current = 0
+    settleTicksRef.current = 0
     alertCounterRef.current = 0
     simulationIdRef.current = null
 
@@ -536,6 +514,7 @@ export function useSimulationPlayback({
     setSimObstacles([])
     setRobotPositionOverrides({})
     setSimulationId(null)
+    setActiveBasePosition(null)
     setIsRunning(false)
 
     onRefetchAll()
@@ -548,6 +527,7 @@ export function useSimulationPlayback({
     speedFactor,
     setSpeedFactor: updateSpeedFactor,
     simulationId,
+    activeBasePosition,
     simAlerts,
     simObstacles,
     robotPositionOverrides,

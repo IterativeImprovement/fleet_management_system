@@ -3,7 +3,6 @@ package com.siyu.fleet_mgmt_sys.controller;
 import com.siyu.fleet_mgmt_sys.dto.simulation.SimulationConfig;
 import com.siyu.fleet_mgmt_sys.dto.websocket.ObstructionEventDTO;
 import com.siyu.fleet_mgmt_sys.dto.websocket.RobotLocationNStatusDTO;
-import com.siyu.fleet_mgmt_sys.model.enums.RobotStatus;
 import com.siyu.fleet_mgmt_sys.service.RoadService;
 import com.siyu.fleet_mgmt_sys.service.RobotBreakdownService;
 import com.siyu.fleet_mgmt_sys.service.robot.RobotService;
@@ -51,8 +50,8 @@ public class WebsocketController {
 
     @MessageMapping("/robot/{robotId}/update")
     public void updateRobotPosition(@DestinationVariable Long robotId, RobotLocationNStatusDTO dto) {
-        robotService.updateStatusAndPosition(
-                robotId, RobotStatus.valueOf(dto.getStatus()), dto.getLat(), dto.getLng());
+        // position only — the backend owns robot status via dispatch
+        robotService.updatePosition(robotId, dto.getLat(), dto.getLng());
     }
 
 }

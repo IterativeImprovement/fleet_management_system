@@ -41,3 +41,17 @@ export async function getRoad(roadId) {
 
   return response.json()
 }
+
+// Startup/reconnect snapshot of every robot's current dispatch leg for a run.
+export async function getDispatchSnapshot(simulationId) {
+  const response = await fetch(`/simulation/${simulationId}/dispatches`, {
+    headers: { Accept: 'application/json' },
+  })
+  if (!response.ok) return []
+  return response.json()
+}
+
+// Tell the backend a robot finished the leg it was animating (revision-gated).
+export async function postDispatchArrival(robotId, revision) {
+  await fetch(`/robot/${robotId}/dispatch/${revision}/arrive`, { method: 'POST' })
+}

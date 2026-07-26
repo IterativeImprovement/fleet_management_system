@@ -59,6 +59,16 @@
   color: #2563eb;
 }
 
+.selected-status.to-task-start {
+  background-color: #fce7f3;
+  color: #9d174d;
+}
+
+.selected-status.returning-to-base {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
 .selected-status.executing {
   background-color: #dcfce7;
   color: #15803d;

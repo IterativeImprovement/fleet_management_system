@@ -70,6 +70,7 @@ test('backend robots are converted to the canonical shape', () => {
     speed: 5,
     position: { latitude: 1.31, longitude: 103.81 },
     taskIds: [12],
+    simulationId: null,
   })
 })
 

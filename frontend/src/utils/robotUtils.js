@@ -3,6 +3,7 @@ export function getRobotStatusLabel(status) {
 
   if (value === 'IDLE') return 'Idle'
   if (value === 'ASSIGNED') return 'Assigned'
+  if (value === 'MOVING') return 'Moving'
   if (value === 'MOVING_TO_BASE') return 'Moving to Base'
   if (value === 'MOVING_TO_MAINTENANCE') return 'Moving to Maintenance'
   if (value === 'CHARGING') return 'Charging'
@@ -18,7 +19,8 @@ export function getRobotStatusType(status) {
 
   if (value === 'IDLE') return 'idle'
   if (value === 'ASSIGNED') return 'assigned'
-  if (value === 'MOVING_TO_BASE') return 'moving'
+  if (value === 'MOVING') return 'to-task-start'
+  if (value === 'MOVING_TO_BASE') return 'returning-to-base'
   if (value === 'MOVING_TO_MAINTENANCE') return 'maintenance'
   if (value === 'CHARGING') return 'charging'
   if (value === 'NEED_MAINTENANCE') return 'maintenance'
