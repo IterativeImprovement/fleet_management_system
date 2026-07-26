@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 public class WebsocketPublisherService {
@@ -48,5 +50,12 @@ public class WebsocketPublisherService {
 
     public void publishRepairComplete(Long robotId) {
         template.convertAndSend("/topic/robot/" + robotId + "/repair/complete", robotId);
+    }
+
+    public void publishRobotStatus(Long robotId, Long simulationId, RobotStatus status) {
+        template.convertAndSend(
+                "/topic/simulation/" + simulationId + "/repair",
+                (Object) Map.of("robotId", robotId, "status", status.name())
+        );
     }
 }

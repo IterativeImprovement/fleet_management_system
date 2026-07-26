@@ -49,6 +49,9 @@ public class Task {
 
     private Double taskDuration;
 
+    @Column(name = "target_robot_id")
+    private Long targetRobotId;
+
     @ElementCollection
     @MapKeyEnumerated(EnumType.STRING)
     @JsonIgnore

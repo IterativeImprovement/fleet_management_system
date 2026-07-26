@@ -9,10 +9,12 @@ import com.siyu.fleet_mgmt_sys.service.robot.RobotService;
 import com.siyu.fleet_mgmt_sys.service.route.RouteObstructionService;
 import com.siyu.fleet_mgmt_sys.service.simulation.SimulationEngine;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.stereotype.Controller;
 
+@Slf4j
 @Controller
 @RequiredArgsConstructor
 public class WebsocketController {
@@ -44,7 +46,8 @@ public class WebsocketController {
     }
 
     @MessageMapping("/robot/{robotId}/breakdown")
-    public void handleRobotBreakdown(Long robotId) {
+    public void handleRobotBreakdown(@DestinationVariable Long robotId) {
+        log.info("Breakdown message received for robot {}", robotId);
         robotBreakdownService.handleRobotBreakdown(robotId);
     }
 

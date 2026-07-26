@@ -36,7 +36,7 @@ public class PolylineEncoder {
         int prevLat = 0;
         int prevLon = 0;
 
-        log.info("Route traversal ({} segments):", edges.size());
+        // log.info("Route traversal ({} segments):", edges.size());
 
         String prevRoadName = null;
         int segmentNumber = 1;
@@ -75,7 +75,7 @@ public class PolylineEncoder {
             prevLon = encodedLon;
         }
 
-        log.info("Encoded polyline length: {} characters", encoded.length());
+        // log.info("Encoded polyline length: {} characters", encoded.length());
         return encoded.toString();
     }
 

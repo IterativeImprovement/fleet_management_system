@@ -11,5 +11,6 @@ public enum DispatchPhase {
     TO_TASK_START,
     EXECUTE_TASK,
     TO_BASE,
-    IDLE
+    IDLE,
+    BEING_TOWED
 }

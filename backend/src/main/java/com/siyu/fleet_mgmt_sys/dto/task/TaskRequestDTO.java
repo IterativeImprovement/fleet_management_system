@@ -27,6 +27,7 @@ public class TaskRequestDTO {
     private Double taskDuration;
 
     private Long simulationId;
+    private Long targetRobotId;
 }
 
 

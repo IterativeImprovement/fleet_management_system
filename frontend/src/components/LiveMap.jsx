@@ -29,6 +29,46 @@ const BASE_ICON = L.divIcon({
   tooltipAnchor: [0, -36],
 })
 
+// Mirrors backend KeyLocations.repairLatitude / repairLongitude (model/KeyLocations.java) — the
+// repair shop is a fixed point (Ulu Pandan Depot), not something that changes per simulation run,
+// so it's hardcoded here rather than threaded through as a prop. Keep these in sync if that ever
+// changes on the backend.
+const REPAIR_LOCATION = [1.333425, 103.760141]
+
+const REPAIR_ICON = L.divIcon({
+  className: 'map-repair-div-icon',
+  html: `
+    <div class="map-repair-marker" aria-hidden="true">
+      <span class="map-repair-marker-badge">
+        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+          <path d="M14.7 6.3a4 4 0 0 0-5.4 4.9L4 16.5V20h3.5l5.3-5.3a4 4 0 0 0 4.9-5.4l-2.6 2.6-2-2Z" />
+        </svg>
+      </span>
+    </div>
+  `,
+  iconSize: [34, 42],
+  iconAnchor: [17, 42],
+  tooltipAnchor: [0, -36],
+})
+
+// Small, fixed-size badge for a blocked road — centered on the point rather than pin-anchored
+// like BASE_ICON/REPAIR_ICON, since it marks a spot along a line rather than a location robots
+// travel to. Deliberately compact: the road name goes in a hover-only tooltip (bound where this
+// is used), not baked into the icon itself — see the obstacle-drawing effect below.
+const OBSTRUCTION_ICON = L.divIcon({
+  className: 'map-obstacle-div-icon',
+  html: `
+    <div class="map-obstacle-marker-badge" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+        <path d="M6 6 18 18M18 6 6 18" />
+      </svg>
+    </div>
+  `,
+  iconSize: [22, 22],
+  iconAnchor: [11, 11],
+  tooltipAnchor: [0, -12],
+})
+
 function getValidMapPosition(position) {
   if (
     !position ||
@@ -102,6 +142,7 @@ function LiveMap({
   obstacles = [],
   activeBasePosition = null,
   routesByTaskId = {},
+  currentRoutesByRobotId = {},
   selectedTaskId,
   selectedRobotId,
   isLoadingRoutes = false,
@@ -116,6 +157,7 @@ function LiveMap({
   const markerLayerRef = useRef(null)
   const baseLayerRef = useRef(null)
   const baseMarkerRef = useRef(null)
+  const repairLayerRef = useRef(null)
   const obstacleLayerRef = useRef(null)
   const hasFittedAllRoutesRef = useRef(false)
   const markersByIdRef = useRef(new Map())
@@ -146,7 +188,34 @@ function LiveMap({
     routeLayerRef.current = L.layerGroup().addTo(mapRef.current)
     markerLayerRef.current = L.layerGroup().addTo(mapRef.current)
     baseLayerRef.current = L.layerGroup().addTo(mapRef.current)
+    repairLayerRef.current = L.layerGroup().addTo(mapRef.current)
     obstacleLayerRef.current = L.layerGroup().addTo(mapRef.current)
+
+    // Repair shop is a fixed point (unlike the base, which varies per simulation config), so it's
+    // placed once here rather than in a reactive effect keyed off a prop.
+    const repairMarker = L.marker(REPAIR_LOCATION, {
+      icon: REPAIR_ICON,
+      keyboard: true,
+      title: 'Repair Shop',
+      alt: 'Repair Shop',
+      riseOnHover: true,
+      zIndexOffset: 500,
+    })
+
+    repairMarker.bindTooltip('Repair Shop', {
+      permanent: false,
+      direction: 'top',
+      className: 'map-repair-tooltip',
+      opacity: 1,
+    })
+
+    repairLayerRef.current.addLayer(repairMarker)
+
+    const repairElement = repairMarker.getElement()
+    if (repairElement) {
+      repairElement.setAttribute('aria-label', 'Repair Shop')
+      repairElement.setAttribute('role', 'img')
+    }
 
     requestAnimationFrame(() => {
       if (!mapRef.current) return
@@ -196,14 +265,14 @@ function LiveMap({
     const routeLines = []
     let selectedBounds = null
 
-    Object.values(routesByTaskId || {}).forEach(route => {
-      if (!route.coordinates || route.coordinates.length < 2) return
+    // Selected task: draw its full route highlighted (colored-by-speed-band segments once loaded,
+    // a plain blue line while they're loading). This is a deliberate preview of the task's whole
+    // planned path — kept separate from the "what's actually happening right now" overlay below.
+    const selectedRoute = selectedTaskId != null ? routesByTaskId?.[selectedTaskId] : null
+    if (selectedRoute && selectedRoute.coordinates && selectedRoute.coordinates.length >= 2) {
+      const coloredSegments = coloredSegmentsByTaskId[selectedRoute.taskId]
 
-      const isSelected = String(route.taskId) === String(selectedTaskId)
-      const coloredSegments = coloredSegmentsByTaskId[route.taskId]
-
-      if (isSelected && coloredSegments && coloredSegments.length > 0) {
-        // draw multiple colored polylines for the selected task
+      if (coloredSegments && coloredSegments.length > 0) {
         const segmentLines = []
 
         coloredSegments.forEach(segment => {
@@ -217,39 +286,56 @@ function LiveMap({
             lineJoin: 'round',
           })
 
-          line.on('click', () => onSelectTask?.(route.taskId))
+          line.on('click', () => onSelectTask?.(selectedRoute.taskId))
           routeLayerRef.current.addLayer(line)
           segmentLines.push(line)
           routeLines.push(line)
         })
 
         if (segmentLines.length > 0) {
-          const group = L.featureGroup(segmentLines)
-          selectedBounds = group.getBounds()
+          selectedBounds = L.featureGroup(segmentLines).getBounds()
         }
       } else {
-        // draw a single polyline for unselected tasks or while the colored route is loafing 
-        const routeLine = L.polyline(route.coordinates, {
-          color: isSelected ? '#0a84ff' : '#64748b',
-          weight: isSelected ? 6 : 3,
-          opacity: isSelected ? 0.95 : 0.45,
+        const routeLine = L.polyline(selectedRoute.coordinates, {
+          color: '#0a84ff',
+          weight: 6,
+          opacity: 0.95,
           lineCap: 'round',
           lineJoin: 'round',
         })
 
-        routeLine.bindTooltip(`Task ${route.taskId}`, {
-          permanent: false,
-          direction: 'top',
-        })
-
-        routeLine.on('click', () => onSelectTask?.(route.taskId))
+        routeLine.bindTooltip(`Task ${selectedRoute.taskId}`, { permanent: false, direction: 'top' })
+        routeLine.on('click', () => onSelectTask?.(selectedRoute.taskId))
         routeLayerRef.current.addLayer(routeLine)
         routeLines.push(routeLine)
-
-        if (isSelected) {
-          selectedBounds = routeLine.getBounds()
-        }
+        selectedBounds = routeLine.getBounds()
       }
+    }
+
+    // FIX: this used to draw every task ever fetched — including long-completed ones — as a grey
+    // background line along its static start→end route, regardless of whether any robot was
+    // actually on it (a robot still approaching a task's start isn't on that route at all yet).
+    // Draw each robot's actual current dispatch leg instead: it's inherently ephemeral, so a
+    // segment disappears the moment that robot finishes it rather than lingering forever.
+    Object.values(currentRoutesByRobotId || {}).forEach(route => {
+      if (!route.coordinates || route.coordinates.length < 2) return
+      if (route.taskId != null && String(route.taskId) === String(selectedTaskId)) return // already highlighted above
+
+      const routeLine = L.polyline(route.coordinates, {
+        color: '#64748b',
+        weight: 3,
+        opacity: 0.45,
+        lineCap: 'round',
+        lineJoin: 'round',
+      })
+
+      if (route.taskId != null) {
+        routeLine.bindTooltip(`Task ${route.taskId}`, { permanent: false, direction: 'top' })
+        routeLine.on('click', () => onSelectTask?.(route.taskId))
+      }
+
+      routeLayerRef.current.addLayer(routeLine)
+      routeLines.push(routeLine)
     })
 
     if (selectedBounds) {
@@ -264,7 +350,28 @@ function LiveMap({
       fitBoundsInsideSingapore(mapRef.current, routeGroup.getBounds(), { padding: [32, 32] })
       hasFittedAllRoutesRef.current = true
     }
-  }, [routesByTaskId, selectedTaskId, coloredSegmentsByTaskId, onSelectTask])
+  }, [routesByTaskId, currentRoutesByRobotId, selectedTaskId, coloredSegmentsByTaskId, onSelectTask])
+
+  // FIX: a selected robot with no route to draw (idle, moving to base, awaiting maintenance, or a
+  // route that hasn't loaded yet) never got any camera attention at all — the effect above only
+  // acts when routesByTaskId has an entry for selectedTaskId. This keeps panning the map to the
+  // robot's own live position for as long as it stays selected and has no route framing the view,
+  // so it visibly follows the robot instead of leaving the camera stuck wherever it last was.
+  useEffect(() => {
+    if (!mapRef.current || !selectedRobotId) return
+
+    const hasRouteForSelection =
+      selectedTaskId != null &&
+      (routesByTaskId?.[selectedTaskId]?.coordinates?.length ?? 0) >= 2
+
+    if (hasRouteForSelection) return
+
+    const robot = robots.find(r => String(r.id) === String(selectedRobotId))
+    const position = getValidMapPosition(robot?.position)
+    if (!position) return
+
+    mapRef.current.panTo(position, { animate: true })
+  }, [robots, selectedRobotId, selectedTaskId, routesByTaskId])
 
   useEffect(() => {
     const layer = baseLayerRef.current
@@ -397,23 +504,30 @@ function LiveMap({
       .forEach(obstacle => {
         const label = obstacle.label || obstacle.name || 'Obstacle'
 
-        const icon = L.divIcon({
-          className: 'map-obstacle-div-icon',
-          html: `
-            <div class="map-obstacle-marker">
-              <span class="obstacle-icon">!</span>
-              <span class="obstacle-label">${label}</span>
-            </div>
-          `,
-          iconSize: null,
-          iconAnchor: [0, 0],
+        // Mark the road's actual geometry in red — a road that crosses others is split into
+        // several sub-edges at those junctions (see RouteGraphService.getEdgesByLinkId on the
+        // backend), so this can be more than one line segment. Falls back to a single straight
+        // line between the road's raw start/end if the backend couldn't resolve any sub-edges.
+        const segments = Array.isArray(obstacle.segments) ? obstacle.segments : []
+        segments.forEach(segment => {
+          if (!Array.isArray(segment) || segment.length < 2) return
+          const line = L.polyline(segment, {
+            color: '#dc2626',
+            weight: 5,
+            opacity: 0.85,
+            lineCap: 'round',
+          })
+          line.bindTooltip(`Blocked: ${label}`, { direction: 'top', className: 'map-obstacle-tooltip' })
+          obstacleLayerRef.current.addLayer(line)
         })
 
+        // Small cross badge at the road's midpoint — see OBSTRUCTION_ICON comment for why this
+        // stays compact instead of the old always-visible text pill.
         const marker = L.marker(
           [Number(obstacle.latitude), Number(obstacle.longitude)],
-          { icon }
+          { icon: OBSTRUCTION_ICON }
         )
-
+        marker.bindTooltip(`Blocked: ${label}`, { direction: 'top', className: 'map-obstacle-tooltip' })
         obstacleLayerRef.current.addLayer(marker)
       })
   }, [obstacles])

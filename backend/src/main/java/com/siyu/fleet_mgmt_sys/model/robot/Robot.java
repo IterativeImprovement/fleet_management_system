@@ -3,6 +3,7 @@ package com.siyu.fleet_mgmt_sys.model.robot;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.siyu.fleet_mgmt_sys.model.enums.TaskStatus;
 import com.siyu.fleet_mgmt_sys.model.task.Cluster;
 import com.siyu.fleet_mgmt_sys.model.task.Task;
 import com.siyu.fleet_mgmt_sys.model.enums.RobotStatus;
@@ -81,7 +82,6 @@ public abstract class Robot {
     }
 
     public Task getCurrentTask() {
-        // via getTasks() so a null list is handled too; get(0) on an empty list throws
         return getTasks().isEmpty() ? null : getTasks().get(0);
     }
 

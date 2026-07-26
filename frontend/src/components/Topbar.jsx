@@ -2,10 +2,10 @@ import { useCallback, useState } from 'react'
 import SimulationConfigForm from './SimulationConfigForm.jsx'
 
 const SPEED_OPTIONS = [
-  { label: '0.5×', factor: 1080 },
-  { label: '1×', factor: 2160 },
-  { label: '2×', factor: 4320 },
-  { label: '4×', factor: 8640 },
+  { label: '0.5×', factor: 180 },
+  { label: '1×', factor: 360 },
+  { label: '2×', factor: 720 },
+  { label: '4×', factor: 1440 },
 ]
 
 function Topbar({

@@ -1,5 +1,6 @@
 package com.siyu.fleet_mgmt_sys.service.route;
 
+import com.siyu.fleet_mgmt_sys.dto.external.ColoredSegmentDTO;
 import com.siyu.fleet_mgmt_sys.model.Route;
 import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
 import com.siyu.fleet_mgmt_sys.model.graph.GraphEdge;
@@ -87,7 +88,7 @@ public class RouteBuilderService {
         List<GraphEdge> path = routeOptimisationService.findFastestRoute(
                 startNode, endNode, graphView);
 
-        RouteBuilderService.log.info("A* complete: {} edges in path", path.size());
+        // RouteBuilderService.log.info("A* complete: {} edges in path", path.size());
 
         // Step 6: Encode polyline (also logs road names)
         String polyline = polylineEncoder.encode(path);
@@ -126,6 +127,46 @@ public class RouteBuilderService {
         return route;
     }
 
+    /**
+     * Fallback for RouteService.getColoredRoute(): builds colored segments straight from our own
+     * graph (which already carries each edge's own currentSpeedBand, refreshed from LTA every 5
+     * minutes) instead of OneMap's external routing API. Use this when the OneMap call fails (e.g.
+     * an expired/invalid API key returning 401) so the "colored route" UI feature degrades to our
+     * own data instead of 500ing outright.
+     */
+    public List<ColoredSegmentDTO> buildColoredRoute(double startLat, double startLon,
+                                                       double endLat, double endLon) {
+        LocalGraphView graphView = new LocalGraphView(routeGraphService);
+
+        ProjectionResult startProjection = projectOntoNearestEdge(startLat, startLon);
+        ProjectionResult endProjection = projectOntoNearestEdge(endLat, endLon);
+
+        GraphNode startNode = createTempNode(-1L, startProjection.lat(), startProjection.lon());
+        GraphNode endNode = createTempNode(-2L, endProjection.lat(), endProjection.lon());
+
+        injectTempNode(startNode, startProjection.edge(), graphView);
+        injectTempNode(endNode, endProjection.edge(), graphView);
+
+        List<GraphEdge> path = routeOptimisationService.findFastestRoute(startNode, endNode, graphView);
+
+        List<ColoredSegmentDTO> segments = new ArrayList<>();
+        for (GraphEdge edge : path) {
+            int band = edge.getCurrentSpeedBand();
+            List<List<Double>> coords = List.of(
+                    List.of(edge.getFromNode().getLatitude(), edge.getFromNode().getLongitude()),
+                    List.of(edge.getToNode().getLatitude(), edge.getToNode().getLongitude()));
+            segments.add(new ColoredSegmentDTO(coords, bandToColor(band), band));
+        }
+        return segments;
+    }
+
+    // Mirrors RouteService.bandToColor — band 1 is fastest/greenest, band 8 is slowest/reddest.
+    private String bandToColor(int speedBand) {
+        if (speedBand <= 3) return "#22c55e";
+        if (speedBand <= 5) return "#f97316";
+        return "#ef4444";
+    }
+
     // ─── Projection ───────────────────────────────────────────────────────────
 
     /**
@@ -136,6 +177,24 @@ public class RouteBuilderService {
         GraphEdge nearestEdge    = null;
         double[] nearestPoint    = null;
         double minDist           = Double.MAX_VALUE;
+
+        // FIX: track the nearest edge that can actually carry traffic (speedBand > 0)
+        // separately from the nearest edge overall. Snapping start/end onto an obstructed
+        // edge gives the temp node injected there (see injectTempNode) sub-edges that
+        // inherit that edge's speedBand of 0, which A* treats as impassable (effectiveSpeed
+        // <= 0 check). That leaves the temp node with no usable way in or out at all, so
+        // routing fails outright with "No route found between nodes -1 and -2" — this is
+        // not a graph-connectivity problem, it's this exact snap. It shows up most reliably
+        // via RouteObstructionService.rerouteRobot(), which builds a new route FROM THE
+        // ROBOT'S CURRENT POSITION right after obstructing the very road that robot is on,
+        // so the current position almost always snaps straight onto the just-blocked edge.
+        // It can equally hit a brand-new task if its start/end happens to land near a
+        // currently-obstructed road. Preferring a usable edge means routing instead finds a
+        // real path from a nearby passable road, which is what "reroute around the
+        // obstruction" is actually supposed to do.
+        GraphEdge nearestUsableEdge = null;
+        double[] nearestUsablePoint = null;
+        double minUsableDist        = Double.MAX_VALUE;
 
         for (GraphEdge edge : routeGraphService.getAllEdges()) {
             double[] projected = projectPointOntoSegment(
@@ -151,6 +210,13 @@ public class RouteBuilderService {
                 nearestEdge  = edge;
                 nearestPoint = projected;
             }
+
+            boolean usable = edge.getCurrentSpeedBand() != null && edge.getCurrentSpeedBand() > 0;
+            if (usable && dist < minUsableDist) {
+                minUsableDist      = dist;
+                nearestUsableEdge  = edge;
+                nearestUsablePoint = projected;
+            }
         }
 
         if (nearestEdge == null) {
@@ -158,6 +224,13 @@ public class RouteBuilderService {
                     "No edges in graph — cannot project point (" + lat + "," + lon + ")");
         }
 
+        if (nearestUsableEdge != null) {
+            return new ProjectionResult(nearestUsablePoint[0], nearestUsablePoint[1], nearestUsableEdge, minUsableDist);
+        }
+
+        // Every edge in the graph is currently obstructed (should be vanishingly rare) —
+        // fall back to the nearest edge regardless so callers get a normal RouteNotFoundException
+        // from A* rather than this method being the confusing point of failure.
         return new ProjectionResult(nearestPoint[0], nearestPoint[1], nearestEdge, minDist);
     }
 

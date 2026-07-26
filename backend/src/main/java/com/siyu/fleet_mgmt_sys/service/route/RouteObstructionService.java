@@ -115,7 +115,7 @@ public class RouteObstructionService {
      */
     private void rerouteRobot(Robot robot, String obstructedLinkId) {
         log.warn("Rerouting robot {} (status={}) around obstruction on linkId={}",
-                robot.getId(), robot.getStatus(), obstructedLinkId);
+                robot.getName(), robot.getStatus(), obstructedLinkId);
 
         try {
             // Current position — where the robot is right now
@@ -139,7 +139,7 @@ public class RouteObstructionService {
             robotRepository.save(robot);
 
             log.info("Robot {} successfully rerouted: {}m, {} link(s)",
-                    robot.getId(),
+                    robot.getName(),
                     newRoute.getTotalDistance(),
                     newRoute.getLinkIds().size());
 
@@ -147,7 +147,7 @@ public class RouteObstructionService {
             websocketPublisherService.publishReroute(robot.getId(), newRoute);
 
         } catch (Exception e) {
-            log.error("Failed to reroute robot {}: {}", robot.getId(), e.getMessage(), e);
+            log.error("Failed to reroute robot {}: {}", robot.getName(), e.getMessage(), e);
             websocketPublisherService.publishRerouteFailed(robot.getId(), obstructedLinkId);
         }
     }

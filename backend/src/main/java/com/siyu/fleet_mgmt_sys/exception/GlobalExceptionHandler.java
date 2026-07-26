@@ -2,12 +2,14 @@ package com.siyu.fleet_mgmt_sys.exception;
 
 import com.siyu.fleet_mgmt_sys.dto.LocationConflictResponseDTO;
 import com.siyu.fleet_mgmt_sys.exception.notfoundexception.NotFoundException;
+import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -53,5 +55,11 @@ public class GlobalExceptionHandler {
         log.error("Unexpected error", ex); // logs full stack trace
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ErrorResponse(500, "An unexpected error occurred"));
+    }
+
+    @ExceptionHandler({AsyncRequestNotUsableException.class, ClientAbortException.class})
+    public void handleClientDisconnect(Exception ex) {
+        // Log at WARN or DEBUG level so it doesn't clutter your error logs
+        log.warn("Client disconnected before response could be written: {}", ex.getMessage());
     }
 }

@@ -48,9 +48,9 @@ public class RouteService {
      */
 
     public Route getRoute(WayPoint start, WayPoint end) {
-        log.info("Routing from ({},{}) to ({},{})",
-                start.getLatitude(), start.getLongitude(),
-                end.getLatitude(), end.getLongitude());
+//        log.info("Routing from ({},{}) to ({},{})",
+//                start.getLatitude(), start.getLongitude(),
+//                end.getLatitude(), end.getLongitude());
 
         return routeBuilderService.buildRoute(
                 start.getLatitude(), start.getLongitude(),
@@ -86,6 +86,24 @@ public class RouteService {
     }
 
     public List<ColoredSegmentDTO> getColoredRoute(String start, String end) {
+        // FIX: this used to call OneMap with no fallback at all — an expired/invalid OneMap API
+        // key (401, as seen in practice) took down the entire "colored route" UI feature with a raw
+        // 500, even though we already have our own graph with per-edge speed bands (refreshed from
+        // LTA every 5 minutes) that can answer the same question without OneMap at all.
+        try {
+            return getColoredRouteViaOneMap(start, end);
+        } catch (Exception e) {
+            log.warn("OneMap colored route failed ({}) — falling back to the graph-based route",
+                    e.getMessage());
+            WayPoint startWp = new WayPoint(start);
+            WayPoint endWp = new WayPoint(end);
+            return routeBuilderService.buildColoredRoute(
+                    startWp.getLatitude(), startWp.getLongitude(),
+                    endWp.getLatitude(), endWp.getLongitude());
+        }
+    }
+
+    private List<ColoredSegmentDTO> getColoredRouteViaOneMap(String start, String end) {
         // get the route from OneMap and decode it into GPS coordinates
         OneMapRouteResponseDTO routeResponse = oneMapService.getRoute(start, end);
         List<double[]> coords = PolylineDecoder.decode(routeResponse.getRouteGeometry());

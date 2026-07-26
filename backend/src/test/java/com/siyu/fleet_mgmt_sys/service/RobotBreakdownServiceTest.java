@@ -8,6 +8,7 @@ import com.siyu.fleet_mgmt_sys.model.task.Task;
 import com.siyu.fleet_mgmt_sys.repository.RobotRepository;
 import com.siyu.fleet_mgmt_sys.repository.TaskRepository;
 import com.siyu.fleet_mgmt_sys.service.dispatch.DispatchService;
+import com.siyu.fleet_mgmt_sys.service.task.TaskService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -26,13 +27,17 @@ class RobotBreakdownServiceTest {
     private TaskRepository taskRepository;
     private DispatchService dispatchService;
     private RobotBreakdownService service;
+    private TaskService taskService;
+    private WebsocketPublisherService websocketPublisherService;
 
     @BeforeEach
     void setUp() {
         robotRepository = mock(RobotRepository.class);
         taskRepository = mock(TaskRepository.class);
         dispatchService = mock(DispatchService.class);
-        service = new RobotBreakdownService(robotRepository, taskRepository, dispatchService);
+        taskService = mock(TaskService.class);
+        websocketPublisherService = mock(WebsocketPublisherService.class);
+        service = new RobotBreakdownService(robotRepository, taskRepository, dispatchService, taskService, websocketPublisherService);
     }
 
     @Test

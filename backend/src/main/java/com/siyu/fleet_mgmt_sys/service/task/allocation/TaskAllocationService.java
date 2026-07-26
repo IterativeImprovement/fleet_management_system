@@ -7,6 +7,7 @@ import com.siyu.fleet_mgmt_sys.model.task.Task;
 import com.siyu.fleet_mgmt_sys.repository.RobotRepository;
 import com.siyu.fleet_mgmt_sys.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +33,7 @@ import java.util.Set;
  * order, so double-assignment can't race here. Add pessimistic locking only if
  * that changes.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TaskAllocationService {
@@ -100,7 +102,18 @@ public class TaskAllocationService {
                 assigned.add(best);
             }
         }
+
+        log.info("Allocating: {} pending tasks, {} free robots", pending.size(), free.size());
+        for (Task t : pending) {
+            log.info("  Pending task: {} type={} priorities={}", t.getName(), t.getType(), t.getCalculatedPriorities());
+        }
+        for (Robot r : free) {
+            log.info("  Free robot: {} type={} status={} currentTask={}",
+                    r.getName(), r.getType(), r.getStatus(), r.getCurrentTask());
+        }
+
         return assigned;
+
     }
 
     private List<Robot> freeRobots(Long simulationId) {
@@ -108,7 +121,8 @@ public class TaskAllocationService {
                 ? robotRepository.findBySimulatedTrueAndSimulationId(simulationId)
                 : robotRepository.findBySimulatedFalse();
         return robots.stream()
-                .filter(r -> r.getCurrentTask() == null && r.getStatus() != RobotStatus.ERROR)
+                .filter(r -> r.getStatus() == RobotStatus.IDLE || r.getStatus() == RobotStatus.MOVING_TO_BASE)
+                .filter(r -> r.getCurrentTask() == null)
                 .toList();
     }
 

@@ -55,7 +55,7 @@ public class SimulationEngine {
 
         // Step 3: Fetch location and roads from DB
         List<Long> locationIds = locationRepository.findAllIdsBySource(LocationSource.ONEMAP);
-        List<Long> roadIds = roadRepository.findAllIds();
+        List<Long> roadIds = roadRepository.findAllIds().stream().map(Long::parseLong).toList();
 
         log.info("Simulation reference data: locations={}, robots={}, roadSegments={}",
                 locationIds.size(), robotIds.size(), roadIds.size());

@@ -266,6 +266,24 @@ function App() {
     fetchSelectedColoredSegments()
   }, [selectedTaskId, routesByTaskId, tasks, useMockData, coloredSegmentsByTaskId])
 
+  // FIX: handleSelectRobot() only snapshotted the robot's task once, at click time. If that robot
+  // later finished the task and moved to a different one (or went idle), selectedTaskId kept
+  // pointing at the old, no-longer-relevant task forever — so the map kept showing a stale route
+  // instead of following the robot to wherever it actually is now. Keep selectedTaskId derived
+  // from the selected robot's current task for as long as a robot stays selected.
+  useEffect(() => {
+    if (!selectedRobotId) return
+
+    const selectedRobot = representedRobots.find(
+      robot => String(robot.id) === String(selectedRobotId)
+    )
+    const currentTaskId = getTaskIdFromRobot(selectedRobot)
+
+    setSelectedTaskId(prev =>
+      String(prev ?? '') === String(currentTaskId ?? '') ? prev : currentTaskId
+    )
+  }, [selectedRobotId, representedRobots])
+
   const routeErrorCount = Object.keys(routeErrorsByTaskId).length
 
   function getTaskIdFromRobot(robot) {
@@ -493,6 +511,7 @@ function App() {
         obstacles={simulation.simObstacles}
         activeBasePosition={simulation.activeBasePosition}
         routesByTaskId={routesByTaskId}
+        currentRoutesByRobotId={simulation.robotRoutesById}
         selectedTaskId={selectedTaskId}
         selectedRobotId={selectedRobotId}
         isLoadingRoutes={isLoadingRoutes}

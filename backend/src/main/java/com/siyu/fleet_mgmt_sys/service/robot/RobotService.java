@@ -118,7 +118,7 @@ public class RobotService {
 
         robots.forEach(robot -> robot.getTasks().size()); // initialise lazy tasks within the session
 
-        System.out.println("Retrieved filtered robots: " + robots);
+        System.out.printf("Retrieved filtered %d robots%n", robots.size());
         return robots;
     }
 

@@ -1,5 +1,6 @@
 package com.siyu.fleet_mgmt_sys.service.task;
 
+import com.siyu.fleet_mgmt_sys.dto.task.RobotBreakdownTaskDTO;
 import com.siyu.fleet_mgmt_sys.dto.task.TaskRequestDTO;
 import com.siyu.fleet_mgmt_sys.dto.task.TaskResponseDTO;
 import com.siyu.fleet_mgmt_sys.exception.notfoundexception.TaskNotFoundException;
@@ -18,15 +19,24 @@ import com.siyu.fleet_mgmt_sys.service.task.submission.TaskClusterService;
 import com.siyu.fleet_mgmt_sys.service.task.submission.TaskSubmissionPipeline;
 import com.siyu.fleet_mgmt_sys.specification.TaskSpecification;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TaskService {
+
+    // Singapore bounding box — kept as named constants so isWithinSingapore() and the clamp below
+    // can't drift apart.
+    private static final double MIN_LAT = 1.1304;
+    private static final double MAX_LAT = 1.4504;
+    private static final double MIN_LON = 103.6020;
+    private static final double MAX_LON = 104.0850;
     private final TaskRepository taskRepository;
     private final WayPointRepository wayPointRepository;
     private final RobotRepository robotRepository;
@@ -45,10 +55,12 @@ public class TaskService {
         WayPoint start = resolvedStart.wayPoint();
         WayPoint end = resolvedEnd.wayPoint();
 
-        if (!isWithinSingapore(start.getLatitude(), start.getLongitude())
-                || !isWithinSingapore(end.getLatitude(), end.getLongitude())) {
-            throw new IllegalArgumentException("Waypoints not within Singapore bounds.");
-        }
+        // FIX: used to hard-reject the whole task ("Waypoints not within Singapore bounds") — a
+        // point landing just outside the box (e.g. the simulation's random location generator
+        // overshooting slightly near the edge) killed task creation outright. Clamp into bounds
+        // instead so a marginal overshoot degrades gracefully rather than dropping the task.
+        clampToSingapore(start);
+        clampToSingapore(end);
 
         TaskType taskType = toTaskType(req.getType());
         List<Long> dependencyIds = req.getDependencyIds() == null
@@ -83,6 +95,11 @@ public class TaskService {
             task.setSimulationId(req.getSimulationId());
         }
 
+        // NEW: Map targetRobotId if this is a breakdown task
+        if (req instanceof RobotBreakdownTaskDTO breakdownReq) {
+            task.setTargetRobotId(breakdownReq.getTargetRobotId());
+        }
+
         Task savedTask = taskSubmissionPipeline.submitTask(task);
         System.out.println("Task created successfully!\n" + savedTask.toString());
         return new TaskResponseDTO(savedTask);
@@ -91,7 +108,7 @@ public class TaskService {
     @Transactional(readOnly = true)
     public TaskResponseDTO getTask(Long id) {
         Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new TaskNotFoundException(id)); // when no tasks matches the given id
+                .orElseThrow(() -> new TaskNotFoundException(id));
         System.out.println("Task retrieved successfully!\n" + task);
         return new TaskResponseDTO(task);
     }
@@ -119,7 +136,7 @@ public class TaskService {
 
         if (req.getName() != null) task.setName(req.getName());
         if (req.getDescription() != null) task.setDescription(req.getDescription());
-        TaskType taskType = req.getType() != null ? TaskType.valueOf(req.getType().toUpperCase()) : null; // convert to Tasktype
+        TaskType taskType = req.getType() != null ? TaskType.valueOf(req.getType().toUpperCase()) : null;
         if (req.getType() != null) task.setType(taskType);
         if (req.getStatus() != null) task.setStatus(TaskStatus.valueOf(req.getStatus().toUpperCase()));
         if (req.getPriority() != null) task.setPriority(req.getPriority());
@@ -158,7 +175,7 @@ public class TaskService {
                 TaskSpecification.filter(priority, type, status, timeLeft, startDateTime, completionDateTime)
         );
 
-        System.out.println("Retrieved filtered tasks:" + tasks);
+        System.out.printf("Retrieved filtered %d tasks%n", tasks.size());
         return tasks.stream()
                 .map(TaskResponseDTO::new)
                 .toList();
@@ -169,37 +186,45 @@ public class TaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new TaskNotFoundException(taskId));
 
-        // unlink robot and task from each other
         Robot robot = task.getRobot();
+
+        // 1. Unlink from the robot FIRST while the task is unmodified
+        if (robot != null) {
+            robot.getTasks().remove(task);
+            if (robot.getTasks().isEmpty()) {
+                robot.setStatus(RobotStatus.IDLE);
+            }
+            robotRepository.save(robot);
+        }
+
+        // 2. NOW update the task state
         task.setStatus(TaskStatus.COMPLETED);
         task.setRobot(null);
         taskRepository.save(task);
 
-        // release any tasks that were waiting on this one
+        // 3. Release downstream dependencies
         dependencyService.releaseUnblockedTasks(task);
 
-        // refresh cluster cache
         if (task.getEndCluster() != null) {
             clusterService.refreshTopTasks(task.getEndCluster().getId());
         }
-
-        // a task may have no assigned robot (e.g. completed straight from the pool)
-        if (robot == null) {
-            return;
-        }
-
-        // Pure completion: unlink and free the robot. Re-allocation/next-leg is driven by
-        // DispatchService (backend-authoritative dispatch), not here.
-        robot.getTasks().remove(task);
-        if (robot.getTasks().isEmpty()) {
-            robot.setStatus(RobotStatus.IDLE);
-        }
-        robotRepository.save(robot);
     }
 
     public boolean isWithinSingapore(double lat, double lon) {
-        return lat >= 1.1304 && lat <= 1.4504
-                && lon >= 103.6020 && lon <= 104.0850;
+        return lat >= MIN_LAT && lat <= MAX_LAT
+                && lon >= MIN_LON && lon <= MAX_LON;
+    }
+
+    /** Clamps a waypoint's coordinates into the Singapore bounding box in place, logging if it moved. */
+    private void clampToSingapore(WayPoint wp) {
+        double clampedLat = Math.max(MIN_LAT, Math.min(MAX_LAT, wp.getLatitude()));
+        double clampedLon = Math.max(MIN_LON, Math.min(MAX_LON, wp.getLongitude()));
+        if (clampedLat != wp.getLatitude() || clampedLon != wp.getLongitude()) {
+            log.warn("Waypoint ({}, {}) outside Singapore bounds — clamped to ({}, {})",
+                    wp.getLatitude(), wp.getLongitude(), clampedLat, clampedLon);
+            wp.setLatitude(clampedLat);
+            wp.setLongitude(clampedLon);
+        }
     }
 
     private void validateCreateRequest(TaskRequestDTO req) {
@@ -273,5 +298,4 @@ public class TaskService {
 
     private record ResolvedWaypoint(Location location, WayPoint wayPoint) {
     }
-
 }

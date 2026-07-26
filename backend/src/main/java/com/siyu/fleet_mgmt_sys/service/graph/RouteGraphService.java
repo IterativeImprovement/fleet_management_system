@@ -98,11 +98,14 @@ public class RouteGraphService {
         double speedMs = SpeedBandUtils.toMetresPerSecond(newSpeedBand);
 
         // Replace each edge with a fresh instance — atomic from reader's perspective
+        // (roadName must be carried over — dropping it here reverts road names to "Unknown Road"
+        // on every 5-minute traffic refresh, since GraphUpdateService calls this on a schedule)
         edges.replaceAll(edge -> GraphEdge.builder()
                 .id(edge.getId())
                 .fromNode(edge.getFromNode())
                 .toNode(edge.getToNode())
                 .linkId(edge.getLinkId())
+                .roadName(edge.getRoadName())
                 .lengthMetres(edge.getLengthMetres())
                 .currentSpeedBand(newSpeedBand)
                 .travelTimeSeconds(edge.getLengthMetres() / speedMs)
@@ -134,6 +137,18 @@ public class RouteGraphService {
         return adjacency.values().stream()
                 .flatMap(List::stream)
                 .toList();
+    }
+
+    /**
+     * Returns every graph sub-edge sharing the given road linkId — a road that crossed one or more
+     * other roads gets split into several sub-edges at those junctions (see
+     * GraphBuilderService.splitEdge), so a single Road row's raw start/end line is not the whole
+     * physical road. Used to draw the true, possibly-multi-segment geometry of an obstructed road
+     * on the frontend instead of just a straight line between its two original endpoints.
+     */
+    public List<GraphEdge> getEdgesByLinkId(String linkId) {
+        CopyOnWriteArrayList<GraphEdge> edges = edgesByLinkId.get(linkId);
+        return edges != null ? new ArrayList<>(edges) : List.of();
     }
 
     /**

@@ -294,49 +294,128 @@
   font-weight: 700;
 }
 
-/* Obstacle markers */
+/* Repair shop marker */
 
-.map-obstacle-marker {
-  position: absolute;
-  z-index: 4;
-
-  transform: translate(-50%, -50%);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  background-color: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-  border-radius: 999px;
-  padding: 6px 10px;
-
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
-  box-shadow: 0 4px 10px rgba(153, 27, 27, 0.12);
+.map-repair-div-icon {
+  background: transparent;
+  border: none;
+  pointer-events: none;
 }
 
-.obstacle-icon {
-  width: 18px;
-  height: 18px;
-  flex: 0 0 18px;
-  border-radius: 50%;
+.map-repair-marker {
+  position: relative;
+  width: 34px;
+  height: 42px;
+  pointer-events: none;
+}
 
-  background-color: #dc2626;
-  color: #ffffff;
+.map-repair-marker::before,
+.map-repair-marker::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+}
+
+.map-repair-marker::before {
+  top: 28px;
+  border-right: 9px solid transparent;
+  border-left: 9px solid transparent;
+  border-top: 14px solid #ffffff;
+}
+
+.map-repair-marker::after {
+  top: 29px;
+  border-right: 7px solid transparent;
+  border-left: 7px solid transparent;
+  border-top: 11px solid #b45309;
+}
+
+.map-repair-marker-badge {
+  position: absolute;
+  top: 0;
+  left: 1px;
+  z-index: 1;
+
+  width: 32px;
+  height: 32px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background-color: #b45309;
+  box-shadow: 0 4px 10px rgba(180, 83, 9, 0.32);
 
   display: flex;
   align-items: center;
   justify-content: center;
-
-  font-size: 12px;
-  line-height: 1;
 }
 
+.map-repair-marker-badge svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.map-repair-div-icon:focus {
+  outline: none;
+}
+
+.map-repair-div-icon:focus-visible .map-repair-marker-badge {
+  box-shadow:
+    0 0 0 3px #fbbf24,
+    0 4px 10px rgba(180, 83, 9, 0.32);
+}
+
+.leaflet-tooltip.map-repair-tooltip {
+  color: #111827;
+  font-weight: 700;
+}
+
+/* Obstacle markers */
+
+/* FIX: this used to be a permanently-rendered pill (red badge + full road-name text baked
+   straight into the icon's HTML), sized to fit the label — a large, always-visible shape sitting
+   on the map that could easily cover nearby robots or routes. Replaced with a small fixed-size
+   circular badge (same footprint as the base/repair markers) with just a cross/X glyph; the road
+   name now lives in a hover-only tooltip (.map-obstacle-tooltip) instead of being baked in. */
 .map-obstacle-div-icon {
   background: transparent;
   border: none;
+}
+
+.map-obstacle-marker-badge {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background-color: #dc2626;
+  box-shadow: 0 3px 8px rgba(220, 38, 38, 0.35);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-obstacle-marker-badge svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.leaflet-tooltip.map-obstacle-tooltip {
+  color: #991b1b;
+  font-weight: 700;
+  font-size: 12px;
 }
 
 /* Leaflet robot markers */
@@ -344,6 +423,7 @@
 .robot-marker {
   stroke-width: 2px;
   fill-opacity: 0.9;
+  transition: transform 100ms linear, d 100ms linear;
 }
 
 .robot-marker.idle {
