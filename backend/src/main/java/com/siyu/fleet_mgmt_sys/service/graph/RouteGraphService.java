@@ -89,9 +89,8 @@ public class RouteGraphService {
     }
 
     /**
-     * Updates speed band for all edges with the given linkId, by rewriting them in place inside
-     * whichever `adjacency` lists actually hold them — see the FIX comment on fromNodeIdsByLinkId
-     * for why this must mutate the SAME lists A* reads rather than a separate copy.
+     * Updates the speed band for every edge with the given linkId, rewriting them in place inside
+     * whichever `adjacency` lists hold them (the same lists A* reads from).
      */
     public void updateSpeedBand(String linkId, int newSpeedBand) {
         List<Long> fromNodeIds = fromNodeIdsByLinkId.get(linkId);
@@ -103,11 +102,8 @@ public class RouteGraphService {
             CopyOnWriteArrayList<GraphEdge> edges = adjacency.get(fromNodeId);
             if (edges == null) continue;
 
-            // Replace each edge with a fresh instance — atomic from reader's perspective
-            // (roadName must be carried over — dropping it here reverts road names to "Unknown Road"
-            // on every 5-minute traffic refresh, since GraphUpdateService calls this on a schedule).
-            // This adjacency list may hold edges for OTHER roads too (several roads can share a
-            // junction node), so only rewrite the ones matching this linkId.
+            // rebuild each matching edge (fresh instance = atomic swap for readers); a junction's
+            // list can hold edges from other roads too, so only touch ones with this linkId
             edges.replaceAll(edge -> {
                 if (!linkId.equals(edge.getLinkId())) return edge;
                 return GraphEdge.builder()
@@ -148,13 +144,7 @@ public class RouteGraphService {
                 .toList();
     }
 
-    /**
-     * Returns every graph sub-edge sharing the given road linkId — a road that crossed one or more
-     * other roads gets split into several sub-edges at those junctions (see
-     * GraphBuilderService.splitEdge), so a single Road row's raw start/end line is not the whole
-     * physical road. Used to draw the true, possibly-multi-segment geometry of an obstructed road
-     * on the frontend instead of just a straight line between its two original endpoints.
-     */
+    /** All sub-edges sharing a linkId (a road gets split at junctions), for drawing its full geometry. */
     public List<GraphEdge> getEdgesByLinkId(String linkId) {
         List<Long> fromNodeIds = fromNodeIdsByLinkId.get(linkId);
         if (fromNodeIds == null) return List.of();

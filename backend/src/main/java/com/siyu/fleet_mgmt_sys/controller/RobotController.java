@@ -3,6 +3,7 @@ package com.siyu.fleet_mgmt_sys.controller;
 import com.siyu.fleet_mgmt_sys.dto.robot.RobotRequestDTO;
 import com.siyu.fleet_mgmt_sys.dto.robot.RobotResponseDTO;
 import com.siyu.fleet_mgmt_sys.model.robot.Robot;
+import com.siyu.fleet_mgmt_sys.service.dispatch.DispatchService;
 import com.siyu.fleet_mgmt_sys.service.robot.RobotMapper;
 import com.siyu.fleet_mgmt_sys.service.robot.RobotService;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import java.util.List;
 public class RobotController {
     private final RobotService robotService;
     private final RobotMapper robotMapper;
+    private final DispatchService dispatchService;
 
     @PostMapping
     public ResponseEntity<RobotResponseDTO> createRobot(@RequestBody RobotRequestDTO req) {
@@ -87,6 +89,20 @@ public class RobotController {
          robotService.setToBase(id);
          return ResponseEntity.ok().build();
          }
+
+    // drops the robot's current task(s) back to the pool and sends it home
+    @PostMapping("/{id}/send-to-base")
+    public ResponseEntity<Void> sendToBase(@PathVariable Long id) {
+        dispatchService.userSendToBase(id);
+        return ResponseEntity.ok().build();
+    }
+
+    // same, but to the repair/servicing location
+    @PostMapping("/{id}/send-to-servicing")
+    public ResponseEntity<Void> sendToServicing(@PathVariable Long id) {
+        dispatchService.userSendToServicing(id);
+        return ResponseEntity.ok().build();
+    }
 
     // Robot position/status over WebSocket now lives in WebsocketController (routing branch owns /app/robot/{id}/update).
 }

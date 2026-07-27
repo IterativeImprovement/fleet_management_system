@@ -20,6 +20,8 @@ import {
   getRobots,
   createRobotInBackend,
   deleteRobotInBackend,
+  sendRobotToBase,
+  sendRobotToServicing,
 } from './api/robotApi'
 import {
   getRouteGeometry,
@@ -273,6 +275,7 @@ function App() {
     )
     const currentTaskId = getTaskIdFromRobot(selectedRobot)
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedTaskId(prev =>
       String(prev ?? '') === String(currentTaskId ?? '') ? prev : currentTaskId
     )
@@ -459,6 +462,31 @@ function App() {
     console.log('Deleted robot from backend:', robotId)
   }
 
+  async function handleSendRobotToBase(robotId) {
+    if (useMockData) {
+      throw new Error('Send to Base is not available in demo mode.')
+    }
+
+    await sendRobotToBase(robotId)
+
+    // refresh so the UI picks up the reassignment
+    await Promise.all([loadRobotsFromBackend(), loadTasksFromBackend()])
+
+    console.log('Sent robot to base:', robotId)
+  }
+
+  async function handleSendRobotToServicing(robotId) {
+    if (useMockData) {
+      throw new Error('Send to Servicing is not available in demo mode.')
+    }
+
+    await sendRobotToServicing(robotId)
+
+    await Promise.all([loadRobotsFromBackend(), loadTasksFromBackend()])
+
+    console.log('Sent robot to servicing:', robotId)
+  }
+
   // Merge animated positions from the simulation into the robots list
   const robotsWithSimPositions = useMemo(() => {
     const overrides = simulation.robotPositionOverrides
@@ -498,6 +526,8 @@ function App() {
         onAddRobot={handleAddRobot}
         onDeleteTask={handleDeleteTask}
         onDeleteRobot={handleDeleteRobot}
+        onSendRobotToBase={handleSendRobotToBase}
+        onSendRobotToServicing={handleSendRobotToServicing}
       />
 
       <LiveMap

@@ -19,6 +19,8 @@ function Sidebar({
   onAddRobot,
   onDeleteTask,
   onDeleteRobot,
+  onSendRobotToBase,
+  onSendRobotToServicing,
 }) {
   const [isAddingTask, setIsAddingTask] = useState(false)
   const [isAddingRobot, setIsAddingRobot] = useState(false)
@@ -86,6 +88,8 @@ function Sidebar({
               }}
               onSelectTask={onSelectTask}
               onDeleteRobot={onDeleteRobot}
+              onSendToBase={onSendRobotToBase}
+              onSendToServicing={onSendRobotToServicing}
             />
           ) : (
             <>

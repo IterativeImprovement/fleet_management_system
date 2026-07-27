@@ -57,7 +57,7 @@ class RobotBreakdownServiceTest {
 
         service.handleRobotBreakdown(1L);
 
-        assertEquals(RobotStatus.ERROR, robot.getStatus());
+        assertEquals(RobotStatus.NEED_MAINTENANCE, robot.getStatus());
         assertNull(task.getRobot());
         assertEquals(TaskStatus.PENDING_ASSIGNMENT, task.getStatus()); // back in the pool
         assertTrue(robot.getTasks().isEmpty());

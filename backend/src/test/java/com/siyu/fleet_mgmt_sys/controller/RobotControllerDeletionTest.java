@@ -2,6 +2,7 @@ package com.siyu.fleet_mgmt_sys.controller;
 
 import com.siyu.fleet_mgmt_sys.exception.GlobalExceptionHandler;
 import com.siyu.fleet_mgmt_sys.exception.RobotHasAssignedTasksException;
+import com.siyu.fleet_mgmt_sys.service.dispatch.DispatchService;
 import com.siyu.fleet_mgmt_sys.service.robot.RobotMapper;
 import com.siyu.fleet_mgmt_sys.service.robot.RobotService;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,13 +20,15 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standal
 class RobotControllerDeletionTest {
     private RobotService robotService;
     private RobotMapper robotMapper;
+    private DispatchService dispatchService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         robotService = mock(RobotService.class);
         robotMapper = mock(RobotMapper.class);
-        mockMvc = standaloneSetup(new RobotController(robotService, robotMapper))
+        dispatchService = mock(DispatchService.class);
+        mockMvc = standaloneSetup(new RobotController(robotService, robotMapper, dispatchService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }

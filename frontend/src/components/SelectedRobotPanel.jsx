@@ -46,9 +46,13 @@ function SelectedRobotPanel({
   onBack,
   onSelectTask,
   onDeleteRobot,
+  onSendToBase,
+  onSendToServicing,
 }) {
   const [deleteError, setDeleteError] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
+  const [actionError, setActionError] = useState('')
+  const [pendingAction, setPendingAction] = useState(null) // 'base' | 'servicing' | null
   const statusType = getRobotStatusType(robot.status)
   const statusLabel = getRobotStatusLabel(robot.status)
   const assignedTasks = getAssignedTasks(robot, tasks)
@@ -78,6 +82,30 @@ function SelectedRobotPanel({
       setDeleteError(error.message || 'Failed to delete robot')
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  async function handleSendToBase() {
+    try {
+      setPendingAction('base')
+      setActionError('')
+      await onSendToBase?.(robot.id)
+    } catch (error) {
+      setActionError(error.message || 'Failed to send robot to base')
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
+  async function handleSendToServicing() {
+    try {
+      setPendingAction('servicing')
+      setActionError('')
+      await onSendToServicing?.(robot.id)
+    } catch (error) {
+      setActionError(error.message || 'Failed to send robot to servicing')
+    } finally {
+      setPendingAction(null)
     }
   }
 
@@ -152,8 +180,22 @@ function SelectedRobotPanel({
 
       <div className="selected-actions">
         <h3>Actions</h3>
-        <button className="primary-action">Send to Base</button>
-        <button className="secondary-action">Send to Servicing</button>
+        <button
+          type="button"
+          className="primary-action"
+          onClick={handleSendToBase}
+          disabled={pendingAction !== null}
+        >
+          {pendingAction === 'base' ? 'Sending...' : 'Send to Base'}
+        </button>
+        <button
+          type="button"
+          className="secondary-action"
+          onClick={handleSendToServicing}
+          disabled={pendingAction !== null}
+        >
+          {pendingAction === 'servicing' ? 'Sending...' : 'Send to Servicing'}
+        </button>
         <button
           type="button"
           className="danger-action"
@@ -162,6 +204,10 @@ function SelectedRobotPanel({
         >
           {isDeleting ? 'Deleting...' : 'Delete Robot'}
         </button>
+
+        {actionError && (
+          <p className="selected-action-error">{actionError}</p>
+        )}
 
         {deleteMessage && (
           <p className="selected-action-error">{deleteMessage}</p>

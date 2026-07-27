@@ -90,12 +90,7 @@ public class RobotBreakdownService {
         }
     }
 
-    /**
-     * Fallback: if the robot's live position hasn't been reported yet (still at the JPA default of
-     * 0,0), routing the breakdown task from there would fail outright (outside Singapore bounds) —
-     * silently dropping the tow task and leaving the robot stuck at NEED_MAINTENANCE forever. Fall
-     * back to the robot's own base position instead, which is always a valid, in-bounds point.
-     */
+    /** Falls back to the robot's base position if its live position hasn't arrived yet or is out of bounds. */
     private RobotBreakdownTaskDTO buildBreakdownTaskDTO(Robot robot, Long simulationId) {
         double lat = robot.getLatitude();
         double lon = robot.getLongitude();

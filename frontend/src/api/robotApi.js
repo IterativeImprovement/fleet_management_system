@@ -110,3 +110,33 @@ export async function deleteRobotInBackend(robotId) {
     throw new Error(`Delete robot failed (${response.status}): ${message}`)
   }
 }
+
+// drops current tasks back to the pool and sends the robot home
+export async function sendRobotToBase(robotId) {
+  const response = await fetch(`${ROBOT_ENDPOINT}/${robotId}/send-to-base`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const message = await getErrorMessage(response)
+    throw new Error(`Send to base failed (${response.status}): ${message}`)
+  }
+}
+
+// same, but to the repair/servicing location
+export async function sendRobotToServicing(robotId) {
+  const response = await fetch(`${ROBOT_ENDPOINT}/${robotId}/send-to-servicing`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const message = await getErrorMessage(response)
+    throw new Error(`Send to servicing failed (${response.status}): ${message}`)
+  }
+}

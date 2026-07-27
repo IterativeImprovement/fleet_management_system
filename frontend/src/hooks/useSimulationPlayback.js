@@ -132,12 +132,8 @@ export function useSimulationPlayback({
               if (status === 'IDLE') {
                 // repair complete
                 addAlert('Repair', `Robot ${robotId} repair complete — returning to service`)
-                // The backend's dispatch map entry for this robot was removed when its BEING_TOWED
-                // shadow leg arrived (DispatchService.onArrive's BEING_TOWED case), so the next real
-                // dispatch it publishes (heading to base or its next task) restarts revision
-                // numbering at 1. Reset our own tracking to match, or that dispatch is rejected as
-                // "stale" against whatever revision we last saw and the robot sits at the repair
-                // depot forever even though the backend correctly redispatched it.
+                // backend restarts revision numbering at 1 for this robot's next dispatch, so reset
+                // our tracking too or that dispatch gets rejected as stale
                 robotRevisionRef.current.delete(robotId)
               } else if (status === 'NEED_MAINTENANCE') {
                 // broke down
@@ -275,14 +271,7 @@ export function useSimulationPlayback({
       }))
       return
     }
-    // dispatch.etaSeconds is a real-world travel duration (distance / robot speed) that lives on
-    // the SAME timeline as simTime (one robot-second of travel = one simulated second) — it must
-    // NOT be re-scaled by speedFactor here. currentSimTime already advances at speedFactor per
-    // real second, so comparing it directly against dispatch.etaSeconds is what actually compresses
-    // movement into the sped-up demo. Multiplying by speedFactor here (as this used to) cancelled
-    // that compression out entirely, making every leg take its full real-world duration to animate
-    // (minutes, sometimes nearly an hour) regardless of speedFactor — starving the free-robot pool
-    // because no robot could ever finish a leg within a short demo run.
+    // etaSeconds already lives on the same timeline as simTime, so don't re-scale it by speedFactor
     robotMovementsRef.current.set(robotId, {
       coords,
       etaSeconds: dispatch.etaSeconds > 0 ? dispatch.etaSeconds : 1,

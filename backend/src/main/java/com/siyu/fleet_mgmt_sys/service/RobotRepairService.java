@@ -36,7 +36,7 @@ public class RobotRepairService {
     /**
      * Called when a RobotBreakdownTask completes — i.e. Robot B has arrived
      * at the repair location with Robot A.
-     * Starts a 2-hour repair timer for Robot A.
+     * Starts a 2-hour repair timer for Robot A, then frees Robot B (the tow robot).
      */
     public void startRepair(Task breakdownTask, Robot robotB) {
         // Robot A is identified from the breakdown task description
@@ -45,6 +45,25 @@ public class RobotRepairService {
 
         Robot robotA = robotRepository.findByName(robotName).orElseThrow(() -> new RobotNotFoundException(robotName));
 
+        beginRepair(robotA);
+
+        // Free the tow robot back into the fleet now that it's dropped off Robot A.
+        robotB.setStatus(RobotStatus.IDLE);
+        robotRepository.save(robotB);
+        if (robotA.getSimulationId() != null) {
+            dispatchService.allocateAndDispatch(robotA.getSimulationId());
+        }
+        log.info("Robot {} released back to fleet after towing", robotB.getName());
+    }
+
+    /** Same pipeline as above, for a robot that drove itself to servicing (no tow robot to free). */
+    public void startSelfRepair(Robot robot) {
+        beginRepair(robot);
+    }
+
+    /** Shared by both entry points above: create the repair task, mark the robot under maintenance,
+     * and schedule its release. */
+    private void beginRepair(Robot robotA) {
         Long simulationId = robotA.getSimulationId();
         // Create the repair task for Robot A
         RobotRepairingTaskDTO repairDTO = new RobotRepairingTaskDTO(robotA, simulationId);
@@ -55,6 +74,9 @@ public class RobotRepairService {
         repairTask.setPriority(repairDTO.getPriority());
         repairTask.setTaskDuration(repairDTO.getTaskDuration());
         repairTask.setStatus(TaskStatus.IN_PROGRESS);
+        // tag with the run so a sim reset actually cleans this up
+        repairTask.setSimulationId(repairDTO.getSimulationId());
+        repairTask.setSimulated(repairDTO.getSimulationId() != null);
         taskRepository.save(repairTask);
 
         // Robot A → UNDER_MAINTENANCE
@@ -79,13 +101,6 @@ public class RobotRepairService {
                 () -> completeRepair(robotA.getId(), repairTask.getId()),
                 Math.round(realDelaySeconds),
                 TimeUnit.SECONDS);
-
-        robotB.setStatus(RobotStatus.IDLE);
-        robotRepository.save(robotB);
-        if (simulationId != null) {
-            dispatchService.allocateAndDispatch(simulationId);
-        }
-        log.info("Robot {} released back to fleet after towing", robotB.getName());
     }
 
     /**

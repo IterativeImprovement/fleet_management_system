@@ -34,6 +34,9 @@ public class RobotService {
             default -> throw new IllegalArgumentException("Unknown robot type: " + req.getType());
         };
 
+        // new robots start parked at base, not at the default (0,0)
+        robot.setPosition(robot.getBaseLatitude(), robot.getBaseLongitude());
+
         // initialises the robot with the given list of tasks
         req.getTaskIdsToAdd().stream().map(id -> taskRepository.findById(id).orElseThrow(() -> new TaskNotFoundException(id)))
                                 .forEach(task -> allocationService.assign(robot, task, false));
