@@ -37,12 +37,8 @@ import java.util.function.Function;
 
 /**
  * Backend-authoritative movement. Owns each robot's current leg (a {@link DispatchDTO}) in an
- * in-memory map, drives the lifecycle base → task start → execute → next task | base, and pushes
- * every leg to the frontend, which animates it and reports arrival. A monotonic revision per
- * robot supersedes a return trip when the robot is re-tasked mid-way and drops stale arrivals.
- *
- * ponytail: in-memory state (no DB table) — a mid-run backend restart loses dispatch state, which
- * is fine for a demo sim (the frontend resets). Add persistence only if durability is needed.
+ * in-memory map, drives the lifecycle base -> task start -> execute -> next task | base, and pushes
+ * every leg to the frontend, which animates it and reports arrival.
  */
 @Slf4j
 @Service
@@ -60,9 +56,6 @@ public class DispatchService {
 
     private final Map<Long, DispatchDTO> dispatches = new ConcurrentHashMap<>();
 
-    // RobotRepairService already depends on DispatchService (to re-run allocation once the tow
-    // robot is freed) — @Lazy here breaks the resulting cycle, same pattern as
-    // TaskSubmissionPipeline's @Lazy DispatchService.
     public DispatchService(TaskAllocationService allocationService,
                             RouteService routeService,
                             WebsocketPublisherService publisher,
@@ -82,8 +75,6 @@ public class DispatchService {
         this.robotRepairService = robotRepairService;
         this.wayPointRepository = wayPointRepository;
     }
-
-    // ── Public API ───────────────────────────────────────────────────────────
 
     /** Allocate the run's pending pool and push a TO_TASK_START leg to each newly-assigned robot. */
     @Transactional
@@ -105,7 +96,7 @@ public class DispatchService {
             case TO_TASK_START -> beginExecute(robotId, current.getTaskId());
             case EXECUTE_TASK -> completeAndContinue(robotId, current.getTaskId(), current.getSimulationId());
             case TO_BASE -> arriveAtBase(robotId, current.getSimulationId());
-            // Shadow leg mirrored onto the broken robot while it's being towed (see beginExecute) —
+            // Shadow leg mirrored onto the broken robot while it's being towed (see beginExecute) -
             // the tow robot's own EXECUTE_TASK arrival is what actually drives completion, so this
             // side just clears itself.
             case BEING_TOWED -> dispatches.remove(robotId);
@@ -133,7 +124,7 @@ public class DispatchService {
     }
 
     /**
-     * If the robot has nothing queued, send it home — the same fallback every other "just finished
+     * If the robot has nothing queued, send it home - the same fallback every other "just finished
      * something" path uses (see completeAndContinue, arriveAtBase). Used by RobotRepairService once
      * a repair completes, so a repaired robot behaves like any other robot that just finished a
      * task instead of sitting idle wherever the repair happened.
@@ -165,7 +156,7 @@ public class DispatchService {
 
     // Shared by both actions above: drop the robot's current task(s) back to the pool, then create
     // and directly assign a new task driving it to `destination`. Skips the nearest-robot matcher
-    // on purpose — the user picked this robot, so it has to be the one that goes.
+    // on purpose - the user picked this robot, so it has to be the one that goes.
     // triggersMaintenance marks the task as self-targeting so arrival is recognised as a
     // self-directed repair (see completeAndContinue).
     private void userDirectedTravel(Long robotId, String taskName, Function<Robot, WayPoint> destination,
@@ -216,13 +207,11 @@ public class DispatchService {
         task.setRoute(routeService.getRouteForTask(task));
         Task savedTask = taskRepository.save(task);
 
-        // Direct assignment (not the pool matcher) — guarantees this robot, not just any eligible one.
+        // Direct assignment (not the pool matcher) - guarantees this robot, not just any eligible one.
         allocationService.assign(robot, savedTask, false);
 
         dispatchToTaskStart(robot);
     }
-
-    // ── State transitions ────────────────────────────────────────────────────
 
     private void dispatchToTaskStart(Robot robot) {
         Task task = robot.getCurrentTask();
@@ -231,7 +220,7 @@ public class DispatchService {
         DispatchDTO leg = buildLeg(robot, task, DispatchPhase.TO_TASK_START, from, task.getStartWayPoint());
         publish(leg);
 
-        // routing failed entirely — release the pairing instead of leaving the robot stuck ASSIGNED
+        // routing failed entirely - release the pairing instead of leaving the robot stuck ASSIGNED
         if (leg.isBlocked()) {
             releaseUnroutableAssignment(robot, task);
         }
@@ -239,7 +228,7 @@ public class DispatchService {
 
     /** See {@link #dispatchToTaskStart}: undo an assignment that could not be routed at all. */
     private void releaseUnroutableAssignment(Robot robot, Task task) {
-        log.warn("Routing permanently failed for robot={} task={} — releasing back to the pool for retry",
+        log.warn("Routing permanently failed for robot={} task={} - releasing back to the pool for retry",
                 robot.getName(), task.getId());
         task.setRobot(null);
         task.setStatus(TaskStatus.PENDING_ASSIGNMENT);
@@ -258,12 +247,11 @@ public class DispatchService {
         if (task == null) return;
         task.setStatus(TaskStatus.IN_PROGRESS);
         taskRepository.save(task);
-        // reuse the task's own start→end route (built at submission)
         DispatchDTO leg = legFromRoute(robot, task, DispatchPhase.EXECUTE_TASK, task.getRoute(), task.getEndWayPoint());
         publish(leg);
 
-        // only shadow when there's an actual passenger — a self-targeting task (e.g. "Send to
-        // Servicing") has no one to mirror, so skip it or we'd stomp our own EXECUTE_TASK leg
+        // only shadow when there's an actual passenger. A self-targeting task (e.g. "Send to
+        // Servicing") has no one to mirror.
         boolean hasSeparatePassenger = task.getTargetRobotId() != null && !task.getTargetRobotId().equals(robotId);
         if (hasSeparatePassenger && !leg.isBlocked()) {
             publishTowShadow(robot, task, leg);
@@ -311,7 +299,7 @@ public class DispatchService {
 
         taskService.completeTask(taskId);       // pure: COMPLETED, unlink, release deps, robot IDLE
 
-        // repair has to start after completeTask, not before — otherwise completeTask's own
+        // repair has to start after completeTask, not before - otherwise completeTask's own
         // "robot IDLE" write would stomp the UNDER_MAINTENANCE status we're about to set
         if (targetRobotId != null) {
             try {
@@ -334,9 +322,9 @@ public class DispatchService {
         allocateAndDispatch(simulationId);       // may hand this or another robot its next task
 
         Robot robot = reload(robotId);
-        // skip if it just went into maintenance above — it stays put until repair finishes
+        // skip if it just went into maintenance above - it stays put until repair finishes
         if (robot.getCurrentTask() == null && robot.getStatus() != RobotStatus.UNDER_MAINTENANCE) {
-            dispatchToBase(robot);               // nothing queued → head home
+            dispatchToBase(robot);               // nothing queued, so head home
         }
     }
 
@@ -357,14 +345,12 @@ public class DispatchService {
         publish(buildLeg(robot, null, DispatchPhase.TO_BASE, from, to));
     }
 
-    // ── Leg builders ─────────────────────────────────────────────────────────
-
     private DispatchDTO buildLeg(Robot robot, Task task, DispatchPhase phase, WayPoint from, WayPoint to) {
-        // 1) graph A* router (transient — never persisted)
+        // 1) graph A* router (transient - never persisted)
         try {
             return legFromRoute(robot, task, phase, routeService.getRoute(from, to), to);
         } catch (Exception graphErr) {
-            log.warn("Graph routing failed robot={} phase={}: {} — trying OneMap",
+            log.warn("Graph routing failed robot={} phase={}: {} - trying OneMap",
                     robot.getName(), phase, graphErr.getMessage());
         }
         // 2) OneMap fallback (external drive route; robot-paced ETA for consistency)
@@ -384,14 +370,14 @@ public class DispatchService {
             log.warn("OneMap routing also failed robot={} phase={}: {}",
                     robot.getName(), phase, oneMapErr.getMessage());
         }
-        // 3) blocked — hold position, let the user know
+        // 3) blocked - hold position, let the user know
         log.warn("Routing blocked for robot={} phase={}", robot.getName(), phase);
         return base(robot, task, phase).blocked(true)
                 .destLat(to.getLatitude()).destLng(to.getLongitude()).build();
     }
 
     private DispatchDTO legFromRoute(Robot robot, Task task, DispatchPhase phase, Route route, WayPoint to) {
-        if (route == null) {   // missing task route — rebuild start→end
+        if (route == null) {   // missing task route - rebuild start to end
             return buildLeg(robot, task, phase, task.getStartWayPoint(), task.getEndWayPoint());
         }
         return base(robot, task, phase)
@@ -417,8 +403,6 @@ public class DispatchService {
                 .taskId(task == null ? null : task.getId())
                 .phase(phase);
     }
-
-    // ── Helpers ──────────────────────────────────────────────────────────────
 
     private void publish(DispatchDTO dispatch) {
         dispatches.put(dispatch.getRobotId(), dispatch);

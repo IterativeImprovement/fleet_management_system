@@ -44,7 +44,7 @@ public class PolylineEncoder {
         for (int i = 0; i < edges.size(); i++) {
             GraphEdge edge = edges.get(i);
 
-            // Log each road name — group consecutive edges on same road
+            // Log each road name - group consecutive edges on same road
             String roadName = edge.getRoadName() != null ? edge.getRoadName() : "Unknown Road";
             if (!roadName.equals(prevRoadName)) {
 //                log.info("  [{}] {}", segmentNumber++, roadName);

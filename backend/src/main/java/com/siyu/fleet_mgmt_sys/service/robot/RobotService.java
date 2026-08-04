@@ -138,7 +138,7 @@ public class RobotService {
     }
 
 
-    // websocket telemetry — position only; the backend owns status via dispatch
+    // websocket telemetry - position only; the backend owns status via dispatch
     @Transactional
     public void updatePosition(Long robotId, double lat, double lng) {
         Robot robot = robotRepository.findById(robotId)

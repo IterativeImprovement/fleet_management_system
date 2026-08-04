@@ -39,17 +39,17 @@ public class TaskSpecification {
                 predicates.add(cb.equal(root.get("status"), status));
             }
 
-            // startDateTime — after: / before: / on:
+            // startDateTime - after: / before: / on:
             if (startDateTime != null) {
                 predicates.add(buildDateTimePredicate(cb, root.get("startDateTime"), startDateTime));
             }
 
-            // completionDateTime — after: / before: / on:
+            // completionDateTime - after: / before: / on:
             if (completionDateTime != null) {
                 predicates.add(buildDateTimePredicate(cb, root.get("completionDateTime"), completionDateTime));
             }
 
-            // timeLeft — computed as completionDateTime - now, filter with gte: or lte:
+            // timeLeft - computed as completionDateTime - now, filter with gte: or lte:
             if (timeLeft != null) {
                 predicates.add(buildTimeLeftPredicate(cb, root.get("completionDateTime"), timeLeft));
             }
@@ -72,7 +72,7 @@ public class TaskSpecification {
             return cb.lessThan(field, dt);
         } else if (value.startsWith("on:")) {
             LocalDateTime dt = LocalDateTime.parse(value.substring(3));
-            // same day — between start and end of that day
+            // same day - between start and end of that day
             return cb.between(field, dt.toLocalDate().atStartOfDay(), dt.toLocalDate().atTime(23, 59, 59));
         }
         throw new IllegalArgumentException("Invalid datetime filter format: " + value + ". Use after: / before: / on:");

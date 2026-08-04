@@ -24,13 +24,13 @@ public class TaskPriorityService {
 
     public Map<RobotType, Double> calculatePriorities(Task task) {
 
-        // ── Null guard — must come before any field access ────────────────────
+        // Null guard - must come before any field access
         if (task.getRoute() == null || task.getRoute().getEstimatedTimes() == null) {
-            log.warn("Task {} has no route or estimatedTimes — assigning fallback priority", task.getName());
+            log.warn("Task {} has no route or estimatedTimes - assigning fallback priority", task.getName());
             Map<RobotType, Double> fallback = new HashMap<>();
             for (RobotType robotType : RobotType.values()) {
                 if (robotType == RobotType.UNINITIALISED) continue;
-                fallback.put(robotType, 0.1); // low but positive — robot can still pick it up
+                fallback.put(robotType, 0.1); // low but positive - robot can still pick it up
             }
             return fallback;
         }
@@ -59,7 +59,7 @@ public class TaskPriorityService {
 
             Double robotEstimate = estimatedTimes.get(robotType);
             if (robotEstimate == null) {
-                log.warn("No estimated time for robotType={} on task={} — skipping", robotType, task.getName());
+                log.warn("No estimated time for robotType={} on task={} - skipping", robotType, task.getName());
                 calculatedPriorities.put(robotType, -1.0);
                 continue;
             }

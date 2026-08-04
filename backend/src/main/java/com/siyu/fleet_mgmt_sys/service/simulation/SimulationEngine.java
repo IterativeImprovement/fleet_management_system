@@ -169,7 +169,7 @@ public class SimulationEngine {
                 List<Integer> poolIndices = new ArrayList<>();
                 for (int i = startIndex; i < events.size(); i++) poolIndices.add(i);
 
-                // Fisher-Yates shuffle — deterministic with seeded RNG
+                // Fisher-Yates shuffle - deterministic with seeded RNG
                 for (int i = poolIndices.size() - 1; i > 0; i--) {
                     int j = rng.nextInt(i + 1);
                     int tmp = poolIndices.get(i);

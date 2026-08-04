@@ -29,5 +29,5 @@ public class DispatchDTO {
     private double destLat;
     private double destLng;
 
-    private boolean blocked;     // routing failed — robot holds position, alert the user
+    private boolean blocked;     // routing failed - robot holds position, alert the user
 }

@@ -51,9 +51,6 @@ public class WayPoint {
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException(label + " must be a valid number (got \"" + original + "\")");
         }
-        if (Double.isNaN(value) || Double.isInfinite(value)) {
-            throw new IllegalArgumentException(label + " must be a valid number (got \"" + original + "\")");
-        }
         if (value < min || value > max) {
             throw new IllegalArgumentException(label + " must be between " + min + " and " + max + " (got " + value + ")");
         }

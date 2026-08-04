@@ -21,7 +21,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *
  * Concurrency model:
  * - adjacency and nodes use ConcurrentHashMap for safe concurrent reads
- * - adjacency lists use CopyOnWriteArrayList — lock-free reads, safe iteration
+ * - adjacency lists use CopyOnWriteArrayList - lock-free reads, safe iteration
  * - speed band updates replace GraphEdge references atomically per list entry
  * - travelTimeSeconds is volatile on GraphEdge for safe cross-thread visibility
  */
@@ -80,7 +80,7 @@ public class RouteGraphService {
             }
         }
 
-        // Atomic hot swap — readers always see a fully built graph
+        // Atomic hot swap - readers always see a fully built graph
         this.nodes = newNodes;
         this.adjacency = newAdjacency;
         this.fromNodeIdsByLinkId = newFromNodeIdsByLinkId;
@@ -197,7 +197,7 @@ public class RouteGraphService {
                         .linkId(edge.getLinkId())
                         .roadName(edge.getRoadName())
                         .lengthMetres(edge.getLengthMetres())
-                        .currentSpeedBand(0)       // 0 = obstructed — A* skips (effectiveSpeed <= 0)
+                        .currentSpeedBand(0)       // 0 = obstructed - A* skips (effectiveSpeed <= 0)
                         .travelTimeSeconds(Double.MAX_VALUE)
                         .build();
             });
@@ -209,7 +209,7 @@ public class RouteGraphService {
     }
 
     /**
-     * Clears an obstruction — restores last known speed band from DB.
+     * Clears an obstruction - restores last known speed band from DB.
      */
     public void clearObstruction(String linkId, int restoredSpeedBand) {
         updateSpeedBand(linkId, restoredSpeedBand);

@@ -41,16 +41,13 @@ public class LTAService {
     @Value("${lta.datamall.api-key}")
     private String apiKey;
 
-    // 1. API Response Cache
     private List<LtaTrafficSpeedBandResponseDTO> cachedBands = null;
     private long cacheExpiresAt = 0;
     private static final long CACHE_TTL_MS = 2 * 60 * 1000;
 
-    // 2. Database State Cache (for efficient DB updates)
     private final Long2IntOpenHashMap dbSpeedCache = new Long2IntOpenHashMap();
     private boolean isDbCacheLoaded = false;
 
-    // 3. Database State Flags (prevents redundant I/O queries)
     private boolean isDbPopulated = false;
     private boolean hasCheckedDbPopulation = false;
 
@@ -71,7 +68,7 @@ public class LTAService {
 
         List<LtaTrafficSpeedBandResponseDTO> firstPage = fetchPage(0, entity);
 
-        // --- EARLY ERROR HANDLER: Check for silent failures ---
+        // Checks for silent failures
         if (firstPage == null || firstPage.isEmpty()) {
             log.error("First page from LTA API returned 0 results. This suggests an upstream API error.");
             throw new IllegalStateException("LTA API returned an empty payload on the first page.");

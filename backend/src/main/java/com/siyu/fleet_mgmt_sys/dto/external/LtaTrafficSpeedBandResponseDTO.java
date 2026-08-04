@@ -8,12 +8,12 @@ import lombok.Data;
  *
  * Speed bands:
  *   1 = > 90 km/h
- *   2 = 71–90 km/h
- *   3 = 51–70 km/h
- *   4 = 41–50 km/h
- *   5 = 31–40 km/h
- *   6 = 21–30 km/h
- *   7 = 10–20 km/h
+ *   2 = 71-90 km/h
+ *   3 = 51-70 km/h
+ *   4 = 41-50 km/h
+ *   5 = 31-40 km/h
+ *   6 = 21-30 km/h
+ *   7 = 10-20 km/h
  *   8 = < 10 km/h
  */
 @Data
@@ -27,7 +27,7 @@ public class LtaTrafficSpeedBandResponseDTO {
     @JsonProperty("RoadCategory")
     private String roadCategory;
 
-    // Speed band (1–8), where 1 is fastest and 8 is slowest
+    // Speed band (1-8), where 1 is fastest and 8 is slowest
     @JsonProperty("SpeedBand")
     private int speedBand;
 

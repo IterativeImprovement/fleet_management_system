@@ -25,7 +25,7 @@ class SpeedBandUtilsTest {
     }
 
     // Boundaries + out-of-range partition: 0 and 9 straddle the valid range,
-    // -1 is negative — all fall through to the default.
+    // -1 is negative - all fall through to the default.
     @ParameterizedTest
     @ValueSource(ints = {0, 9, -1})
     void outOfRangeBandFallsBackToDefault(int band) {

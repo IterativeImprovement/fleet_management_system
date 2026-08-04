@@ -53,7 +53,7 @@ public class WebsocketController {
 
     @MessageMapping("/robot/{robotId}/update")
     public void updateRobotPosition(@DestinationVariable Long robotId, RobotLocationNStatusDTO dto) {
-        // position only — the backend owns robot status via dispatch
+        // position only - the backend owns robot status via dispatch
         robotService.updatePosition(robotId, dto.getLat(), dto.getLng());
     }
 

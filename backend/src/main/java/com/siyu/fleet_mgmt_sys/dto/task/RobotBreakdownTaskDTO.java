@@ -44,7 +44,7 @@ public class RobotBreakdownTaskDTO extends TaskRequestDTO {
     /**
      * Fallback-aware constructor: takes an explicit start position rather than always trusting
      * robot.getLatitude()/getLongitude(). Use this when the robot's live telemetry position hasn't
-     * arrived yet (e.g. malfunction fired before the first WebSocket position push) — the caller is
+     * arrived yet (e.g. malfunction fired before the first WebSocket position push) - the caller is
      * expected to have substituted a safe fallback (typically the robot's base position) in that case.
      */
     public RobotBreakdownTaskDTO(Robot robot, Long simulationId, double startLat, double startLon) {

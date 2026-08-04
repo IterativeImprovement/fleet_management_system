@@ -21,7 +21,7 @@ class RouteOptimisationServiceTest {
     private final RouteOptimisationService service = new RouteOptimisationService();
 
     // All nodes sit at (0,0) so the haversine heuristic is 0 and A* reduces to
-    // pure Dijkstra on travelTimeSeconds — fully deterministic, cost = the times we set.
+    // pure Dijkstra on travelTimeSeconds - fully deterministic, cost = the times we set.
     // The robot's max speed (~22.2 m/s) is >= every speed band, so A* always uses
     // each edge's travelTimeSeconds directly rather than re-deriving from length.
 

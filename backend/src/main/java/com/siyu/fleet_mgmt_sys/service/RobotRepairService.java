@@ -34,7 +34,7 @@ public class RobotRepairService {
     private static final double SIM_TIME_COMPRESSION_FACTOR = 259200.0 / 120.0;
 
     /**
-     * Called when a RobotBreakdownTask completes — i.e. Robot B has arrived
+     * Called when a RobotBreakdownTask completes - i.e. Robot B has arrived
      * at the repair location with Robot A.
      * Starts a 2-hour repair timer for Robot A, then frees Robot B (the tow robot).
      */
@@ -79,7 +79,7 @@ public class RobotRepairService {
         repairTask.setSimulated(repairDTO.getSimulationId() != null);
         taskRepository.save(repairTask);
 
-        // Robot A → UNDER_MAINTENANCE
+        // Robot A to UNDER_MAINTENANCE
         robotA.setStatus(RobotStatus.UNDER_MAINTENANCE);
         robotRepository.save(robotA);
 
@@ -93,7 +93,7 @@ public class RobotRepairService {
         double realDelaySeconds = simulationId != null
                 ? Math.max(durationSeconds / SIM_TIME_COMPRESSION_FACTOR, 1.0)
                 : durationSeconds;
-        log.info("Repair started for robot {} — will complete in {} (2 simulated hours)",
+        log.info("Repair started for robot {} - will complete in {} (2 simulated hours)",
                 robotA.getName(), simulationId != null
                         ? String.format("%.1fs", realDelaySeconds)
                         : "2 hours");
@@ -118,14 +118,14 @@ public class RobotRepairService {
         repairTask.setCompletionDateTime(LocalDateTime.now());
         taskRepository.save(repairTask);
 
-        // Robot A → IDLE, ready for reassignment
+        // Robot A to IDLE, ready for reassignment
         robot.setStatus(RobotStatus.IDLE);
         robot.setPosition(
                 KeyLocations.repairLatitude,
                 KeyLocations.repairLongitude);
         robotRepository.save(robot);
 
-        log.info("Repair complete for robot {} — status set to IDLE", robot.getName());
+        log.info("Repair complete for robot {} - status set to IDLE", robot.getName());
         if (robot.getSimulationId() != null) {
             websocketPublisherService.publishRobotStatus(robotId, robot.getSimulationId(), RobotStatus.IDLE);
         } else {

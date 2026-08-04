@@ -31,7 +31,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TaskService {
 
-    // Singapore bounding box — kept as named constants so isWithinSingapore() and the clamp below
+    // Singapore bounding box - kept as named constants so isWithinSingapore() and the clamp below
     // can't drift apart.
     private static final double MIN_LAT = 1.1304;
     private static final double MAX_LAT = 1.4504;
@@ -184,7 +184,7 @@ public class TaskService {
 
         Robot robot = task.getRobot();
 
-        // 1. Unlink from the robot FIRST while the task is unmodified
+        // Unlink from robot first
         if (robot != null) {
             robot.getTasks().remove(task);
             if (robot.getTasks().isEmpty()) {
@@ -193,12 +193,11 @@ public class TaskService {
             robotRepository.save(robot);
         }
 
-        // 2. NOW update the task state
+        // Update task state
         task.setStatus(TaskStatus.COMPLETED);
         task.setRobot(null);
         taskRepository.save(task);
 
-        // 3. Release downstream dependencies
         dependencyService.releaseUnblockedTasks(task);
 
         if (task.getEndCluster() != null) {
@@ -216,7 +215,7 @@ public class TaskService {
         double clampedLat = Math.max(MIN_LAT, Math.min(MAX_LAT, wp.getLatitude()));
         double clampedLon = Math.max(MIN_LON, Math.min(MAX_LON, wp.getLongitude()));
         if (clampedLat != wp.getLatitude() || clampedLon != wp.getLongitude()) {
-            log.warn("Waypoint ({}, {}) outside Singapore bounds — clamped to ({}, {})",
+            log.warn("Waypoint ({}, {}) outside Singapore bounds - clamped to ({}, {})",
                     wp.getLatitude(), wp.getLongitude(), clampedLat, clampedLon);
             wp.setLatitude(clampedLat);
             wp.setLongitude(clampedLon);
@@ -270,7 +269,7 @@ public class TaskService {
         }
 
         return switch (type.trim().toUpperCase()) {
-            case "STANDARD", "STANDARDTRANSPORT" -> TaskType.STANDARD;
+            case "STANDARD" -> TaskType.STANDARD;
             case "LARGE" -> TaskType.LARGE;
             default -> throw new IllegalArgumentException("Unknown task type: " + type);
         };

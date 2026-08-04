@@ -49,7 +49,7 @@ public class RoadService {
     }
 
     /**
-     * The road's true geometry as drawn in the routing graph — see
+     * The road's true geometry as drawn in the routing graph - see
      * RouteGraphService.getEdgesByLinkId for why this can be more than one segment.
      */
     private List<List<List<Double>>> buildSegments(String linkId) {

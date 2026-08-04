@@ -19,7 +19,7 @@ public class LocalGraphView {
 
     private final RouteGraphService sharedGraph;
 
-    // Temp edges added only for this query — never touch the shared graph
+    // Temp edges added only for this query - never touch the shared graph
     private final Map<Long, List<GraphEdge>> tempAdjacency = new HashMap<>();
 
     public LocalGraphView(RouteGraphService sharedGraph) {
@@ -36,7 +36,7 @@ public class LocalGraphView {
 
         if (temp == null || temp.isEmpty()) return shared;
 
-        // Merge — shared edges + temp edges for this node
+        // Merge - shared edges + temp edges for this node
         List<GraphEdge> merged = new ArrayList<>(shared);
         merged.addAll(temp);
         return merged;

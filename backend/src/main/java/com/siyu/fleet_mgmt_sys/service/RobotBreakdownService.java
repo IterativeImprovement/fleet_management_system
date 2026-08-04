@@ -33,7 +33,7 @@ public class RobotBreakdownService {
     private final TaskService taskService;
     private final WebsocketPublisherService webSocketPublisher;
 
-    // Treat anything within this many degrees of (0,0) as "no real position yet" — WebSocket
+    // Treat anything within this many degrees of (0,0) as "no real position yet" - WebSocket
     // telemetry hasn't landed, rather than the robot genuinely idling in the Gulf of Guinea.
     private static final double UNSET_POSITION_EPSILON = 1e-6;
 
@@ -46,12 +46,12 @@ public class RobotBreakdownService {
         if (robot.getStatus() == RobotStatus.NEED_MAINTENANCE
                 || robot.getStatus() == RobotStatus.UNDER_MAINTENANCE
                 || robot.getStatus() == RobotStatus.ERROR) {
-            log.info("BREAKDOWN: ignoring malfunction for robot {} — already {}",
+            log.info("BREAKDOWN: ignoring malfunction for robot {} - already {}",
                     robot.getName(), robot.getStatus());
             return;
         }
 
-        // Stop dispatching to this robot — any in-flight arrival for it is now void.
+        // Stop dispatching to this robot - any in-flight arrival for it is now void.
         dispatchService.cancelDispatch(robotId);
 
         // Return its task(s) to the common pool.
@@ -63,14 +63,14 @@ public class RobotBreakdownService {
         }
         robot.getTasks().clear();
 
-        // Robot A → NEED_MAINTENANCE (not ERROR — it's awaiting repair, not in a fault state)
+        // Robot A to NEED_MAINTENANCE (not ERROR - it's awaiting repair, not in a fault state)
         robot.setStatus(RobotStatus.NEED_MAINTENANCE);
         robotRepository.save(robot);
 
-        log.warn("BREAKDOWN: robot {} returned {} task(s) to the pool, status → NEED_MAINTENANCE",
+        log.warn("BREAKDOWN: robot {} returned {} task(s) to the pool, status now NEED_MAINTENANCE",
                 robot.getName(), dropped.size());
 
-        // Create a breakdown task — a tow robot (Robot B) will carry Robot A to the repair location.
+        // Create a breakdown task - a tow robot (Robot B) will carry Robot A to the repair location.
         // The breakdown task is submitted to the pool; allocation assigns Robot B automatically.
         if (simulationId != null) {
             try {
@@ -82,7 +82,7 @@ public class RobotBreakdownService {
                         robot.getName(), e.getMessage(), e);
             }
 
-            // Re-run allocation — picks up both dropped tasks and the new breakdown task.
+            // Re-run allocation - picks up both dropped tasks and the new breakdown task.
             dispatchService.allocateAndDispatch(simulationId);
 
             // Notify frontend so it can show the repair status
@@ -99,7 +99,7 @@ public class RobotBreakdownService {
         boolean outOfBounds = !unset && !taskService.isWithinSingapore(lat, lon);
 
         if (unset || outOfBounds) {
-            log.warn("BREAKDOWN: robot {} has no valid live position ({}, {}) — falling back to its "
+            log.warn("BREAKDOWN: robot {} has no valid live position ({}, {}) - falling back to its "
                             + "base position ({}, {}) for the tow task",
                     robot.getName(), lat, lon, robot.getBaseLatitude(), robot.getBaseLongitude());
             return new RobotBreakdownTaskDTO(robot, simulationId, robot.getBaseLatitude(), robot.getBaseLongitude());

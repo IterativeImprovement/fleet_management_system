@@ -22,7 +22,7 @@ import java.util.Set;
  * and matches each
  * task to the nearest eligible free robot of the same run. Eligibility (robot
  * type + deadline
- * feasibility) is precomputed at submission by TaskPriorityService — a priority
+ * feasibility) is precomputed at submission by TaskPriorityService - a priority
  * of -1 means the
  * robot cannot do the task. Returns the robots that were newly assigned so the
  * caller
@@ -63,7 +63,7 @@ public class TaskAllocationService {
      */
     @Transactional
     public List<Robot> allocate(Long simulationId) {
-        // copy — we sort in place, and the repository/List.of source may be immutable
+        // copy - we sort in place, and the repository/List.of source may be immutable
         List<Task> pending = new ArrayList<>(simulationId != null
                 ? taskRepository.findByStatusAndSimulationId(TaskStatus.PENDING_ASSIGNMENT, simulationId)
                 : taskRepository.findByStatusAndSimulationIdIsNull(TaskStatus.PENDING_ASSIGNMENT));

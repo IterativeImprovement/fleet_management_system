@@ -16,13 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
- * Handles route obstruction events.
- *
- * When a road is obstructed:
- * 1. Mark all sub-edges of that road as obstructed in the in-memory graph
- * 2. Find all active robots whose current route passes through that road
- * 3. Reroute each affected robot from their current position
- * 4. Persist the new route and notify frontend via WebSocket
+ * Handles route obstruction events and reroutes affected robots.
  */
 @Slf4j
 @Service
@@ -45,7 +39,7 @@ public class RouteObstructionService {
     public void handleObstruction(String linkId) {
         log.warn("OBSTRUCTION EVENT: linkId={}", linkId);
 
-        // Step 1: Mark all sub-edges of this road as obstructed in the in-memory graph
+        // Step 1: Mark all sub-edges of this road as obstructed
         routeGraphService.obstructLink(linkId);
 
         // Step 2: Find all active robots whose current route contains this linkId
@@ -67,10 +61,8 @@ public class RouteObstructionService {
     /**
      * Called when a road obstruction is cleared.
      * Restores the road's speed band in-memory.
-     * Does not automatically reroute — robots will naturally use the road
-     * again on their next routing calculation.
      *
-     * @param linkId           the linkId of the cleared road
+     * @param linkId the linkId of the cleared road
      * @param restoredSpeedBand the speed band to restore
      */
     public void handleObstructionCleared(String linkId, int restoredSpeedBand) {
@@ -79,12 +71,9 @@ public class RouteObstructionService {
         log.info("Obstruction cleared on linkId={}, restored to band={}", linkId, restoredSpeedBand);
     }
 
-    // ─── Finding affected robots ──────────────────────────────────────────────
-
     /**
      * Finds all active robots whose current route passes through the given linkId.
-     * Only considers robots that are currently MOVING — idle or charging robots
-     * do not have an active route to reroute.
+     * Only considers robots that are currently MOVING.
      */
     private List<Robot> findAffectedRobots(String linkId) {
         return robotRepository.findAll().stream()
@@ -106,8 +95,6 @@ public class RouteObstructionService {
         return linkIds.contains(linkId);
     }
 
-    // ─── Rerouting ────────────────────────────────────────────────────────────
-
     /**
      * Reroutes a single robot around the obstruction.
      * Uses the robot's current position as the new start point.
@@ -118,20 +105,16 @@ public class RouteObstructionService {
                 robot.getName(), robot.getStatus(), obstructedLinkId);
 
         try {
-            // Current position — where the robot is right now
             double currentLat = robot.getLatitude();
             double currentLon = robot.getLongitude();
 
-            // Destination is the end waypoint of the robot's current task
             WayPoint destination = robot.getCurrentTask().getEndWayPoint();
 
-            // Build new route from current position to destination
-            // A* will naturally avoid the obstructed road (speedBand=0 → skipped)
+            // Build new route from current position to destination (skipping obstructed routes)
             Route newRoute = routeBuilderService.buildRoute(
                     currentLat, currentLon,
                     destination.getLatitude(), destination.getLongitude());
 
-            // Persist new route
             routeRepository.save(newRoute);
 
             // Replace robot's task route

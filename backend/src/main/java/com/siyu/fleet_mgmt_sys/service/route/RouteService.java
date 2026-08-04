@@ -30,7 +30,7 @@ public class RouteService {
 
     private final RouteRepository routeRepository;
 
-    // ─── Primary routing (graph-based) ───────────────────────────────────────
+    // Primary routing (graph-based)
 
     /**
      * Primary route method - uses the graph-based A* router.
@@ -65,7 +65,7 @@ public class RouteService {
 
     }
 
-    // ─── OneMap routing (fallback / controller use) ───────────────────────────
+    // OneMap routing (fallback / controller use)
 
     /**
      * Returns a raw OneMap route response.

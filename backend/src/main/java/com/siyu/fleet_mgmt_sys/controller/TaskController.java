@@ -21,7 +21,7 @@ public class TaskController {
     @PostMapping
     public ResponseEntity<TaskResponseDTO> createTask(@RequestBody TaskRequestDTO req) {
         TaskResponseDTO result = taskService.createTask(req);
-        // task committed → let the backend allocate it and push the dispatch (simulation only;
+        // task committed, so let the backend allocate it and push the dispatch (simulation only;
         // live allocation/telemetry is a separate, out-of-scope concern)
         if (req.getSimulationId() != null) {
             dispatchService.allocateAndDispatch(req.getSimulationId());

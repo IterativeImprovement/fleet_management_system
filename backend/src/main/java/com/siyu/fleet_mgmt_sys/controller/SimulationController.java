@@ -39,7 +39,7 @@ public class SimulationController {
         // do not accumulate in the database on each new Start
         simulationResetService.resetAll();
 
-        // No body → run the preset defaults. No seed in the body → pick a random one.
+        // No body, so run the preset defaults. No seed in the body, so pick a random one.
         if (config == null) {
             config = new SimulationConfig();
         }
