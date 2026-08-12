@@ -16,10 +16,8 @@ public class LargeRobot extends Robot {
 
     public LargeRobot(String name) {
         super("L" + name);
+        this.type = RobotType.LARGE;
+        this.speed = RobotAttributes.Large.SPEED;
     }
-
-
-    public final RobotType type = RobotType.LARGE;
-    public final double speed = RobotAttributes.Large.SPEED;
 
 }

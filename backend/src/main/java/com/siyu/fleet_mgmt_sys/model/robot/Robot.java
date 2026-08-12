@@ -73,7 +73,7 @@ public abstract class Robot {
     }
 
     public RobotType getType() {
-        return RobotType.UNINITIALISED;
+        return this.type;
     }
 
     public List<Task> getTasks() {

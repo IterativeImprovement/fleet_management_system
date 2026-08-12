@@ -16,8 +16,7 @@ public class StandardRobot extends Robot {
 
     public StandardRobot(String name) {
         super("S" + name);
+        this.type = RobotType.STANDARD;
+        this.speed = RobotAttributes.Standard.SPEED;
     }
-
-    public final RobotType type = RobotType.STANDARD;
-    public final double speed = RobotAttributes.Standard.SPEED;
 }

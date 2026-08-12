@@ -8,7 +8,7 @@ import java.util.List;
 
 /**
  * Encodes a list of graph edges into a Google Encoded Polyline string.
- * Also logs every road name traversed for route auditing.
+ * Also logs every road name traversed for route auditing (logs currently commented out for simplicity).
  *
  * Google Encoded Polyline format:
  * - Each lat/lng is multiplied by 1e5, rounded, differenced from previous, then encoded

@@ -7,14 +7,11 @@ services:
     environment:
       POSTGRES_DB: fleet_mgmt_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: noclashfleet
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
-      # routing branch added a ./db/init.sql mount, but that file was never committed —
-      # Docker would create a directory there and break Postgres init. Restore when the file lands.
-      # - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d fleet_mgmt_db"]
       interval: 10s
@@ -29,8 +26,12 @@ services:
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/fleet_mgmt_db
       - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=noclashfleet
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - ONEMAP_EMAIL=${ONEMAP_EMAIL:-}
+      - ONEMAP_PASSWORD=${ONEMAP_PASSWORD:-}
+      - ONEMAP_API_KEY=${ONEMAP_API_KEY:-}
+      - LTA_API_KEY=${LTA_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy

@@ -5,6 +5,7 @@ import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
 import com.siyu.fleet_mgmt_sys.model.enums.TaskType;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -22,6 +23,12 @@ import java.util.Map;
 @NoArgsConstructor
 public class TaskPriorityService {
 
+    @Value("${task.priority.smallest:1}")
+    private int smallestPriority = 1;
+
+    @Value("${task.priority.largest:5}")
+    private int largestPriority = 5;
+
     public Map<RobotType, Double> calculatePriorities(Task task) {
 
         // Null guard - must come before any field access
@@ -35,7 +42,7 @@ public class TaskPriorityService {
             return fallback;
         }
 
-        double userPriorityScore = 4 - task.getPriority();
+        double userPriorityScore = normalisePriority(task.getPriority());
         double[] priorityWeights = {0.2, 0.8};
 
         Duration remainingTime = Duration.between(LocalDateTime.now(), task.getCompletionDateTime());
@@ -79,5 +86,12 @@ public class TaskPriorityService {
 
         log.info(calculatedPriorities.toString());
         return calculatedPriorities;
+    }
+
+    private double normalisePriority(int priority) {
+        int range = largestPriority - smallestPriority;
+        if (range <= 0) return 1.0;
+        double normalised = (double) (largestPriority - priority) / range;
+        return Math.max(0.0, Math.min(1.0, normalised));
     }
 }

@@ -111,7 +111,7 @@ public class Task {
     }
 
     public double getPriorityFor(RobotType robotType) {
-        return this.calculatedPriorities.get(robotType);
+        return this.calculatedPriorities.getOrDefault(robotType, -1.0);
     }
 
 

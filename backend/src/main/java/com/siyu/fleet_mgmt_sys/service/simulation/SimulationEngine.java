@@ -154,7 +154,7 @@ public class SimulationEngine {
             TaskType type = pickableTypes[rng.nextInt(pickableTypes.length)];
 
             // Assigns a random priority
-            int priority = rng.nextInt(config.getSmallestPriority(), config.getLargestPriority());
+            int priority = rng.nextInt(config.getSmallestPriority(), config.getLargestPriority() + 1);
 
             // Completion deadline: simTime + random offset between min and max
             double range = config.getMaxTaskCompletionSeconds() - config.getMinTaskCompletionSeconds();

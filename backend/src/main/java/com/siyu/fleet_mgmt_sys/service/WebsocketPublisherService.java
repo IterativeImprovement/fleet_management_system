@@ -16,23 +16,19 @@ public class WebsocketPublisherService {
 
     private final SimpMessagingTemplate template;
 
-    // Push simulation events to frontend
     public void publishSimulationEvent(SimulationEvent event) {
         template.convertAndSend("/topic/simulation", event);
     }
 
-    // Push a robot's current dispatch (leg) to the run's subscribers
     public void publishDispatch(Long simulationId, DispatchDTO dispatch) {
         template.convertAndSend("/topic/simulation/" + simulationId + "/dispatch", dispatch);
     }
 
-    // Push reroute notification to frontend
-    public void publishReroute(Long robotId, Route newRoute) {
+     public void publishReroute(Long robotId, Route newRoute) {
         template.convertAndSend("/topic/robot/" + robotId + "/reroute", newRoute);
     }
 
-    // Push obstruction notification
-    public void publishObstruction(String linkId) {
+     public void publishObstruction(String linkId) {
         template.convertAndSend("/topic/obstruction", linkId);
     }
 

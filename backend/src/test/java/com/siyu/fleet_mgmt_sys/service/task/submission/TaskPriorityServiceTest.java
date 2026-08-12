@@ -47,11 +47,11 @@ class TaskPriorityServiceTest {
 
     @Test
     void weightingMathProducesExpectedScore() {
-        // priority 2 -> userPriorityScore 2; est 1000s of ~10000s -> tightness ~0.1
-        // score = 0.1*0.2 + 2*0.8 = 1.62
+        // priority 2 of range 1-5 -> userPriorityScore 0.75; est 1000s of ~10000s -> tightness ~0.1
+        // score = 0.1*0.2 + 0.75*0.8 = 0.62
         Task task = task(2, TaskType.STANDARD, 10_000, times(1000, 1000));
 
-        assertEquals(1.62, service.calculatePriorities(task).get(RobotType.LARGE), 0.01);
+        assertEquals(0.62, service.calculatePriorities(task).get(RobotType.LARGE), 0.01);
     }
 
     // --- helpers ---

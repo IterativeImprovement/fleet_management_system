@@ -55,16 +55,13 @@ public class GraphUpdateService {
         for (LtaTrafficSpeedBandResponseDTO dto : speedBands) {
             if (dto.getLinkId() == null || dto.getSpeedBand() <= 0) continue;
 
-            // 1. Get the current speed from memory
             Integer currentSpeed = routeGraphService.getSpeedBand(dto.getLinkId());
 
-            // 2. The Diff Check: Only proceed if it is a new link OR the speed has actually changed
+            // diff check
             if (currentSpeed == null || currentSpeed != dto.getSpeedBand()) {
 
-                // Update DB
                 graphEdgeRepository.updateSpeedBand(dto.getLinkId(), dto.getSpeedBand());
 
-                // Update in-memory graph
                 routeGraphService.updateSpeedBand(dto.getLinkId(), dto.getSpeedBand());
 
                 updated++;

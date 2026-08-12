@@ -87,8 +87,8 @@ public class TaskAllocationService {
             for (Robot robot : free) {
                 if (used.contains(robot.getId()))
                     continue;
-                Double priority = task.getPriorityFor(robot.getType());
-                if (priority == null || priority < 0)
+                double priority = task.getPriorityFor(robot.getType());
+                if (priority < 0)
                     continue; // ineligible: type or deadline
                 double d = distanceTo(robot, task);
                 if (d < bestDist || (d == bestDist && (best == null || robot.getId() < best.getId()))) {

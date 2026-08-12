@@ -32,7 +32,7 @@ public class Cluster {
     @OneToMany(mappedBy = "endCluster")
     private List<Task> endTasks = new ArrayList<>(); // task that end in the cluster
 
-    // adjacent clusters （pre-computed on cluster creation)
+    // adjacent clusters (pre-computed on cluster creation)
     @ManyToMany
     @JsonIgnore
     private List<Cluster> adjacentClusters = new ArrayList<>();

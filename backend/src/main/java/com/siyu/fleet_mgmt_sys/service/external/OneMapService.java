@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
@@ -31,9 +30,7 @@ public class OneMapService {
 
     private final RestTemplate restTemplate;
     private final LocationRepository locationRepository;
-
-    @Value("${onemap.api-key}")
-    private String apiKey;
+    private final OneMapTokenService oneMapTokenService;
 
     /* Location / Theme */
 
@@ -217,7 +214,7 @@ public class OneMapService {
     // Used for theme/location endpoints
     private HttpHeaders buildHeaders() {
         HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", apiKey);
+        headers.set("Authorization", oneMapTokenService.getToken());
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
         return headers;
     }
@@ -225,7 +222,7 @@ public class OneMapService {
     // Used for routing/search endpoints
     private @NonNull HttpEntity<String> buildBearerEntity() {
         HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + apiKey);
+        headers.set("Authorization", "Bearer " + oneMapTokenService.getToken());
         return new HttpEntity<>(headers);
     }
 }
