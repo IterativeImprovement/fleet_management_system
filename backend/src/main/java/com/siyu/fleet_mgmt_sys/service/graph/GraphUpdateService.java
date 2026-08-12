@@ -5,7 +5,7 @@ import com.siyu.fleet_mgmt_sys.repository.GraphEdgeRepository;
 import com.siyu.fleet_mgmt_sys.service.external.LTAService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,14 +25,21 @@ public class GraphUpdateService {
     private final GraphEdgeRepository graphEdgeRepository;
     private final RouteGraphService routeGraphService;
 
+    @Value("${lta.sync.enabled:true}")
+    private boolean syncEnabled = true;
+
     /**
-     * Runs every 5 minutes.
+     * Runs roughly every 100 minutes, starting a minute after boot.
      * Fetches latest speed bands, updates DB and in-memory graph.
      */
-    @Scheduled(initialDelay = 60_000, fixedDelay = 6_000_000) // updates every hour
+    @Scheduled(initialDelay = 60_000, fixedDelay = 6_000_000)
     @Transactional
-    @ConditionalOnProperty(name = "lta.sync.enabled", havingValue = "true", matchIfMissing = true)
     public void update() {
+        if (!syncEnabled) {
+            log.debug("LTA sync disabled, skipping graph speed band update.");
+            return;
+        }
+
         log.info("Updating graph speed bands from LTA...");
 
         List<LtaTrafficSpeedBandResponseDTO> speedBands;
