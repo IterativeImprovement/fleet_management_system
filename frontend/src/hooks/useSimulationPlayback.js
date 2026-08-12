@@ -12,7 +12,6 @@ import { getRobots } from '../api/robotApi.js'
 import { decodePolyline, interpolateAlongRoute } from '../utils/routeUtils.js'
 import { resolveSimulationBasePosition } from '../utils/simConfigCodec.js'
 
-// 3 simulated days sped up to be 2 mins
 const SIM_DURATION_SECONDS = 259200
 const DEFAULT_REAL_DURATION_SECONDS = 720
 const DEFAULT_SPEED_FACTOR = SIM_DURATION_SECONDS / DEFAULT_REAL_DURATION_SECONDS
@@ -33,7 +32,6 @@ function phaseToStatus(phase) {
   }
 }
 
-// convert second to clock display
 function formatSimTime(simSeconds) {
   const days = Math.floor(simSeconds / 86400)
   const hours = Math.floor((simSeconds % 86400) / 3600)
@@ -60,7 +58,6 @@ export function useSimulationPlayback({
   const [simulationId, setSimulationId] = useState(null)
   const [activeBasePosition, setActiveBasePosition] = useState(null)
 
-  // refs: values that change every tick but don't need to re-render
   const eventsRef = useRef([])
   const nextEventIndexRef = useRef(0)
   const simTimeRef = useRef(0)
@@ -122,19 +119,18 @@ export function useSimulationPlayback({
           intervalRef.current = setInterval(tick, TICK_INTERVAL_MS)
         }
 
-        // Subscribe to repair complete notifications
         client.subscribe(
           `/topic/simulation/${simId}/repair`,
           (msg) => {
             const { robotId, status } = JSON.parse(msg.body)
             if (status === 'IDLE') {
-              // repair complete
+
               addAlert('Repair', `Robot ${robotId} repair complete — returning to service`)
               // backend restarts revision numbering at 1 for this robot's next dispatch, so reset
               // our tracking too or that dispatch gets rejected as stale
               robotRevisionRef.current.delete(robotId)
             } else if (status === 'NEED_MAINTENANCE') {
-              // broke down
+
               addAlert('Breakdown', `Robot ${robotId} sent for repair`)
             }
             setRobotPositionOverrides(prev => ({

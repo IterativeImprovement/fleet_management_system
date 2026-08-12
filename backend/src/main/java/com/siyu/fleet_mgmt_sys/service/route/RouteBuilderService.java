@@ -17,10 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 
-/**
- * Route building service: Constructs a route based on start and end points.
- * Uses LTA Speed bands API to construct weighted graph, then uses A* to find the most optimal route.
- */
+/** Builds graph-based routes between coordinates. */
 
 @Slf4j
 @Service
@@ -31,47 +28,43 @@ public class RouteBuilderService {
     private final RouteOptimisationService routeOptimisationService;
     private final PolylineEncoder polylineEncoder;
 
-    /**
-     * Builds a Route from start to end coordinates.
-     *
-     * @param startLat start latitude
-     * @param startLon start longitude
-     * @param endLat   end latitude
-     * @param endLon   end longitude
-     * @return populated Route entity (not yet persisted)
-     */
-    public Route  buildRoute(double startLat, double startLon,
-                            double endLat, double endLon) {
+    /** Builds an in-memory route without persisting it. */
+    public Route buildRoute(double startLat, double startLon,
+            double endLat, double endLon) {
 
         log.info("Building route from ({},{}) to ({},{})",
                 startLat, startLon, endLat, endLon);
 
-        // Step 1: Create a fresh query-local graph view
-        // Completely isolated - no other query can see temp edges added here
+        // Create a fresh query-local graph view
+        // Each request uses its own graph view so temporary edges are not shared.
         LocalGraphView graphView = new LocalGraphView(routeGraphService);
 
-        // Step 2: Project start and end coordinates onto nearest edges
+        // Project start and end coordinates onto nearest edges
         ProjectionResult startProjection = projectOntoNearestEdge(startLat, startLon);
-        ProjectionResult endProjection   = projectOntoNearestEdge(endLat, endLon);
+        ProjectionResult endProjection = projectOntoNearestEdge(endLat, endLon);
 
-        // Step 3: Create temporary nodes at projection points. These nodes are unique for this query.
-        /* Example: You want to travel from NUS to Harbourfront MRT station.
-        There is no road that perfectly encompasses those locations, so the routing service picks projection points as
-        "pick up" and "drop off" points. */
+        // Create temporary nodes at projection points. These nodes are unique for this
+        // query.
+        /*
+         * Example: You want to travel from NUS to Harbourfront MRT station.
+         * There is no road that perfectly encompasses those locations, so the routing
+         * service picks projection points as
+         * "pick up" and "drop off" points.
+         */
 
         // Negative IDs ensure they never collide with real persisted node IDs
         GraphNode startNode = createTempNode(-1L, startProjection.lat(), startProjection.lon());
-        GraphNode endNode   = createTempNode(-2L, endProjection.lat(), endProjection.lon());
+        GraphNode endNode = createTempNode(-2L, endProjection.lat(), endProjection.lon());
 
-        // Step 4: Inject temp edges into the LOCAL view only.
+        // Inject temp edges into the LOCAL view only.
         injectTempNode(startNode, startProjection.edge(), graphView);
-        injectTempNode(endNode,   endProjection.edge(),   graphView);
+        injectTempNode(endNode, endProjection.edge(), graphView);
 
-        // Step 5: Run A* with the query-local view
+        // Run A* with the query-local view
         List<GraphEdge> path = routeOptimisationService.findFastestRoute(
                 startNode, endNode, graphView);
 
-        // Step 6: Encode polyline
+        // Encode polyline
         String polyline = polylineEncoder.encode(path);
 
         double totalDistanceMetres = path.stream()
@@ -80,7 +73,7 @@ public class RouteBuilderService {
 
         Map<RobotType, Double> estimatedTimes = computeEstimatedTimesPerRobotType(path);
 
-        // Step 7: Build and return Route entity
+        // Build and return Route entity
         Route route = new Route();
         route.setRouteGeo(polyline);
         route.setTotalDistance((int) Math.round(totalDistanceMetres));
@@ -95,12 +88,10 @@ public class RouteBuilderService {
 
         StringBuilder logMessage = new StringBuilder("Route built:\n");
 
-        estimatedTimes.forEach((type, time) ->
-                logMessage.append(String.format("%s: %dm, %.1fs\n",
-                        type.name(),
-                        route.getTotalDistance(),
-                        time))
-        );
+        estimatedTimes.forEach((type, time) -> logMessage.append(String.format("%s: %dm, %.1fs\n",
+                type.name(),
+                route.getTotalDistance(),
+                time)));
 
         log.info(logMessage.toString());
 
@@ -108,11 +99,12 @@ public class RouteBuilderService {
     }
 
     /**
-     * Updated: All coloured route needs from this frontend goes through this function instead of the LTA one,
+     * Builds coloured segments using the local road graph and its current speed
+     * bands.
      * bypassing the need to call external API entirely.
      */
     public List<ColoredSegmentDTO> buildColoredRoute(double startLat, double startLon,
-                                                       double endLat, double endLon) {
+            double endLat, double endLon) {
         LocalGraphView graphView = new LocalGraphView(routeGraphService);
 
         ProjectionResult startProjection = projectOntoNearestEdge(startLat, startLon);
@@ -137,13 +129,13 @@ public class RouteBuilderService {
         return segments;
     }
 
-
     private String bandToColor(int speedBand) {
-        if (speedBand <= 3) return "#22c55e";
-        if (speedBand <= 5) return "#f97316";
+        if (speedBand <= 3)
+            return "#22c55e";
+        if (speedBand <= 5)
+            return "#f97316";
         return "#ef4444";
     }
-
 
     /**
      * Projects a lat/lng point onto the nearest edge in the graph.
@@ -162,7 +154,7 @@ public class RouteBuilderService {
             double[] projected = projectPointOntoSegment(
                     lat, lon,
                     edge.getFromNode().getLatitude(), edge.getFromNode().getLongitude(),
-                    edge.getToNode().getLatitude(),   edge.getToNode().getLongitude());
+                    edge.getToNode().getLatitude(), edge.getToNode().getLongitude());
 
             double dist = GraphBuilderService.haversineMetres(
                     lat, lon, projected[0], projected[1]);
@@ -186,7 +178,6 @@ public class RouteBuilderService {
                     "No edges in graph: cannot project point (" + lat + "," + lon + ")");
         }
 
-
         // Chooses nearest nonobstructed point if possible
         if (nearestUsableEdge != null) {
             return new ProjectionResult(nearestUsablePoint[0], nearestUsablePoint[1], nearestUsableEdge, minUsableDist);
@@ -201,20 +192,21 @@ public class RouteBuilderService {
      * Returns the closest point on the segment to P as [lat, lon].
      */
     private double[] projectPointOntoSegment(double pLat, double pLon,
-                                             double aLat, double aLon,
-                                             double bLat, double bLon) {
+            double aLat, double aLon,
+            double bLat, double bLon) {
         double abLat = bLat - aLat;
         double abLon = bLon - aLon;
         double apLat = pLat - aLat;
         double apLon = pLon - aLon;
 
         double abLenSq = abLat * abLat + abLon * abLon;
-        if (abLenSq == 0) return new double[]{ aLat, aLon }; // degenerate segment
+        if (abLenSq == 0)
+            return new double[] { aLat, aLon }; // degenerate segment
 
         double t = (apLat * abLat + apLon * abLon) / abLenSq;
         t = Math.max(0, Math.min(1, t)); // clamp to [0, 1]
 
-        return new double[]{ aLat + t * abLat, aLon + t * abLon };
+        return new double[] { aLat + t * abLat, aLon + t * abLon };
     }
 
     /**
@@ -239,11 +231,11 @@ public class RouteBuilderService {
      * The original edge A-B remains in the shared graph unchanged.
      */
     private void injectTempNode(GraphNode tempNode, GraphEdge edge,
-                                LocalGraphView graphView) {
+            LocalGraphView graphView) {
         GraphNode from = edge.getFromNode();
-        GraphNode to   = edge.getToNode();
+        GraphNode to = edge.getToNode();
 
-        double distToTemp   = GraphBuilderService.haversineMetres(
+        double distToTemp = GraphBuilderService.haversineMetres(
                 from.getLatitude(), from.getLongitude(),
                 tempNode.getLatitude(), tempNode.getLongitude());
         double distFromTemp = GraphBuilderService.haversineMetres(
@@ -290,7 +282,8 @@ public class RouteBuilderService {
         Map<RobotType, Double> times = new EnumMap<>(RobotType.class);
 
         for (RobotType type : RobotType.values()) {
-            if (type == RobotType.UNINITIALISED) continue;
+            if (type == RobotType.UNINITIALISED)
+                continue;
 
             double robotSpeedMs = getRobotSpeedMs(type);
 
@@ -306,6 +299,7 @@ public class RouteBuilderService {
 
         return times;
     }
+
     private double getRobotSpeedMs(RobotType type) {
         return switch (type) {
             case STANDARD -> RobotAttributes.Standard.SPEED;
@@ -315,7 +309,8 @@ public class RouteBuilderService {
     }
 
     private record ProjectionResult(double lat, double lon,
-                                    GraphEdge edge,
-                                    double distanceMetres) {}
+            GraphEdge edge,
+            double distanceMetres) {
+    }
 
 }

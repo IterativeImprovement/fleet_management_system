@@ -400,7 +400,7 @@ function LiveMap({
   }, [activeBasePosition])
 
 
-  // Keep the click handler current without re-binding markers each render.
+  // Update markers in place so animation does not interrupt marker clicks.
   useEffect(() => {
     onSelectRobotRef.current = onSelectRobot
   }, [onSelectRobot])
