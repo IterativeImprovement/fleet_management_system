@@ -8,7 +8,6 @@ import {
   randomSeed,
 } from '../utils/simConfigCodec.js'
 
-// canonical config (per-second / seconds) -> friendly display strings
 function toFriendly(cfg) {
   return {
     numRobots: String(cfg.numRobots),
@@ -23,9 +22,7 @@ function toFriendly(cfg) {
   }
 }
 
-// Build the canonical config from friendly strings. Fields the user hasn't
-// touched keep their exact canonical value from `base` (avoids lossy
-// friendly<->canonical round-trips, so a loaded string re-copies identically).
+// Preserve unchanged canonical values to avoid conversion precision loss.
 function buildConfig(f, seed, base) {
   const init = toFriendly(base)
   const resolve = (cur, key, toCanon) =>
@@ -107,7 +104,7 @@ function SimulationConfigForm({ onConfigChange, disabled }) {
     }
     const encoded = encodeConfig({ ...buildConfig(f, s, baseConfig), seed: Number(s) })
     setConfigString(encoded)
-    navigator.clipboard?.writeText(encoded).catch(() => {})
+    navigator.clipboard?.writeText(encoded).catch(() => { })
   }
 
   function handleLoad() {

@@ -26,6 +26,7 @@ function AddRobotForm({ robots = [], onAddRobot, onCancel }) {
       return
     }
 
+    // create frontend representation of robot
     const newRobot = createRobot({
       id: Date.now(),
       name: trimmedName,

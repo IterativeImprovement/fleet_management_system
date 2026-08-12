@@ -29,10 +29,7 @@ const BASE_ICON = L.divIcon({
   tooltipAnchor: [0, -36],
 })
 
-// Mirrors backend KeyLocations.repairLatitude / repairLongitude (model/KeyLocations.java) — the
-// repair shop is a fixed point (Ulu Pandan Depot), not something that changes per simulation run,
-// so it's hardcoded here rather than threaded through as a prop. Keep these in sync if that ever
-// changes on the backend.
+// Must match the repair location defined by the backend.
 const REPAIR_LOCATION = [1.333425, 103.760141]
 
 const REPAIR_ICON = L.divIcon({
@@ -261,9 +258,7 @@ function LiveMap({
     const routeLines = []
     let selectedBounds = null
 
-    // Selected task: draw its full route highlighted (colored-by-speed-band segments once loaded,
-    // a plain blue line while they're loading). This is a deliberate preview of the task's whole
-    // planned path — kept separate from the "what's actually happening right now" overlay below.
+    // Show the selected task's planned route separately from active robot routes.
     const selectedRoute = selectedTaskId != null ? routesByTaskId?.[selectedTaskId] : null
     if (selectedRoute && selectedRoute.coordinates && selectedRoute.coordinates.length >= 2) {
       const coloredSegments = coloredSegmentsByTaskId[selectedRoute.taskId]
@@ -410,9 +405,7 @@ function LiveMap({
     onSelectRobotRef.current = onSelectRobot
   }, [onSelectRobot])
 
-  // Reconcile markers in place (move/update/add/remove) instead of clearing and
-  // rebuilding every frame — so a marker survives from mouse-down to mouse-up and
-  // its click actually fires while the simulation moves the dots.
+  /// Update markers in place so animation does not interrupt marker clicks.
   useEffect(() => {
     if (!markerLayerRef.current) return
 
