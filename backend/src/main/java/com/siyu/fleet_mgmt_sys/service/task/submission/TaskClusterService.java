@@ -20,13 +20,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/*
-
-The TaskClusterService clusters tasks by geographical proximity, saving on computational time.
-
-Tasks can have the same or different clusters for their start and end points.
-
-*/
+/** Groups task endpoints into nearby clusters used during allocation. */
 
 @Service
 @RequiredArgsConstructor
@@ -168,13 +162,7 @@ public class TaskClusterService { // this service clusters tasks that are close 
         removeTasksFromClusterCaches(List.of(task));
     }
 
-    /**
-     * Detaches a batch of tasks from every cluster that references them, then
-     * recomputes each affected cluster's centroid and top tasks once, excluding
-     * the whole batch. Removing tasks one-by-one is unsafe here: a cluster's new
-     * top task could be picked from another task that is also about to be
-     * deleted, leaving a dangling reference when the batch is flushed.
-     */
+    /** Removes the full batch before recomputing clusters to avoid dangling top-task references. */
     @Transactional
     public void removeTasksFromClusterCaches(Collection<Task> tasks) {
         if (tasks.isEmpty()) return;

@@ -102,7 +102,7 @@ class RouteObstructionServiceTest {
         verify(websocketPublisherService, never()).publishReroute(anyLong(), any());
     }
 
-    // --- helpers ---
+
 
     // An actively-moving robot at a known position, carrying a task whose route runs over `linkId`.
     private static Robot movingRobotOnLink(String linkId) {

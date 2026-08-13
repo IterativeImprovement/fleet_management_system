@@ -120,7 +120,6 @@ class TaskAllocationServiceTest {
         verify(taskRepository).save(task);
     }
 
-    // --- helpers ---
 
     private static Task standardTask(double lat, double lng) {
         Route route = new Route();

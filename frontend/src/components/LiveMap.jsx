@@ -29,10 +29,7 @@ const BASE_ICON = L.divIcon({
   tooltipAnchor: [0, -36],
 })
 
-// Mirrors backend KeyLocations.repairLatitude / repairLongitude (model/KeyLocations.java) — the
-// repair shop is a fixed point (Ulu Pandan Depot), not something that changes per simulation run,
-// so it's hardcoded here rather than threaded through as a prop. Keep these in sync if that ever
-// changes on the backend.
+// Must match the repair coordinates in backend KeyLocations.
 const REPAIR_LOCATION = [1.333425, 103.760141]
 
 const REPAIR_ICON = L.divIcon({
@@ -187,8 +184,6 @@ function LiveMap({
     repairLayerRef.current = L.layerGroup().addTo(mapRef.current)
     obstacleLayerRef.current = L.layerGroup().addTo(mapRef.current)
 
-    // Repair shop is a fixed point (unlike the base, which varies per simulation config), so it's
-    // placed once here rather than in a reactive effect keyed off a prop.
     const repairMarker = L.marker(REPAIR_LOCATION, {
       icon: REPAIR_ICON,
       keyboard: true,
@@ -261,9 +256,7 @@ function LiveMap({
     const routeLines = []
     let selectedBounds = null
 
-    // Selected task: draw its full route highlighted (colored-by-speed-band segments once loaded,
-    // a plain blue line while they're loading). This is a deliberate preview of the task's whole
-    // planned path — kept separate from the "what's actually happening right now" overlay below.
+    // Show the selected task's planned route separately from the robot's active leg
     const selectedRoute = selectedTaskId != null ? routesByTaskId?.[selectedTaskId] : null
     if (selectedRoute && selectedRoute.coordinates && selectedRoute.coordinates.length >= 2) {
       const coloredSegments = coloredSegmentsByTaskId[selectedRoute.taskId]
@@ -410,9 +403,7 @@ function LiveMap({
     onSelectRobotRef.current = onSelectRobot
   }, [onSelectRobot])
 
-  // Reconcile markers in place (move/update/add/remove) instead of clearing and
-  // rebuilding every frame — so a marker survives from mouse-down to mouse-up and
-  // its click actually fires while the simulation moves the dots.
+  // Update markers in place so clicks are not lost while robots move.
   useEffect(() => {
     if (!markerLayerRef.current) return
 
@@ -489,10 +480,7 @@ function LiveMap({
       .forEach(obstacle => {
         const label = obstacle.label || obstacle.name || 'Obstacle'
 
-        // Mark the road's actual geometry in red — a road that crosses others is split into
-        // several sub-edges at those junctions (see RouteGraphService.getEdgesByLinkId on the
-        // backend), so this can be more than one line segment. Falls back to a single straight
-        // line between the road's raw start/end if the backend couldn't resolve any sub-edges.
+        // A road may contain several graph segments after junction splitting.
         const segments = Array.isArray(obstacle.segments) ? obstacle.segments : []
         segments.forEach(segment => {
           if (!Array.isArray(segment) || segment.length < 2) return
@@ -506,8 +494,6 @@ function LiveMap({
           obstacleLayerRef.current.addLayer(line)
         })
 
-        // Small cross badge at the road's midpoint — see OBSTRUCTION_ICON comment for why this
-        // stays compact instead of the old always-visible text pill.
         const marker = L.marker(
           [Number(obstacle.latitude), Number(obstacle.longitude)],
           { icon: OBSTRUCTION_ICON }

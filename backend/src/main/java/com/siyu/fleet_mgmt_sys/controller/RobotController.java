@@ -104,5 +104,5 @@ public class RobotController {
         return ResponseEntity.ok().build();
     }
 
-    // Robot position/status over WebSocket now lives in WebsocketController (routing branch owns /app/robot/{id}/update).
+
 }

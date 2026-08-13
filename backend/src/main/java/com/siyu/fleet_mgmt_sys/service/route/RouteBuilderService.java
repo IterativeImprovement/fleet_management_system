@@ -35,8 +35,7 @@ public class RouteBuilderService {
         log.info("Building route from ({},{}) to ({},{})",
                 startLat, startLon, endLat, endLon);
 
-        // Create a fresh query-local graph view
-        // Each request uses its own graph view so temporary edges are not shared.
+        // Use a per-request overlay so projection nodes do not modify the shared graph.
         LocalGraphView graphView = new LocalGraphView(routeGraphService);
 
         // Project start and end coordinates onto nearest edges
@@ -98,11 +97,7 @@ public class RouteBuilderService {
         return route;
     }
 
-    /**
-     * Builds coloured segments using the local road graph and its current speed
-     * bands.
-     * bypassing the need to call external API entirely.
-     */
+    // BEING_TOWED is a mirror; the tow robot completes the actual task.
     public List<ColoredSegmentDTO> buildColoredRoute(double startLat, double startLon,
             double endLat, double endLon) {
         LocalGraphView graphView = new LocalGraphView(routeGraphService);
@@ -178,19 +173,13 @@ public class RouteBuilderService {
                     "No edges in graph: cannot project point (" + lat + "," + lon + ")");
         }
 
-        // Chooses nearest nonobstructed point if possible
         if (nearestUsableEdge != null) {
             return new ProjectionResult(nearestUsablePoint[0], nearestUsablePoint[1], nearestUsableEdge, minUsableDist);
         }
 
-        // Fallback to nearest edge if all edges are obstructed
         return new ProjectionResult(nearestPoint[0], nearestPoint[1], nearestEdge, minDist);
     }
 
-    /**
-     * Projects point P onto segment AB, clamped to segment bounds.
-     * Returns the closest point on the segment to P as [lat, lon].
-     */
     private double[] projectPointOntoSegment(double pLat, double pLon,
             double aLat, double aLon,
             double bLat, double bLon) {
@@ -221,15 +210,6 @@ public class RouteBuilderService {
                 .build();
     }
 
-    /**
-     * Splits an edge at a temporary node's position and registers
-     * the resulting sub-edges into the query-local graph view.
-     *
-     * Original edge A-B becomes two sub-edges: A to tempNode, and
-     * tempNode to B.
-     *
-     * The original edge A-B remains in the shared graph unchanged.
-     */
     private void injectTempNode(GraphNode tempNode, GraphEdge edge,
             LocalGraphView graphView) {
         GraphNode from = edge.getFromNode();

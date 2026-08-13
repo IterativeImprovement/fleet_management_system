@@ -19,8 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Handles a robot breakdown: cancel its dispatch, return its task(s) to the common pool, mark it
- * ERROR, then re-run allocation so another robot picks up the dropped work.
+ * Cancels the robot's dispatch, returns its tasks to the pool,
+ * creates a towing task and reallocates the available work.
  */
 @Slf4j
 @Service
@@ -33,8 +33,6 @@ public class RobotBreakdownService {
     private final TaskService taskService;
     private final WebsocketPublisherService webSocketPublisher;
 
-    // Treat anything within this many degrees of (0,0) as "no real position yet" - WebSocket
-    // telemetry hasn't landed, rather than the robot genuinely idling in the Gulf of Guinea.
     private static final double UNSET_POSITION_EPSILON = 1e-6;
 
     @Transactional
@@ -63,15 +61,18 @@ public class RobotBreakdownService {
         }
         robot.getTasks().clear();
 
-        // Robot A to NEED_MAINTENANCE (not ERROR - it's awaiting repair, not in a fault state)
+        // Robot A to NEED_MAINTENANCE (not ERROR - it's awaiting repair, not in a fault
+        // state)
         robot.setStatus(RobotStatus.NEED_MAINTENANCE);
         robotRepository.save(robot);
 
         log.warn("BREAKDOWN: robot {} returned {} task(s) to the pool, status now NEED_MAINTENANCE",
                 robot.getName(), dropped.size());
 
-        // Create a breakdown task - a tow robot (Robot B) will carry Robot A to the repair location.
-        // The breakdown task is submitted to the pool; allocation assigns Robot B automatically.
+        // Create a breakdown task - a tow robot (Robot B) will carry Robot A to the
+        // repair location.
+        // The breakdown task is submitted to the pool; allocation assigns Robot B
+        // automatically.
         if (simulationId != null) {
             try {
                 RobotBreakdownTaskDTO breakdownDTO = buildBreakdownTaskDTO(robot, simulationId);
@@ -90,7 +91,10 @@ public class RobotBreakdownService {
         }
     }
 
-    /** Falls back to the robot's base position if its live position hasn't arrived yet or is out of bounds. */
+    /**
+     * Falls back to the robot's base position if its live position hasn't arrived
+     * yet or is out of bounds.
+     */
     private RobotBreakdownTaskDTO buildBreakdownTaskDTO(Robot robot, Long simulationId) {
         double lat = robot.getLatitude();
         double lon = robot.getLongitude();
@@ -100,7 +104,7 @@ public class RobotBreakdownService {
 
         if (unset || outOfBounds) {
             log.warn("BREAKDOWN: robot {} has no valid live position ({}, {}) - falling back to its "
-                            + "base position ({}, {}) for the tow task",
+                    + "base position ({}, {}) for the tow task",
                     robot.getName(), lat, lon, robot.getBaseLatitude(), robot.getBaseLongitude());
             return new RobotBreakdownTaskDTO(robot, simulationId, robot.getBaseLatitude(), robot.getBaseLongitude());
         }

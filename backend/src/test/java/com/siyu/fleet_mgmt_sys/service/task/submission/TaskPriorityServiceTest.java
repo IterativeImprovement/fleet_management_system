@@ -54,7 +54,6 @@ class TaskPriorityServiceTest {
         assertEquals(0.62, service.calculatePriorities(task).get(RobotType.LARGE), 0.01);
     }
 
-    // --- helpers ---
 
     private static Map<RobotType, Double> times(double standardSeconds, double largeSeconds) {
         return Map.of(RobotType.STANDARD, standardSeconds, RobotType.LARGE, largeSeconds);

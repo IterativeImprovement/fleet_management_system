@@ -70,7 +70,7 @@ class RouteOptimisationServiceTest {
                 () -> service.findFastestRoute(n1, n4, viewOf(edges)));
     }
 
-    // --- helpers ---
+
 
     private static GraphNode node(long id) {
         return GraphNode.builder().id(id).latitude(0.0).longitude(0.0).build();

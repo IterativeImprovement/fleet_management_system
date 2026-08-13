@@ -70,11 +70,11 @@ export function useSimulationPlayback({
   const alertCounterRef = useRef(0)
   const eventIdToTaskIdRef = useRef(new Map()) // eventId → real backend task id
 
-  // Backend-authoritative movement: the backend pushes each robot's current leg; we just animate.
-  const robotMovementsRef = useRef(new Map()) // robotId → { coords, etaSeconds, startSim, phase, revision }
-  const robotRevisionRef = useRef(new Map())  // robotId → highest dispatch revision seen (reject stale)
-  const lastWsPushRef = useRef(new Map())     // robotId → last telemetry push (ms)
-  const inFlightArrivalsRef = useRef(0)       // arrival POSTs awaiting a response
+  // Dispatch state comes from the backend; this hook animates each leg
+  const robotMovementsRef = useRef(new Map())
+  const robotRevisionRef = useRef(new Map())
+  const lastWsPushRef = useRef(new Map())
+  const inFlightArrivalsRef = useRef(0)
   const settleTicksRef = useRef(0)
 
   const stompClientRef = useRef(null)
@@ -86,8 +86,6 @@ export function useSimulationPlayback({
     speedFactorRef.current = factor
     setSpeedFactor(factor)
   }, [])
-
-  // ── WebSocket ───────────────────────────────────────────────────────────────
 
   function connectWebSocket() {
     const wsUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`
@@ -109,8 +107,7 @@ export function useSimulationPlayback({
         )
         console.log(`[Sim] WebSocket connected + subscribed to sim ${simId} dispatches`)
 
-        // Reconcile any dispatches that already exist, THEN start the clock — so no dispatch
-        // pushed by an early task event is missed before we're subscribed.
+        // Load dispatches created before the WebSocket subscription was ready.
         try {
           const snapshot = await getDispatchSnapshot(simId)
           snapshot.forEach(handleDispatch)
@@ -126,25 +123,24 @@ export function useSimulationPlayback({
 
         // Subscribe to repair complete notifications
         client.subscribe(
-            `/topic/simulation/${simId}/repair`,
-            (msg) => {
-              const { robotId, status } = JSON.parse(msg.body)
-              if (status === 'IDLE') {
-                // repair complete
-                addAlert('Repair', `Robot ${robotId} repair complete — returning to service`)
-                // backend restarts revision numbering at 1 for this robot's next dispatch, so reset
-                // our tracking too or that dispatch gets rejected as stale
-                robotRevisionRef.current.delete(robotId)
-              } else if (status === 'NEED_MAINTENANCE') {
-                // broke down
-                addAlert('Breakdown', `Robot ${robotId} sent for repair`)
-              }
-              setRobotPositionOverrides(prev => ({
-                ...prev,
-                [robotId]: { ...prev[robotId], status }
-              }))
-              onRefetchAll()
+          `/topic/simulation/${simId}/repair`,
+          (msg) => {
+            const { robotId, status } = JSON.parse(msg.body)
+            if (status === 'IDLE') {
+              // repair complete
+              addAlert('Repair', `Robot ${robotId} repair complete — returning to service`)
+
+              robotRevisionRef.current.delete(robotId)
+            } else if (status === 'NEED_MAINTENANCE') {
+              // broke down
+              addAlert('Breakdown', `Robot ${robotId} sent for repair`)
             }
+            setRobotPositionOverrides(prev => ({
+              ...prev,
+              [robotId]: { ...prev[robotId], status }
+            }))
+            onRefetchAll()
+          }
         )
       },
       onDisconnect: () => console.log('[Sim] WebSocket disconnected'),
@@ -166,8 +162,6 @@ export function useSimulationPlayback({
     }
   }
 
-  // Stream the robot's live position to the backend (position only — backend owns status).
-  // The backend needs a recent position to route a mid-return diversion from.
   function pushRobotPosition(robotId, lat, lng) {
     const client = stompClientRef.current
     if (!client || !client.connected) return
@@ -202,7 +196,6 @@ export function useSimulationPlayback({
     client.publish({ destination: `/app/robot/${robotId}/breakdown` })
   }
 
-  // ── Alerts ────────────────────────────────────────────────────────────────
 
   function addAlert(type, message) {
     alertCounterRef.current += 1
@@ -213,10 +206,6 @@ export function useSimulationPlayback({
     ])
   }
 
-  // ── Dispatch handling (backend-pushed legs) ─────────────────────────────────
-
-  // Remove a robot's "current route" overlay — called whenever it has no active leg to show
-  // (blocked, idle, legless) or once its leg completes (see tickMovements).
   function clearRobotRoute(robotId) {
     setRobotRoutesById(prev => {
       if (!(robotId in prev)) return prev
@@ -271,7 +260,7 @@ export function useSimulationPlayback({
       }))
       return
     }
-    // etaSeconds already lives on the same timeline as simTime, so don't re-scale it by speedFactor
+
     robotMovementsRef.current.set(robotId, {
       coords,
       etaSeconds: dispatch.etaSeconds > 0 ? dispatch.etaSeconds : 1,
@@ -279,17 +268,15 @@ export function useSimulationPlayback({
       phase: dispatch.phase,
       revision: dispatch.revision,
     })
-    // This leg's own polyline — replaces whatever route was shown for this robot before (a fresh
-    // dispatch always supersedes the prior one, same as the position/status override below).
+
     setRobotRoute(robotId, dispatch.taskId, dispatch.phase, coords)
-    // colour immediately at the leg's start (higher revision replaces any in-progress leg → diversion)
+
     setRobotPositionOverrides(prev => ({
       ...prev,
       [robotId]: { latitude: coords[0][0], longitude: coords[0][1], status: phaseToStatus(dispatch.phase) },
     }))
   }
 
-  // ── Event handlers ──────────────────────────────────────────────────────────
 
   // Create the task on the backend; the backend allocates it and pushes the dispatch over WS.
   async function handleTaskCreated(event) {
@@ -344,19 +331,16 @@ export function useSimulationPlayback({
     const movement = robotMovementsRef.current.get(robotId)
 
     if (movement) {
-      // 1. Use event.simTime instead of simTimeRef.current
-      // Added Math.max(0, ...) to ensure it doesn't calculate negative progress if events arrive out of order
       const progress = movement.etaSeconds > 0
-          ? Math.max(0, Math.min((event.simTime - movement.startSim) / movement.etaSeconds, 1))
-          : 1
+        ? Math.max(0, Math.min((event.simTime - movement.startSim) / movement.etaSeconds, 1))
+        : 1
 
       const pos = interpolateAlongRoute(movement.coords, progress)
 
       if (pos) {
         setRobotPositionOverrides(prev => ({ ...prev, [robotId]: { ...pos, status: 'ERROR' } }))
 
-        // 2. Force-push the exact breakdown coordinates to the backend IMMEDIATELY,
-        // bypassing the 500ms throttle so the backend doesn't assume it's still at base.
+        // Send the breakdown position immediately
         const client = stompClientRef.current
         if (client && client.connected) {
           client.publish({
@@ -400,7 +384,6 @@ export function useSimulationPlayback({
     }
   }
 
-  // ── Animation tick ──────────────────────────────────────────────────────────
 
   function tickMovements(currentSimTime) {
     const completed = []
@@ -419,8 +402,6 @@ export function useSimulationPlayback({
 
     completed.forEach(({ robotId, revision }) => {
       robotMovementsRef.current.delete(robotId)
-      // The completed leg's route overlay disappears now — if a next leg follows, the dispatch
-      // that arrives shortly after will draw its own route.
       clearRobotRoute(robotId)
       postArrival(robotId, revision) // backend advances the state machine and pushes the next leg
     })
@@ -437,7 +418,6 @@ export function useSimulationPlayback({
     }
   }
 
-  // ── Main clock tick ─────────────────────────────────────────────────────────
 
   function tick() {
     if (!isRunningRef.current) return
@@ -490,7 +470,6 @@ export function useSimulationPlayback({
     setIsRunning(false)
   }
 
-  // ── Public API ───────────────────────────────────────────────────────────────
 
   const startSimulation = useCallback(async (config) => {
     try {

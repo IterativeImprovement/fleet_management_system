@@ -7,14 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * A query-local view of the road graph.
- * Wraps the shared RouteGraphService and overlays temporary edges
- * for start/end projection nodes without mutating the shared graph.
- *
- * Each routing query gets its own LocalGraphView instance.
- * Temp edges are never visible to other queries.
- */
+/** Per-request graph overlay for temporary route projection edges. */
 public class LocalGraphView {
 
     private final RouteGraphService sharedGraph;

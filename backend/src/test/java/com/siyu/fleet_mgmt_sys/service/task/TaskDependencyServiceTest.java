@@ -53,11 +53,9 @@ class TaskDependencyServiceTest {
 
         service.releaseUnblockedTasks(depA);
 
-        assertEquals(TaskStatus.PENDING_ASSIGNMENT, waiting.getStatus());  // released into the pool
+        assertEquals(TaskStatus.PENDING_ASSIGNMENT, waiting.getStatus()); // released into the pool
         verify(taskRepository).save(waiting);
     }
-
-    // --- helpers ---
 
     private void stubWaitingLookup(Task completedTask, Task... waiting) {
         when(taskRepository.findByStatusAndDependenciesContaining(

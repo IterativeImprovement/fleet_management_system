@@ -51,12 +51,7 @@ public class LTAService {
     private boolean isDbPopulated = false;
     private boolean hasCheckedDbPopulation = false;
 
-    /**
-     * This function asynchronously fetches all speed band info from the LTA API
-     * Synchronized to prevent race conditions on the cache map when the TTL expires.
-     *
-     * @return Speed band information for all roads
-     */
+    /** Fetches all LTA speed-band pages and caches the result until expiry. */
     public synchronized List<LtaTrafficSpeedBandResponseDTO> getAllSpeedBands() {
 
         long now = System.currentTimeMillis();

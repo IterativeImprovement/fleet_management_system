@@ -23,5 +23,4 @@ public class RoadController {
         return ResponseEntity.ok(roadService.updateRoadStatus(id, newStatus));
     }
 
-    // Obstruction over WebSocket now lives in WebsocketController (routing branch owns /app/obstruction).
 }

@@ -6,15 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-/**
- * Encodes a list of graph edges into a Google Encoded Polyline string.
- * Also logs every road name traversed for route auditing (logs currently commented out for simplicity).
- *
- * Google Encoded Polyline format:
- * - Each lat/lng is multiplied by 1e5, rounded, differenced from previous, then encoded
- * - Each value is split into 5-bit chunks, reversed, OR'd with 0x20 if more chunks follow,
- *   then offset by 63 and appended as ASCII characters
- */
+/** Encodes graph coordinates using the Google Encoded Polyline format. */
 @Slf4j
 @Service
 public class PolylineEncoder {
@@ -47,7 +39,7 @@ public class PolylineEncoder {
             // Log each road name - group consecutive edges on same road
             String roadName = edge.getRoadName() != null ? edge.getRoadName() : "Unknown Road";
             if (!roadName.equals(prevRoadName)) {
-//                log.info("  [{}] {}", segmentNumber++, roadName);
+                // log.info(" [{}] {}", segmentNumber++, roadName);
                 prevRoadName = roadName;
             }
 

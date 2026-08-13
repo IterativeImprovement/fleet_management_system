@@ -81,14 +81,11 @@ function SimulationConfigForm({ onConfigChange, disabled }) {
   const [configString, setConfigString] = useState('')
   const [loadError, setLoadError] = useState('')
 
-  // Derived each render (pure) - no state needed for validation.
   const config = buildConfig(f, seed, baseConfig)
   const validationError = validateConfig(config, seed)
   const shownError = loadError || validationError
 
-  // Lift the resolved config + validation error up to Topbar whenever the user
-  // changes something. Deps are our own state (stable across parent re-renders,
-  // so no loop) and onConfigChange must be a stable callback.
+  // Notify Topbar when the resolved configuration changes..
   useEffect(() => {
     const cfg = buildConfig(f, seed, baseConfig)
     onConfigChange(cfg, validateConfig(cfg, seed))
