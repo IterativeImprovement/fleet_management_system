@@ -4,8 +4,8 @@ import com.siyu.fleet_mgmt_sys.exception.notfoundexception.ClusterNotFoundExcept
 import com.siyu.fleet_mgmt_sys.model.WayPoint;
 import com.siyu.fleet_mgmt_sys.model.task.Cluster;
 import com.siyu.fleet_mgmt_sys.model.task.Task;
-import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
 import com.siyu.fleet_mgmt_sys.model.enums.TaskStatus;
+import com.siyu.fleet_mgmt_sys.model.enums.TaskType;
 import com.siyu.fleet_mgmt_sys.repository.TaskClusterRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -211,12 +211,16 @@ public class TaskClusterService { // this service clusters tasks that are close 
                 .filter(t -> t.getStatus() == TaskStatus.PENDING_ASSIGNMENT) // retrieves pending tasks
                 .toList();
 
+        Comparator<Task> mostUrgent = Comparator.comparingInt(Task::getPriority)
+                .thenComparing(Task::getCompletionDateTime, Comparator.nullsLast(Comparator.naturalOrder()));
+
         Task topStandard = pending.stream()
-                .max(Comparator.comparingDouble(task -> task.getPriorityFor(RobotType.STANDARD)))
+                .filter(task -> task.getType() != TaskType.LARGE)
+                .min(mostUrgent)
                 .orElse(null);
 
         Task topLarge = pending.stream()
-                .max(Comparator.comparingDouble(task -> task.getPriorityFor(RobotType.LARGE)))
+                .min(mostUrgent)
                 .orElse(null);
 
         cluster.setTopStandardTask(topStandard);

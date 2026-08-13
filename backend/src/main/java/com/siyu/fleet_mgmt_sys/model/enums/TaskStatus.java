@@ -7,6 +7,7 @@ public enum TaskStatus {
     WAITING_FOR_DEPENDENCIES,
     IN_PROGRESS,
     COMPLETED,
+    EXPIRED,
     ERROR
 }
 

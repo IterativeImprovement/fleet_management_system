@@ -62,14 +62,14 @@ function canon(key) {
 }
 
 function validateConfig(cfg, seed) {
-  if (!Number.isInteger(cfg.numRobots) || cfg.numRobots < 1) return 'Number of robots must be a whole number ≥ 1'
+  if (!Number.isInteger(cfg.numRobots) || cfg.numRobots < 1) return 'Number of robots must be a whole number >= 1'
   if (!(cfg.durationSeconds > 0)) return 'Duration must be greater than 0'
   if (cfg.taskArrivalRatePerSecond < 0 || cfg.malfunctionRatePerRobotPerSecond < 0 || cfg.routeObstructionRatePerSecond < 0)
     return 'Rates cannot be negative'
   if (cfg.smallestPriority < 1 || cfg.largestPriority < cfg.smallestPriority)
-    return 'Priority range is invalid (min ≥ 1 and ≤ max)'
+    return 'Priority range is invalid (min >= 1 and <= max)'
   if (!(cfg.minTaskCompletionSeconds > 0) || cfg.maxTaskCompletionSeconds < cfg.minTaskCompletionSeconds)
-    return 'Task completion range is invalid (min ≤ max)'
+    return 'Task completion range is invalid (min <= max)'
   if (seed.trim() !== '' && !Number.isFinite(Number(seed))) return 'Seed must be a number'
   return ''
 }
@@ -81,7 +81,7 @@ function SimulationConfigForm({ onConfigChange, disabled }) {
   const [configString, setConfigString] = useState('')
   const [loadError, setLoadError] = useState('')
 
-  // Derived each render (pure) — no state needed for validation.
+  // Derived each render (pure) - no state needed for validation.
   const config = buildConfig(f, seed, baseConfig)
   const validationError = validateConfig(config, seed)
   const shownError = loadError || validationError
@@ -182,7 +182,7 @@ function SimulationConfigForm({ onConfigChange, disabled }) {
 
       <label className="sim-config-string">
         Configuration string (share to reproduce this exact run)
-        <textarea rows="2" value={configString} disabled={disabled} placeholder="Paste a string here and click Load…"
+        <textarea rows="2" value={configString} disabled={disabled} placeholder="Paste a string here and click Load..."
           onChange={e => { setConfigString(e.target.value); setLoadError('') }} />
       </label>
 

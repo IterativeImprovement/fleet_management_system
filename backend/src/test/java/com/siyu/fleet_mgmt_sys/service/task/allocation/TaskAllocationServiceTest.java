@@ -1,5 +1,6 @@
 package com.siyu.fleet_mgmt_sys.service.task.allocation;
 
+import com.siyu.fleet_mgmt_sys.model.Route;
 import com.siyu.fleet_mgmt_sys.model.WayPoint;
 import com.siyu.fleet_mgmt_sys.model.enums.RobotStatus;
 import com.siyu.fleet_mgmt_sys.model.enums.RobotType;
@@ -75,10 +76,8 @@ class TaskAllocationServiceTest {
 
     @Test
     void allocateSkipsIneligibleRobots() {
-        // a LARGE task cannot be done by a STANDARD robot (priority -1)
         Task task = standardTask(1.30, 103.80);
         task.setType(TaskType.LARGE);
-        task.setCalculatedPriorities(Map.of(RobotType.STANDARD, -1.0, RobotType.LARGE, 1.5));
         Robot standard = freeRobot(1L, 1.31, 103.80);
 
         when(taskRepository.findByStatusAndSimulationId(TaskStatus.PENDING_ASSIGNMENT, SIM))
@@ -90,14 +89,48 @@ class TaskAllocationServiceTest {
         assertTrue(standard.getTasks().isEmpty());
     }
 
+    @Test
+    void allocateSkipsRobotsThatCannotBeatTheDeadline() {
+        Task task = standardTask(1.30, 103.80);
+        task.setCompletionDateTime(LocalDateTime.now().plusSeconds(30));
+        Robot robot = freeRobot(1L, 1.31, 103.80);
+
+        when(taskRepository.findByStatusAndSimulationId(TaskStatus.PENDING_ASSIGNMENT, SIM))
+                .thenReturn(List.of(task));
+        when(robotRepository.findBySimulatedTrueAndSimulationId(SIM))
+                .thenReturn(List.of(robot));
+
+        assertTrue(service.allocate(SIM).isEmpty());
+        assertEquals(TaskStatus.PENDING_ASSIGNMENT, task.getStatus());
+    }
+
+    @Test
+    void allocateMarksTasksPastTheirDeadlineAsExpired() {
+        Task task = standardTask(1.30, 103.80);
+        task.setCompletionDateTime(LocalDateTime.now().minusMinutes(5));
+        Robot robot = freeRobot(1L, 1.31, 103.80);
+
+        when(taskRepository.findByStatusAndSimulationId(TaskStatus.PENDING_ASSIGNMENT, SIM))
+                .thenReturn(List.of(task));
+        when(robotRepository.findBySimulatedTrueAndSimulationId(SIM))
+                .thenReturn(List.of(robot));
+
+        assertTrue(service.allocate(SIM).isEmpty());
+        assertEquals(TaskStatus.EXPIRED, task.getStatus());
+        verify(taskRepository).save(task);
+    }
+
     // --- helpers ---
 
     private static Task standardTask(double lat, double lng) {
+        Route route = new Route();
+        route.setEstimatedTimes(Map.of(RobotType.STANDARD, 600.0, RobotType.LARGE, 900.0));
+
         Task task = new Task();
         task.setPriority(1);
         task.setType(TaskType.STANDARD);
         task.setCompletionDateTime(LocalDateTime.now().plusHours(1));
-        task.setCalculatedPriorities(Map.of(RobotType.STANDARD, 2.0, RobotType.LARGE, 1.0));
+        task.setRoute(route);
         task.setStartWayPoint(new WayPoint(lat, lng));
         task.setStatus(TaskStatus.PENDING_ASSIGNMENT);
         return task;

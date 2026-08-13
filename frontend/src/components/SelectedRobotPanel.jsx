@@ -173,7 +173,7 @@ function SelectedRobotPanel({
         <div className="robot-detail-row">
           <span>ETA:</span>
           <strong>
-            {currentTask ? formatDuration(currentTask.estimatedTimeSeconds) : '—'}
+            {currentTask ? formatDuration(currentTask.estimatedTimeSeconds) : '-'}
           </strong>
         </div>
       </div>

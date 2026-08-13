@@ -40,7 +40,7 @@ test('interpolateAlongRoute: clamps to endpoints and hits the midpoint', () => {
 })
 
 test('interpolateAlongRoute: multi-segment progress apportions by length', () => {
-  // First segment length 1, second length 3 → total 4. progress 0.5 → distance 2,
+  // First segment length 1, second length 3 gives total 4. progress 0.5 gives distance 2,
   // which lands 1 unit into the second segment (at lng 2).
   const coords = [[0, 0], [0, 1], [0, 4]]
   const mid = interpolateAlongRoute(coords, 0.5)
@@ -48,7 +48,7 @@ test('interpolateAlongRoute: multi-segment progress apportions by length', () =>
 })
 
 test('polylineLengthMeters: sums segment lengths in metres', () => {
-  // 1° here is ~111320 m; a two-segment 0→1→3 line spans 3° total.
+  // 1° here is ~111320 m; a two-segment 0 to 1 to 3 line spans 3° total.
   assert.equal(polylineLengthMeters([[0, 0], [0, 3]]), 3 * 111320)
   assert.equal(polylineLengthMeters([[0, 0]]), 0)
 })

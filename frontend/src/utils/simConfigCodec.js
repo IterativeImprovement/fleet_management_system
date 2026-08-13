@@ -1,16 +1,16 @@
 // Encode/decode a simulation config to a shareable string, plus the unit
-// conversions the config form uses. The string is reversible
-//  pasting it back reconstructs the exact same config + seed.
+// conversions the config form uses. The string is reversible base64(JSON) (not
+// a hash) so pasting it back reconstructs the exact same config + seed.
 
 const CONFIG_VERSION = 1
 
 export const SECONDS_PER_DAY = 86400
 export const SECONDS_PER_HOUR = 3600
 
-// Mirrors backend SimulationConfig defaults 
-// . Only used for the first render, the encoded string always
+// Mirrors backend SimulationConfig defaults (canonical units: seconds /
+// per-second). Only used for the first render — the encoded string always
 // carries every field explicitly, so drift here can't corrupt a shared run.
-// Keep these defaults aligned with the backend SimulationConfig.
+// ponytail: keep in sync with SimulationConfig.java if fields change.
 export const DEFAULT_CONFIG = {
   durationSeconds: 259200,
   numRobots: 10,

@@ -36,7 +36,7 @@ export function decodePolyline(encoded) {
   return coordinates
 }
 
-// Walk a list of [lat, lng] waypoints and return the position at `progress` (0–1),
+// Walk a list of [lat, lng] waypoints and return the position at `progress` (0-1),
 // apportioning progress across segments by their length. Continuous within a route.
 export function interpolateAlongRoute(coords, progress) {
   if (!coords || coords.length === 0) return null
@@ -87,7 +87,7 @@ export function polylineLengthMeters(coords) {
 
 // Sim-seconds for a robot of speed `speedMps` to travel `coords`, floored at
 // `minSeconds` so every leg has a positive, non-zero duration.
-// Uses an approximate degree-to-metre conversion and a minimum travel time.
+// ponytail: degree→metre approx + constant floor; tune if pacing looks off.
 export function paceLegDuration(coords, speedMps, minSeconds = 60) {
   const mps = speedMps > 0 ? speedMps : 1.5 // fallback nominal speed
   return Math.max(polylineLengthMeters(coords) / mps, minSeconds)

@@ -94,7 +94,7 @@ function Topbar({
               onClick={handleStart}
               disabled={isLoading || !!configError}
             >
-              {isLoading ? 'Generating…' : '▶ Start Simulation'}
+              {isLoading ? 'Generating...' : '▶ Start Simulation'}
             </button>
             {/* kept mounted (toggled via CSS) so edits persist when the panel closes */}
             <div className={`sim-config-panel${showConfig ? '' : ' sim-config-panel--hidden'}`}>
@@ -118,7 +118,7 @@ function Topbar({
               onClick={handleReset}
               disabled={isLoading}
             >
-              {isLoading ? 'Resetting…' : '↺ Reset'}
+              {isLoading ? 'Resetting...' : '↺ Reset'}
             </button>
           </>
         )}

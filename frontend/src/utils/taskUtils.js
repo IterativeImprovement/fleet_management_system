@@ -1,5 +1,5 @@
 export function formatDuration(seconds) {
-  if (seconds == null || !Number.isFinite(Number(seconds))) return '—'
+  if (seconds == null || !Number.isFinite(Number(seconds))) return '-'
   const s = Number(seconds)
   if (s < 60) return '<1 min'
   const mins = Math.round(s / 60)
@@ -24,6 +24,7 @@ export function getTaskStatusLabel(status) {
   if (value === 'WAITING_FOR_DEPENDENCIES') return 'Waiting for Dependencies'
   if (value === 'IN_PROGRESS') return 'In Progress'
   if (value === 'COMPLETED') return 'Completed'
+  if (value === 'EXPIRED') return 'Expired'
   if (value === 'ERROR') return 'Error'
 
   return 'Unknown'
@@ -37,6 +38,7 @@ export function getTaskStatusType(status) {
   if (value === 'WAITING_FOR_DEPENDENCIES') return 'waiting'
   if (value === 'IN_PROGRESS') return 'in-progress'
   if (value === 'COMPLETED') return 'completed'
+  if (value === 'EXPIRED') return 'expired'
   if (value === 'ERROR') return 'error'
 
   return 'unknown'
