@@ -61,8 +61,7 @@ public class RobotBreakdownService {
         }
         robot.getTasks().clear();
 
-        // Robot A to NEED_MAINTENANCE (not ERROR - it's awaiting repair, not in a fault
-        // state)
+        // Robot A to NEED_MAINTENANCE     
         robot.setStatus(RobotStatus.NEED_MAINTENANCE);
         robotRepository.save(robot);
 

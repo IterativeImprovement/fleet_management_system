@@ -13,7 +13,6 @@ public class PolylineEncoder {
 
     /**
      * Encodes the route into a Google Encoded Polyline string.
-     * Logs every road segment traversed in order.
      *
      * @param edges ordered list of edges from A* result
      * @return encoded polyline string
@@ -27,8 +26,6 @@ public class PolylineEncoder {
         StringBuilder encoded = new StringBuilder();
         int prevLat = 0;
         int prevLon = 0;
-
-        // log.info("Route traversal ({} segments):", edges.size());
 
         String prevRoadName = null;
         int segmentNumber = 1;

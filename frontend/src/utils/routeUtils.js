@@ -87,7 +87,6 @@ export function polylineLengthMeters(coords) {
 
 // Sim-seconds for a robot of speed `speedMps` to travel `coords`, floored at
 // `minSeconds` so every leg has a positive, non-zero duration.
-// ponytail: degree→metre approx + constant floor; tune if pacing looks off.
 export function paceLegDuration(coords, speedMps, minSeconds = 60) {
   const mps = speedMps > 0 ? speedMps : 1.5 // fallback nominal speed
   return Math.max(polylineLengthMeters(coords) / mps, minSeconds)

@@ -37,7 +37,6 @@ public class RobotRepairService {
      * robot.
      */
     public void startRepair(Task breakdownTask, Robot robotB) {
-        // Robot A is identified from the breakdown task description
         // breakdown task name is "BREAKDOWN <robotName>"
         String robotName = breakdownTask.getName().replace("BREAKDOWN ", "").trim();
 

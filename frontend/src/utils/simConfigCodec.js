@@ -10,7 +10,7 @@ export const SECONDS_PER_HOUR = 3600
 // Mirrors backend SimulationConfig defaults (canonical units: seconds /
 // per-second). Only used for the first render — the encoded string always
 // carries every field explicitly, so drift here can't corrupt a shared run.
-// ponytail: keep in sync with SimulationConfig.java if fields change.
+// Keep these defaults aligned with SimulationConfig.java.
 export const DEFAULT_CONFIG = {
   durationSeconds: 259200,
   numRobots: 10,

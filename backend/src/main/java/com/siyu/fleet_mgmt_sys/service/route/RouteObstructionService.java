@@ -39,10 +39,8 @@ public class RouteObstructionService {
     public void handleObstruction(String linkId) {
         log.warn("OBSTRUCTION EVENT: linkId={}", linkId);
 
-        // Step 1: Mark all sub-edges of this road as obstructed
         routeGraphService.obstructLink(linkId);
 
-        // Step 2: Find all active robots whose current route contains this linkId
         List<Robot> affectedRobots = findAffectedRobots(linkId);
 
         if (affectedRobots.isEmpty()) {
@@ -52,7 +50,6 @@ public class RouteObstructionService {
 
         log.warn("Obstruction on linkId={} affects {} robot(s)", linkId, affectedRobots.size());
 
-        // Step 3: Reroute each affected robot
         for (Robot robot : affectedRobots) {
             rerouteRobot(robot, linkId);
         }

@@ -36,31 +36,26 @@ public class SimulationEngine {
     private final LTAService LTAService;
 
     public SimulationResult generate(SimulationConfig config) {
-        // Ensure locations are populated before generation
+    
         oneMapService.populateIfEmpty();
 
-        // Ensure roads are populated before generation
         LTAService.populateIfEmpty(); // this method also saves the speed bands
 
-        // Get simulation ID (sequential)
         SimulationRun run = new SimulationRun();
         run.setSeed(config.getSeed());
         run = simulationRunRepository.save(run);
         Long simulationId = run.getId();
         log.info("Created simulation run with id={}, seed={}", simulationId, config.getSeed());
 
-        // Create and save simulation robots
         List<Long> robotIds = simulationRobotSeeder.seed(config, simulationId);
         log.info("Seeded {} robots for simulationId={}", robotIds.size(), simulationId);
 
-        // Fetch location and roads from DB
         List<Long> locationIds = locationRepository.findAllIdsBySource(LocationSource.ONEMAP);
         List<Long> roadIds = roadRepository.findAllIds().stream().map(Long::parseLong).toList();
 
         log.info("Simulation reference data: locations={}, robots={}, roadSegments={}",
                 locationIds.size(), robotIds.size(), roadIds.size());
 
-        // Fetch names
 
         Map<Long, String> locationNames = new HashMap<>();
         locationRepository.findIdAndNameBySource(LocationSource.ONEMAP)
@@ -91,12 +86,12 @@ public class SimulationEngine {
             log.warn("No road segments found in database. Obstruction events will not be generated");
         }
 
-        // Seed independent RNG streams
+
         Random taskRng = new Random(config.getSeed() ^ 0xAAAA_AAAAL);
         Random malfunctionRng = new Random(config.getSeed() ^ 0xBBBB_BBBBL);
         Random obstructionRng = new Random(config.getSeed() ^ 0xCCCC_CCCCL);
 
-        // Generate events
+        
         List<SimulationEvent> taskEvents = generateTaskEvents(config, taskRng, locationIds, locationNames);
         log.info("Generated {} task events", taskEvents.size());
 
@@ -116,10 +111,9 @@ public class SimulationEngine {
             allEvents.addAll(obstructionEvents);
         }
 
-        // Sort all events by simTime
+        
         allEvents.sort(Comparator.comparingDouble(SimulationEvent::getSimTime));
 
-        // Assign final sequential IDs after sorting
         for (int i = 0; i < allEvents.size(); i++) {
             allEvents.get(i).setEventId((long) (i + 1));
         }
@@ -148,34 +142,28 @@ public class SimulationEngine {
             if (t > config.getDurationSeconds())
                 break;
 
-            // Pick distinct start and end waypoints
+
             Long start = pickOne(waypointIds, rng);
             Long end;
             do {
                 end = pickOne(waypointIds, rng);
             } while (end.equals(start));
 
-            // Assigns a random type
             TaskType type = pickableTypes[rng.nextInt(pickableTypes.length)];
 
-            // Assigns a random priority
             int priority = rng.nextInt(config.getSmallestPriority(), config.getLargestPriority() + 1);
 
-            // Generate the deadline within the configured completion range.
             double range = config.getMaxTaskCompletionSeconds() - config.getMinTaskCompletionSeconds();
             double completionDeadline = t + config.getMinTaskCompletionSeconds() + (rng.nextDouble() * range);
 
-            // Dependencies are selected from the most recently generated tasks.
             if (!events.isEmpty() && rng.nextDouble() < config.getDependentTaskProbability()) {
                 int poolSize = Math.min(events.size(), config.getDependencyPoolSize());
                 int startIndex = events.size() - poolSize;
 
-                // Build index pool from recent tasks
                 List<Integer> poolIndices = new ArrayList<>();
                 for (int i = startIndex; i < events.size(); i++)
                     poolIndices.add(i);
 
-                // Fisher-Yates shuffle - deterministic with seeded RNG
                 for (int i = poolIndices.size() - 1; i > 0; i--) {
                     int j = rng.nextInt(i + 1);
                     int tmp = poolIndices.get(i);
