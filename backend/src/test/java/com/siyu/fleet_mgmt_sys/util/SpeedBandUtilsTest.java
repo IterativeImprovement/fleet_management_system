@@ -1,5 +1,6 @@
 package com.siyu.fleet_mgmt_sys.util;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -24,10 +25,13 @@ class SpeedBandUtilsTest {
         assertEquals(expected, SpeedBandUtils.toMetresPerSecond(band));
     }
 
-    // Boundaries + out-of-range partition: 0 and 9 straddle the valid range,
-    // -1 is negative - all fall through to the default.
+    @Test
+    void obstructedBandIsImpassable() {
+        assertEquals(0, SpeedBandUtils.toMetresPerSecond(0));
+    }
+
     @ParameterizedTest
-    @ValueSource(ints = {0, 9, -1})
+    @ValueSource(ints = {9, -1})
     void outOfRangeBandFallsBackToDefault(int band) {
         assertEquals(12.5, SpeedBandUtils.toMetresPerSecond(band));
     }

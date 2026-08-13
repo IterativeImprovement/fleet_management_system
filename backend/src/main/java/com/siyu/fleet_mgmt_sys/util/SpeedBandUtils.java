@@ -7,6 +7,7 @@ public class SpeedBandUtils {
     public static double toMetresPerSecond(int speedBand) {
         // Uses the approximate midpoint of each LTA km/h range
         return switch (speedBand) {
+            case 0 -> 0;
             case 1 -> 1.4;    // ~5 km/h
             case 2 -> 4.2;    // ~15 km/h
             case 3 -> 6.9;    // ~25 km/h

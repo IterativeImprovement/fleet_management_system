@@ -74,6 +74,10 @@ public class GraphBuilderService {
                       : DEFAULT_SPEED_BAND
                     : DEFAULT_SPEED_BAND;
 
+            if (speedBand <= 0) {
+                speedBand = DEFAULT_SPEED_BAND;
+            }
+
             double length = haversineMetres(
                     road.getStartLat(), road.getStartLon(),
                     road.getEndLat(), road.getEndLon());
