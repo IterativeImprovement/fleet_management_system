@@ -90,7 +90,10 @@ export function useSimulationPlayback({
   // ── WebSocket ───────────────────────────────────────────────────────────────
 
   function connectWebSocket() {
-    const wsUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`
+    // VITE_WS_URL points straight at the backend in production (Vercel can't proxy WebSockets)
+    const wsUrl =
+      import.meta.env.VITE_WS_URL ||
+      `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`
 
     const client = new Client({
       brokerURL: wsUrl,

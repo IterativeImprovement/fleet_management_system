@@ -1,0 +1,40 @@
+# Render Blueprint: Spring Boot backend + Postgres.
+# The React frontend is deployed separately on Vercel (see frontend/vercel.json).
+databases:
+  - name: fleet-mgmt-db
+    databaseName: fleet_mgmt_db
+    plan: free
+    region: singapore
+
+services:
+  - type: web
+    name: fleet-mgmt-backend
+    runtime: docker
+    plan: free
+    region: singapore
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /robot
+    envVars:
+      - key: DB_HOST
+        fromDatabase: { name: fleet-mgmt-db, property: host }
+      - key: DB_PORT
+        fromDatabase: { name: fleet-mgmt-db, property: port }
+      - key: DB_NAME
+        fromDatabase: { name: fleet-mgmt-db, property: database }
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase: { name: fleet-mgmt-db, property: user }
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase: { name: fleet-mgmt-db, property: password }
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: update
+      - key: CONFIG_LOG_LEVEL
+        value: INFO
+      - key: JAVA_TOOL_OPTIONS
+        value: -XX:MaxRAMPercentage=75
+      # Set these in the Render dashboard (the committed defaults may be expired)
+      - key: ONEMAP_API_KEY
+        sync: false
+      - key: LTA_API_KEY
+        sync: false
