@@ -3,34 +3,6 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/map/tiles/:path*",
-      "destination": "https://fleet-mgmt-backend.onrender.com/map/tiles/:path*"
-    },
-    {
-      "source": "/route/:path*",
-      "destination": "https://fleet-mgmt-backend.onrender.com/route/:path*"
-    },
-    {
-      "source": "/task/:path*",
-      "destination": "https://fleet-mgmt-backend.onrender.com/task/:path*"
-    },
-    {
-      "source": "/locations/:path*",
-      "destination": "https://fleet-mgmt-backend.onrender.com/locations/:path*"
-    },
-    {
-      "source": "/robot/:path*",
-      "destination": "https://fleet-mgmt-backend.onrender.com/robot/:path*"
-    },
-    {
-      "source": "/simulation/:path*",
-      "destination": "https://fleet-mgmt-backend.onrender.com/simulation/:path*"
-    },
-    {
-      "source": "/road/:path*",
-      "destination": "https://fleet-mgmt-backend.onrender.com/road/:path*"
-    },
-    {
       "source": "/route",
       "destination": "https://fleet-mgmt-backend.onrender.com/route"
     },
@@ -53,6 +25,34 @@
     {
       "source": "/road",
       "destination": "https://fleet-mgmt-backend.onrender.com/road"
+    },
+    {
+      "source": "/map/tiles/:path+",
+      "destination": "https://fleet-mgmt-backend.onrender.com/map/tiles/:path+"
+    },
+    {
+      "source": "/route/:path+",
+      "destination": "https://fleet-mgmt-backend.onrender.com/route/:path+"
+    },
+    {
+      "source": "/task/:path+",
+      "destination": "https://fleet-mgmt-backend.onrender.com/task/:path+"
+    },
+    {
+      "source": "/locations/:path+",
+      "destination": "https://fleet-mgmt-backend.onrender.com/locations/:path+"
+    },
+    {
+      "source": "/robot/:path+",
+      "destination": "https://fleet-mgmt-backend.onrender.com/robot/:path+"
+    },
+    {
+      "source": "/simulation/:path+",
+      "destination": "https://fleet-mgmt-backend.onrender.com/simulation/:path+"
+    },
+    {
+      "source": "/road/:path+",
+      "destination": "https://fleet-mgmt-backend.onrender.com/road/:path+"
     }
   ]
 }
