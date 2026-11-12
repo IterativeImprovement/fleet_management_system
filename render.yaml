@@ -33,8 +33,11 @@ services:
         value: INFO
       - key: JAVA_TOOL_OPTIONS
         value: -XX:MaxRAMPercentage=75
-      # Set these in the Render dashboard (the committed defaults may be expired)
-      - key: ONEMAP_API_KEY
+      # Set these in the Render dashboard.
+      # The OneMap account login lets the backend renew its 3-day token automatically.
+      - key: ONEMAP_EMAIL
+        sync: false
+      - key: ONEMAP_PASSWORD
         sync: false
       - key: LTA_API_KEY
         sync: false
