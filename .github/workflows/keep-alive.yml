@@ -1,0 +1,25 @@
+name: Keep Render backend awake
+
+# Render's free web services sleep after ~15 idle minutes and take a minute or
+# two to wake. Pinging every 10 minutes keeps the deployed backend responsive.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping backend
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --retry 3 --retry-delay 20 --retry-all-errors \
+            -m 120 https://fleet-mgmt-backend.onrender.com/robot || true)
+          echo "Backend responded with HTTP $code"
+          # Warn rather than fail, so a Render outage doesn't send an email every 10 minutes
+          if [ "$code" != "200" ]; then
+            echo "::warning::Backend ping returned HTTP $code"
+          fi
