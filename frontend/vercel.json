@@ -3,6 +3,10 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/map/tiles/:z/:x/:file",
+      "destination": "https://www.onemap.gov.sg/maps/tiles/Default/:z/:x/:file"
+    },
+    {
       "source": "/route",
       "destination": "https://fleet-mgmt-backend.onrender.com/route"
     },
@@ -25,10 +29,6 @@
     {
       "source": "/road",
       "destination": "https://fleet-mgmt-backend.onrender.com/road"
-    },
-    {
-      "source": "/map/tiles/:path+",
-      "destination": "https://fleet-mgmt-backend.onrender.com/map/tiles/:path+"
     },
     {
       "source": "/route/:path+",
